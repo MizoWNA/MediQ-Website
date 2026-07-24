@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import { AnimatedSphere } from "./animated-sphere";
 
-const words = ["create", "build", "scale", "ship"];
+const words = ["notes", "mindmaps", "explainations", "mentroship"];
 
 export function HeroSection() {
   const [isVisible, setIsVisible] = useState(false);
@@ -75,9 +75,9 @@ export function HeroSection() {
               isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
             }`}
           >
-            <span className="block">The platform</span>
+            <span className="block">Your pitstop</span>
             <span className="block">
-              to{" "}
+              for{" "}
               <span className="relative inline-block">
                 <span 
                   key={wordIndex}
