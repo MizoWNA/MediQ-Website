@@ -6,26 +6,26 @@ const features = [
   {
     number: "01",
     title: "Important Mindmaps",
-    description: "Mindmaps & Notes hand-crafted for students.",
+    description: "Mindmaps & Notes hand-crafted for students of all kinds, ranging from a Y1 student to a graduating clinical doctor.",
     visual: "deploy",
   },
   {
     number: "02",
-    title: "AI-Native Workflows",
-    description: "Build intelligent applications with built-in AI capabilities. From inference to training, everything scales automatically.",
-    visual: "ai",
-  },
-  {
-    number: "03",
-    title: "Real-time Collaboration",
-    description: "Work together seamlessly. Live preview, instant feedback, and version control that actually makes sense.",
+    title: "Private Tutoring & Mentorship",
+    description: "Whether you need a professor to teach you 1-on-1 or just need a mentor to guide you, we have what you need.",
     visual: "collab",
   },
   {
+    number: "03",
+    title: "A Network of Professors",
+    description: "We've worked with and supplied many professors with professionally made mindmaps and materials, including giants like Dr. Galal.",
+    visual: "ai",
+  },
+  {
     number: "04",
-    title: "Enterprise Security",
-    description: "Bank-grade encryption, SOC 2 compliance, and granular access controls. Your data stays yours.",
-    visual: "security",
+    title: "Medical Tools",
+    description: "We supply you with the highest-grade medical tools, like stethoscopes, sphygmomanometers, and suture kits.",
+    visual: "steth",
   },
 ];
 
@@ -149,14 +149,14 @@ function CollabVisual() {
       {/* User A */}
       <g>
         <rect x="30" y="50" width="50" height="60" rx="4" fill="none" stroke="currentColor" strokeWidth="2" />
-        <text x="55" y="85" textAnchor="middle" fontSize="20" fontFamily="monospace" fill="currentColor">A</text>
+        <text x="55" y="85" textAnchor="middle" fontSize="20" fontFamily="monospace" fill="currentColor">M</text>
         <circle cx="55" cy="35" r="12" fill="none" stroke="currentColor" strokeWidth="2" />
       </g>
       
       {/* User B */}
       <g>
         <rect x="120" y="50" width="50" height="60" rx="4" fill="none" stroke="currentColor" strokeWidth="2" />
-        <text x="145" y="85" textAnchor="middle" fontSize="20" fontFamily="monospace" fill="currentColor">B</text>
+        <text x="145" y="85" textAnchor="middle" fontSize="20" fontFamily="monospace" fill="currentColor">S</text>
         <circle cx="145" cy="35" r="12" fill="none" stroke="currentColor" strokeWidth="2" />
       </g>
       
@@ -228,6 +228,148 @@ function SecurityVisual() {
   );
 }
 
+function StethoscopeVisual() {
+  return (
+    <svg viewBox="0 0 200 160" className="w-full h-full">
+      {/* Pulsing outer circle */}
+      <circle
+        cx="100"
+        cy="80"
+        r="50"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        opacity="0.4"
+      >
+        <animate
+          attributeName="r"
+          values="45;55;45"
+          dur="2s"
+          repeatCount="indefinite"
+        />
+        <animate
+          attributeName="opacity"
+          values="0.4;0.1;0.4"
+          dur="2s"
+          repeatCount="indefinite"
+        />
+      </circle>
+
+      {/* Inner pulsing circle */}
+      <circle
+        cx="100"
+        cy="80"
+        r="40"
+        fill="currentColor"
+        opacity="0.08"
+      >
+        <animate
+          attributeName="r"
+          values="38;42;38"
+          dur="2s"
+          repeatCount="indefinite"
+        />
+        <animate
+          attributeName="opacity"
+          values="0.08;0.15;0.08"
+          dur="2s"
+          repeatCount="indefinite"
+        />
+      </circle>
+
+      {/* Stethoscope ear tubing */}
+      <path
+        d="M 88 65
+           L 88 72
+           Q 88 86 100 86
+           Q 112 86 112 72
+           L 112 65"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+      />
+
+      {/* Left earpiece */}
+      <path
+        d="M 88 65 L 88 61"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="3.5"
+        strokeLinecap="round"
+      />
+
+      {/* Right earpiece */}
+      <path
+        d="M 112 65 L 112 61"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="3.5"
+        strokeLinecap="round"
+      />
+
+      {/* Central stethoscope tubing */}
+      <path
+        d="M 100 86 L 100 98"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+      />
+
+      {/* Chest piece */}
+      <circle
+        cx="100"
+        cy="104"
+        r="6"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+      />
+
+      {/* Chest piece center */}
+      <circle
+        cx="100"
+        cy="104"
+        r="3"
+        fill="currentColor"
+        opacity="0.2"
+      >
+        <animate
+          attributeName="opacity"
+          values="0.2;0.5;0.2"
+          dur="1.5s"
+          repeatCount="indefinite"
+        />
+      </circle>
+
+      {/* Subtle heartbeat pulse line */}
+{/*
+      <path
+        d="M 72 80
+           L 80 80
+           L 83 76
+           L 86 84
+           L 89 80"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        opacity="0"
+      >
+        <animate
+          attributeName="opacity"
+          values="0;0.8;0"
+          dur="2s"
+          repeatCount="indefinite"
+        />
+      </path> */}
+    </svg>
+  );
+}
+
+
 function AnimatedVisual({ type }: { type: string }) {
   switch (type) {
     case "deploy":
@@ -238,6 +380,8 @@ function AnimatedVisual({ type }: { type: string }) {
       return <CollabVisual />;
     case "security":
       return <SecurityVisual />;
+    case "steth":
+      return <StethoscopeVisual />;
     default:
       return <DeployVisual />;
   }

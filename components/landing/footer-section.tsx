@@ -30,7 +30,7 @@ const footerLinks = {
 };
 
 const socialLinks = [
-  { name: "Twitter", href: "#" },
+  { name: "Instagram", href: "https://www.instagram.com/mediq26_/" },
   { name: "GitHub", href: "#" },
   { name: "LinkedIn", href: "#" },
 ];
@@ -55,7 +55,7 @@ export function FooterSection() {
               </a>
 
               <p className="text-muted-foreground leading-relaxed mb-8 max-w-xs">
-                The platform for teams who ship. Build, deploy, and scale with unprecedented velocity.
+                The platform for doctors of the future. Learn, Engage, and Grow at unprecedented speeds.
               </p>
 
               {/* Social Links */}
@@ -102,7 +102,7 @@ export function FooterSection() {
         {/* Bottom Bar */}
         <div className="py-8 border-t border-foreground/10 flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-sm text-muted-foreground">
-            2025 Optimus. All rights reserved.
+            2026 MediQ. All rights reserved.
           </p>
 
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
