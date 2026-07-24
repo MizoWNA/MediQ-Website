@@ -64,7 +64,7 @@ export function HeroSection() {
         >
           <span className="inline-flex items-center gap-3 text-sm font-mono text-muted-foreground">
             <span className="w-8 h-px bg-foreground/30" />
-            The platform for modern teams
+            The platform for modern doctors
           </span>
         </div>
         
@@ -75,7 +75,7 @@ export function HeroSection() {
               isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
             }`}
           >
-            <span className="block">Your pitstop</span>
+            <span className="block">Your platform</span>
             <span className="block">
               for{" "}
               <span className="relative inline-block">
@@ -108,8 +108,7 @@ export function HeroSection() {
               isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
             }`}
           >
-            Your toolkit to stop configuring and start innovating. 
-            Securely build, deploy, and scale the best experiences.
+            We're with you from day one until the day you graduate. Contact us now.
           </p>
           
           {/* CTAs */}
