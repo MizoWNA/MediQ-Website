@@ -5,8 +5,8 @@ import { useEffect, useRef, useState } from "react";
 const features = [
   {
     number: "01",
-    title: "Instant Deployment",
-    description: "Push to production in seconds. Our edge network ensures your applications load instantly, anywhere in the world.",
+    title: "Important Mindmaps",
+    description: "Mindmaps & Notes hand-crafted for students.",
     visual: "deploy",
   },
   {
@@ -332,7 +332,7 @@ export function FeaturesSection() {
           >
             Everything you need.
             <br />
-            <span className="text-muted-foreground">Nothing you don&apos;t.</span>
+            <span className="text-muted-foreground">At your fingertips.</span>
           </h2>
         </div>
 

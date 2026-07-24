@@ -112,7 +112,7 @@ export function HeroSection() {
           </p>
           
           {/* CTAs */}
-          <div 
+{/*          <div 
             className={`flex flex-col sm:flex-row items-start gap-4 transition-all duration-700 delay-300 ${
               isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
             }`}
@@ -131,13 +131,13 @@ export function HeroSection() {
             >
               Watch demo
             </Button>
-          </div>
+          </div> */}
         </div>
         
       </div>
       
       {/* Stats marquee - full width outside container */}
-      <div 
+{/*      <div 
         className={`absolute bottom-24 left-0 right-0 transition-all duration-700 delay-500 ${
           isVisible ? "opacity-100" : "opacity-0"
         }`}
@@ -162,7 +162,7 @@ export function HeroSection() {
             </div>
           ))}
         </div>
-      </div>
+      </div> */}
       
       {/* Scroll indicator */}
       
