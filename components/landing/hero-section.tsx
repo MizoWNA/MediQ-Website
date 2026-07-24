@@ -108,7 +108,7 @@ export function HeroSection() {
               isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
             }`}
           >
-            We're with you from day one until the day you graduate. Contact us now.
+            We're with you from day one until the day you graduate. Contact us now
           </p>
           
           {/* CTAs */}
