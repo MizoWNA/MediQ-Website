@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { Shield, Lock, Eye, FileCheck, MessageCircleMore } from "lucide-react";
+import { Shield, Lock, Eye, FileCheck, MessageCircleMore, Camera, Send } from "lucide-react";
 
 const securityFeatures = [
   {
@@ -10,17 +10,17 @@ const securityFeatures = [
     description: "Our main communications channel regarding Mentorships & New Drops.",
   },
   {
-    icon: Lock,
+    icon: Send,
     title: "Academic Telegram",
     description: "Our hub & main archive for academic mindmaps, notes, and resources.",
   },
   {
-    icon: Eye,
+    icon: Send,
     title: "Clinical Telegram",
     description: "Our hub & main archive for clinical mindmaps, notes, and resources.",
   },
   {
-    icon: FileCheck,
+    icon: Camera,
     title: "Instagram Account",
     description: "Our main comminication channel regarding Media Production releases & other social media related topics.",
   },
