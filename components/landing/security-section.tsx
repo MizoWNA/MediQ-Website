@@ -28,13 +28,13 @@ const securityFeatures = [
 
 // Set a custom link (`url`) for each channel below.
 const certifications = [
-  { name: "Academic Telegram", url: "#" },
-  { name: "Clinical Telegram", url: "#" },
-  { name: "Instagram Account", url: "#" },
-  { name: "TikTok Account", url: "#" },
-  { name: "Youtube Channel", url: "#" },
-  { name: "Facebook Account", url: "#" },
-  { name: "Whatsapp Community", url: "#" },
+  { name: "Academic Telegram", url: "https://t.me/mediqacademic" },
+  { name: "Clinical Telegram", url: "https://t.me/mediqclinical" },
+  { name: "Instagram Account", url: "https://www.instagram.com/mediq26_/" },
+  { name: "TikTok Account", url: "https://www.tiktok.com/@mediq26" },
+  { name: "Youtube Channel", url: "https://www.youtube.com/@MedIQ.1" },
+  { name: "Facebook Account", url: "https://www.facebook.com/profile.php?id=61572036539747" },
+  { name: "Whatsapp Community", url: "https://chat.whatsapp.com/ImuE8zaJQXxARov9anUr7s" },
 ];
 
 export function SecuritySection() {
