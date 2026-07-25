@@ -2,19 +2,20 @@
 
 import { useEffect, useState, useRef } from "react";
 
+// Set a custom link for each mindmap in the `url` field below.
 const integrations = [
-  { name: "The Placenta", category: "Emberyology" },
-  { name: "Cardiology Curves", category: "Physiology" },
-  { name: "Arteries & Veins", category: "Histology" },
-  { name: "Midaxillary Relations", category: "Anatomy" },
-  { name: "Microscopic Slides", category: "Histology" },
-  { name: "Hormones & Arteriolar Diameter", category: "Physiology" },
-  { name: "Arteries Drawings", category: "Anatomy" },
-  { name: "Drug Principles", category: "Pharmacology" },
-  { name: "Cell Injury & Depositions", category: "Pathology" },
-  { name: "Most Common Series", category: "All Subjects" },
-  { name: "ABP Receptors", category: "Physiology" },
-  { name: "Thorax Nerves", category: "Anatomy" },
+  { name: "The Placenta", category: "Emberyology", url: "#" },
+  { name: "Cardiology Curves", category: "Physiology", url: "#" },
+  { name: "Arteries & Veins", category: "Histology", url: "#" },
+  { name: "Midaxillary Relations", category: "Anatomy", url: "#" },
+  { name: "Microscopic Slides", category: "Histology", url: "#" },
+  { name: "Hormones & Arteriolar Diameter", category: "Physiology", url: "#" },
+  { name: "Arteries Drawings", category: "Anatomy", url: "#" },
+  { name: "Drug Principles", category: "Pharmacology", url: "#" },
+  { name: "Cell Injury & Depositions", category: "Pathology", url: "#" },
+  { name: "Most Common Series", category: "All Subjects", url: "#" },
+  { name: "ABP Receptors", category: "Physiology", url: "#" },
+  { name: "Thorax Nerves", category: "Anatomy", url: "#" },
 ];
 
 export function IntegrationsSection() {
@@ -66,15 +67,16 @@ export function IntegrationsSection() {
           {[...Array(2)].map((_, setIndex) => (
             <div key={setIndex} className="flex gap-6 shrink-0">
               {integrations.map((integration) => (
-                <div
+                <a
                   key={`${integration.name}-${setIndex}`}
-                  className="shrink-0 px-8 py-6 border border-foreground/10 hover:border-foreground/30 hover:bg-foreground/[0.02] transition-all duration-300 group"
+                  href={integration.url}
+                  className="shrink-0 block px-8 py-6 border border-foreground/10 hover:border-foreground/30 hover:bg-foreground/[0.02] transition-all duration-300 group cursor-pointer"
                 >
                   <div className="text-lg font-medium group-hover:translate-x-1 transition-transform">
                     {integration.name}
                   </div>
                   <div className="text-sm text-muted-foreground">{integration.category}</div>
-                </div>
+                </a>
               ))}
             </div>
           ))}
@@ -87,15 +89,16 @@ export function IntegrationsSection() {
           {[...Array(2)].map((_, setIndex) => (
             <div key={setIndex} className="flex gap-6 shrink-0">
               {[...integrations].reverse().map((integration) => (
-                <div
+                <a
                   key={`${integration.name}-reverse-${setIndex}`}
-                  className="shrink-0 px-8 py-6 border border-foreground/10 hover:border-foreground/30 hover:bg-foreground/[0.02] transition-all duration-300 group"
+                  href={integration.url}
+                  className="shrink-0 block px-8 py-6 border border-foreground/10 hover:border-foreground/30 hover:bg-foreground/[0.02] transition-all duration-300 group cursor-pointer"
                 >
                   <div className="text-lg font-medium group-hover:translate-x-1 transition-transform">
                     {integration.name}
                   </div>
                   <div className="text-sm text-muted-foreground">{integration.category}</div>
-                </div>
+                </a>
               ))}
             </div>
           ))}
