@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { Shield, Lock, Eye, FileCheck } from "lucide-react";
+import { Shield, Lock, Eye, FileCheck, MessageCircleMore } from "lucide-react";
 
 const securityFeatures = [
   {
-    icon: Shield,
+    icon: MessageCircleMore,
     title: "Whatsapp Community",
     description: "Our main communications channel regarding Mentorships & New Drops.",
   },
