@@ -6,10 +6,10 @@ import { useEffect, useRef, useState } from "react";
 const steps = [
   {
     number: "I",
-    title: "بعيدا عن الطب",
+    title: "Medicine Aside, ",
     description: "We sit down with your favorite professors and ask them intersting questions about life, medicine, and occasionally football!",
     image: "/media/step-1.png",
-    link: "#",
+    link: "https://www.youtube.com/watch?v=OhS_e5ZPXHc",
   },
   {
     number: "II",
