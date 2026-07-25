@@ -68,17 +68,21 @@ export function CtaSection() {
                 </p>
 
                 <div className="flex flex-col sm:flex-row items-start gap-4">
+                  
                   <Button
                     size="lg"
                     className="bg-foreground hover:bg-foreground/90 text-background px-8 h-14 text-base rounded-full group"
+                    onClick={() => window.open("https://forms.gle/18KshEMPAuw6mUAc6", "_blank")}
                   >
                     Apply for Mentorship
                     <ArrowRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" />
                   </Button>
+                  
                   <Button
                     size="lg"
                     variant="outline"
                     className="h-14 px-8 text-base rounded-full border-foreground/20 hover:bg-foreground/5"
+                    onClick={() => window.open("https://forms.gle/6eYVutPqRsydLHQf6", "_blank")}
                   >
                     Join our Team
                   </Button>
