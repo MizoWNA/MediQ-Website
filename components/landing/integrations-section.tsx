@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from "react";
 
 // Set a custom link for each mindmap in the `url` field below.
 const integrations = [
-  { name: "The Placenta", category: "Emberyology", url: "/media/ThePlacenta.pdf" },
+  { name: "The Placenta", category: "Emberyology", url: "/media/ThePlacerna.pdf" },
   { name: "Cardiology Curves", category: "Physiology", url: "/media/Cardio.pdf" },
   { name: "Arteries & Veins", category: "Histology", url: "/media/Avv.pdf" },
   { name: "Midaxillary Relations", category: "Anatomy", url: "/media/Midax.pdf" },
