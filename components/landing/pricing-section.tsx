@@ -2,41 +2,41 @@ import { ArrowRight, Check } from "lucide-react";
 
 const plans = [
   {
-    name: "Starter",
-    description: "For individuals and small projects",
-    price: 0,
+    name: "Basic",
+    description: "For those wanting to test it out.",
+    price: 350,
     period: "week",
     features: [
-      "Up to 3 projects",
-      "1GB storage",
-      "Community support",
-      "Basic analytics",
-      "SSL certificates",
+      "Daily Study Plan",
+      "Weekly Mock Exams",
+      "Private Groups for Mentees",
+      "Early Access to MediQ Data",
+      "Personal Daily Call",
     ],
     cta: "Start free",
     popular: false,
   },
   {
-    name: "Pro",
-    description: "For growing teams and businesses",
-    price: 29,
+    name: "Gold",
+    description: "For those who want the best offer.",
+    price: 1050,
     period: "month",
     features: [
-      "Unlimited projects",
-      "100GB storage",
-      "Priority support",
-      "Advanced analytics",
-      "Custom domains",
-      "Team collaboration",
-      "API access",
+      "Daily Study Plan",
+      "Weekly Mock Exams",
+      "Private Groups for Mentees",
+      "Early Access to MediQ Data",
+      "Personal Daily Call",
+      "Weekly Group Discussions",
+      "Mentorship Competitions & Prizes",
     ],
     cta: "Start trial",
     popular: true,
   },
   {
-    name: "Enterprise",
-    description: "For large-scale operations",
-    price: 99,
+    name: "Summer",
+    description: "For those who need extra help.",
+    price: 1500,
     period: "module",
     features: [
       "Everything in Pro",
@@ -100,7 +100,7 @@ export function PricingSection() {
               <div className="mb-8 pb-8 border-b border-foreground/10">
                 <div className="flex items-baseline gap-2">
                   <span className="font-display text-5xl lg:text-6xl text-foreground">
-                    ${plan.price}
+                    £ {plan.price}
                   </span>
                   <span className="text-muted-foreground">/{plan.period}</span>
                 </div>
