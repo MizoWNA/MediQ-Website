@@ -1,4 +1,7 @@
-import { ArrowRight, Check } from "lucide-react";
+import { Check } from "lucide-react";
+
+// Toggle the seasonal Summer plan on/off.
+const SHOW_SUMMER_PLAN = true;
 
 const plans = [
   {
@@ -13,7 +16,7 @@ const plans = [
       "Early Access to MediQ Data",
       "Personal Daily Call",
     ],
-    cta: "Start free",
+    cta: "Sign Up Now",
     popular: false,
   },
   {
@@ -30,7 +33,7 @@ const plans = [
       "Weekly Group Discussions",
       "Mentorship Competitions & Prizes",
     ],
-    cta: "Start trial",
+    cta: "Sign Up Now",
     popular: true,
   },
   {
@@ -39,21 +42,22 @@ const plans = [
     price: 1500,
     period: "module",
     features: [
-      "Everything in Pro",
-      "Unlimited storage",
-      "24/7 dedicated support",
-      "Custom integrations",
-      "SLA guarantee",
-      "On-premise option",
-      "Security audit",
-      "Custom contracts",
+      "Everything in Gold",
+      "Module Data",
+      "Previous Exams / Mocks",
+      "Daily Level Assessments",
+      "Special Follow-up Group",
     ],
-    cta: "Contact sales",
+    cta: "Contact Sales",
     popular: false,
   },
 ];
 
 export function PricingSection() {
+  const visiblePlans = SHOW_SUMMER_PLAN
+    ? plans
+    : plans.filter((plan) => plan.name !== "Summer");
+
   return (
     <section id="pricing" className="relative py-32 lg:py-40 border-t border-foreground/10">
       <div className="max-w-7xl mx-auto px-6 lg:px-12">
@@ -73,8 +77,12 @@ export function PricingSection() {
         </div>
 
         {/* Pricing Cards */}
-        <div className="grid md:grid-cols-3 gap-px bg-foreground/10">
-          {plans.map((plan, idx) => (
+        <div
+          className={`grid gap-px bg-foreground/10 ${
+            visiblePlans.length === 2 ? "md:grid-cols-2" : "md:grid-cols-3"
+          }`}
+        >
+          {visiblePlans.map((plan, idx) => (
             <div
               key={plan.name}
               className={`relative p-8 lg:p-12 bg-background ${
@@ -116,26 +124,15 @@ export function PricingSection() {
                 ))}
               </ul>
 
-              {/* CTA */}
-              <button
-                className={`w-full py-4 flex items-center justify-center gap-2 text-sm font-medium transition-all group ${
-                  plan.popular
-                    ? "bg-foreground text-primary-foreground hover:bg-foreground/90"
-                    : "border border-foreground/20 text-foreground hover:border-foreground hover:bg-foreground/5"
-                }`}
-              >
-                {plan.cta}
-                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-              </button>
             </div>
           ))}
         </div>
 
         {/* Bottom Note */}
         <p className="mt-12 text-center text-sm text-muted-foreground">
-          All plans include automatic updates, HTTPS, and DDoS protection.{" "}
-          <a href="#" className="underline underline-offset-4 hover:text-foreground transition-colors">
-            Compare all features
+          If you have any questions or suggestions,{" "}
+          <a href="https://www.instagram.com/mediq26_/" className="underline underline-offset-4 hover:text-foreground transition-colors">
+            Send us a DM
           </a>
         </p>
       </div>
