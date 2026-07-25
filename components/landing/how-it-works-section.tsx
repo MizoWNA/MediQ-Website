@@ -2,41 +2,28 @@
 
 import { useEffect, useRef, useState } from "react";
 
+// Set a custom thumbnail (`image`) and destination (`link`) for each step below.
 const steps = [
   {
     number: "I",
-    title: "Dr. Ahmed Galal",
-    description: "The premier episode of our show, (بعيدا عن الطب), with Dr. Ahmed Galal.",
-    code: `import { optimus } from '@optimus/core'
-
-optimus.connect({
-  source: 'your-database',
-  sync: true
-})`,
+    title: "بعيدا عن الطب",
+    description: "We sit down with your favorite professors and ask them intersting questions about life, medicine, and occasionally football!",
+    image: "/media/step-1.png",
+    link: "#",
   },
   {
     number: "II",
-    title: "Dr. Ahmed Zahra",
-    description: "Design powerful automations with our visual builder or write code directly.",
-    code: `optimus.workflow('process', {
-  trigger: 'event',
-  actions: [
-    'validate',
-    'transform', 
-    'deliver'
-  ]
-})`,
+    title: "Media Project 2",
+    description: "C'mon Team, we should have more variety in our media productions.",
+    image: "/media/step-2.png",
+    link: "#",
   },
   {
     number: "III",
-    title: "Dr.....?",
-    description: "Deploy globally with zero configuration. Your app goes live in under 30 seconds.",
-    code: `optimus.deploy({
-  target: 'production',
-  regions: 'auto'
-})
-
-// Deployed to 12 regions`,
+    title: "Media Project 3",
+    description: "Once we actually work on something new, it'll go here. Until then, I'm just a pretty placeholder!",
+    image: "/media/step-3.png",
+    link: "#",
   },
 ];
 
@@ -141,55 +128,28 @@ export function HowItWorksSection() {
             ))}
           </div>
 
-          {/* Code display */}
+          {/* Thumbnail display */}
           <div className="lg:sticky lg:top-32 self-start">
-            <div className="border border-background/10 overflow-hidden">
-              {/* Window header */}
-              <div className="px-6 py-4 border-b border-background/10 flex items-center justify-between">
-                <div className="flex gap-2">
-                  <div className="w-3 h-3 rounded-full bg-background/20" />
-                  <div className="w-3 h-3 rounded-full bg-background/20" />
-                  <div className="w-3 h-3 rounded-full bg-background/20" />
-                </div>
-                <span className="text-xs font-mono text-background/40">workflow.ts</span>
+            <a
+              key={activeStep}
+              href={steps[activeStep].link}
+              className="thumbnail-reveal group block border border-background/10 overflow-hidden aspect-video relative"
+            >
+              <img
+                src={steps[activeStep].image || "/placeholder.svg"}
+                alt={steps[activeStep].title}
+                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+              />
+              {/* Hover overlay */}
+              <div className="absolute inset-0 bg-foreground/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                <span className="inline-flex items-center gap-2 text-sm font-mono text-background border border-background/40 px-4 py-2 backdrop-blur-sm">
+                  Watch
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                    <path d="M7 17L17 7M17 7H7M17 7V17" />
+                  </svg>
+                </span>
               </div>
-
-              {/* Code content */}
-              <div className="p-8 font-mono text-sm min-h-[280px]">
-                <pre className="text-background/70">
-                  {steps[activeStep].code.split('\n').map((line, lineIndex) => (
-                    <div 
-                      key={`${activeStep}-${lineIndex}`} 
-                      className="leading-loose code-line-reveal"
-                      style={{ 
-                        animationDelay: `${lineIndex * 80}ms`,
-                      }}
-                    >
-                      <span className="text-background/20 select-none w-8 inline-block">{lineIndex + 1}</span>
-                      <span className="inline-flex">
-                        {line.split('').map((char, charIndex) => (
-                          <span
-                            key={`${activeStep}-${lineIndex}-${charIndex}`}
-                            className="code-char-reveal"
-                            style={{
-                              animationDelay: `${lineIndex * 80 + charIndex * 15}ms`,
-                            }}
-                          >
-                            {char === ' ' ? '\u00A0' : char}
-                          </span>
-                        ))}
-                      </span>
-                    </div>
-                  ))}
-                </pre>
-              </div>
-
-              {/* Status */}
-              <div className="px-6 py-4 border-t border-background/10 flex items-center gap-3">
-                <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-                <span className="text-xs font-mono text-background/40">Ready</span>
-              </div>
-            </div>
+            </a>
           </div>
         </div>
       </div>
@@ -199,29 +159,18 @@ export function HowItWorksSection() {
           from { width: 0%; }
           to { width: 100%; }
         }
-        
-        .code-line-reveal {
+
+        .thumbnail-reveal {
           opacity: 0;
-          transform: translateX(-8px);
-          animation: lineReveal 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+          transform: scale(0.98);
+          filter: blur(6px);
+          animation: thumbnailReveal 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
         }
-        
-        @keyframes lineReveal {
+
+        @keyframes thumbnailReveal {
           to {
             opacity: 1;
-            transform: translateX(0);
-          }
-        }
-        
-        .code-char-reveal {
-          opacity: 0;
-          filter: blur(8px);
-          animation: charReveal 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-        }
-        
-        @keyframes charReveal {
-          to {
-            opacity: 1;
+            transform: scale(1);
             filter: blur(0);
           }
         }
