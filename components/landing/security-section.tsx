@@ -26,7 +26,16 @@ const securityFeatures = [
   },
 ];
 
-const certifications = ["Academic Telegram", "Clinical Telegram", "Instagram Account", "TikTok Account", "Youtube Channel", "Facebook Account", "Whatsapp Community"];
+// Set a custom link (`url`) for each channel below.
+const certifications = [
+  { name: "Academic Telegram", url: "#" },
+  { name: "Clinical Telegram", url: "#" },
+  { name: "Instagram Account", url: "#" },
+  { name: "TikTok Account", url: "#" },
+  { name: "Youtube Channel", url: "#" },
+  { name: "Facebook Account", url: "#" },
+  { name: "Whatsapp Community", url: "#" },
+];
 
 export function SecuritySection() {
   const [isVisible, setIsVisible] = useState(false);
@@ -72,15 +81,16 @@ export function SecuritySection() {
             {/* Certifications */}
             <div className="flex flex-wrap gap-3">
               {certifications.map((cert, index) => (
-                <span
-                  key={cert}
-                  className={`px-4 py-2 border border-foreground/10 text-sm font-mono transition-all duration-500 ${
+                <a
+                  key={cert.name}
+                  href={cert.url}
+                  className={`px-4 py-2 border border-foreground/10 text-sm font-mono transition-all duration-500 hover:border-foreground/40 hover:bg-foreground hover:text-background cursor-pointer ${
                     isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
                   }`}
                   style={{ transitionDelay: `${index * 50 + 200}ms` }}
                 >
-                  {cert}
-                </span>
+                  {cert.name}
+                </a>
               ))}
             </div>
           </div>
