@@ -4,18 +4,18 @@ import { useEffect, useState, useRef } from "react";
 
 // Set a custom link for each mindmap in the `url` field below.
 const integrations = [
-  { name: "The Placenta", category: "Emberyology", url: "#" },
-  { name: "Cardiology Curves", category: "Physiology", url: "#" },
-  { name: "Arteries & Veins", category: "Histology", url: "#" },
-  { name: "Midaxillary Relations", category: "Anatomy", url: "#" },
-  { name: "Microscopic Slides", category: "Histology", url: "#" },
-  { name: "Hormones & Arteriolar Diameter", category: "Physiology", url: "#" },
-  { name: "Arteries Drawings", category: "Anatomy", url: "#" },
-  { name: "Drug Principles", category: "Pharmacology", url: "#" },
-  { name: "Cell Injury & Depositions", category: "Pathology", url: "#" },
-  { name: "Most Common Series", category: "All Subjects", url: "#" },
-  { name: "ABP Receptors", category: "Physiology", url: "#" },
-  { name: "Thorax Nerves", category: "Anatomy", url: "#" },
+  { name: "The Placenta", category: "Emberyology", url: "/media/ThePlacenta.pdf" },
+  { name: "Cardiology Curves", category: "Physiology", url: "/media/Cardio.pdf" },
+  { name: "Arteries & Veins", category: "Histology", url: "/media/Avv.pdf" },
+  { name: "Midaxillary Relations", category: "Anatomy", url: "/media/Midax.pdf" },
+  { name: "Microscopic Slides", category: "Histology", url: "/media/Microscope.pdf" },
+  { name: "Hormones & Arteriolar Diameter", category: "Physiology", url: "/media/Horm.pdf" },
+  { name: "Arteries Drawings", category: "Anatomy", url: "/media/Art.pdf" },
+  { name: "Drug Principles", category: "Pharmacology", url: "/media/Pharma.pdf" },
+  { name: "Cell Injury & Depositions", category: "Pathology", url: "/media/Patho.pdf" },
+  { name: "Most Common Series", category: "All Subjects", url: "/media/Sam.pdf" },
+  { name: "ABP Receptors", category: "Physiology", url: "/media/ABP.pdf" },
+  { name: "Thorax Nerves", category: "Anatomy", url: "/media/Thorax.pdf" },
 ];
 
 export function IntegrationsSection() {
