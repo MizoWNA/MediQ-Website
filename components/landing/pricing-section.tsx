@@ -1,13 +1,11 @@
-"use client";
-
-import { useState } from "react";
 import { ArrowRight, Check } from "lucide-react";
 
 const plans = [
   {
     name: "Starter",
     description: "For individuals and small projects",
-    price: { monthly: 0, annual: 0 },
+    price: 0,
+    period: "week",
     features: [
       "Up to 3 projects",
       "1GB storage",
@@ -21,7 +19,8 @@ const plans = [
   {
     name: "Pro",
     description: "For growing teams and businesses",
-    price: { monthly: 29, annual: 24 },
+    price: 29,
+    period: "month",
     features: [
       "Unlimited projects",
       "100GB storage",
@@ -37,7 +36,8 @@ const plans = [
   {
     name: "Enterprise",
     description: "For large-scale operations",
-    price: { monthly: null, annual: null },
+    price: 99,
+    period: "module",
     features: [
       "Everything in Pro",
       "Unlimited storage",
@@ -54,8 +54,6 @@ const plans = [
 ];
 
 export function PricingSection() {
-  const [isAnnual, setIsAnnual] = useState(true);
-
   return (
     <section id="pricing" className="relative py-32 lg:py-40 border-t border-foreground/10">
       <div className="max-w-7xl mx-auto px-6 lg:px-12">
@@ -72,39 +70,6 @@ export function PricingSection() {
           <p className="text-lg text-muted-foreground max-w-xl">
             Start free and scale as you grow. No hidden fees, no surprises.
           </p>
-        </div>
-
-        {/* Billing Toggle */}
-        <div className="flex items-center gap-4 mb-16">
-          <span
-            className={`text-sm transition-colors ${
-              !isAnnual ? "text-foreground" : "text-muted-foreground"
-            }`}
-          >
-            Monthly
-          </span>
-          <button
-            onClick={() => setIsAnnual(!isAnnual)}
-            className="relative w-14 h-7 bg-foreground/10 rounded-full p-1 transition-colors hover:bg-foreground/20"
-          >
-            <div
-              className={`w-5 h-5 bg-foreground rounded-full transition-transform duration-300 ${
-                isAnnual ? "translate-x-7" : "translate-x-0"
-              }`}
-            />
-          </button>
-          <span
-            className={`text-sm transition-colors ${
-              isAnnual ? "text-foreground" : "text-muted-foreground"
-            }`}
-          >
-            Annual
-          </span>
-          {isAnnual && (
-            <span className="ml-2 px-2 py-1 bg-foreground text-primary-foreground text-xs font-mono">
-              Save 17%
-            </span>
-          )}
         </div>
 
         {/* Pricing Cards */}
@@ -133,16 +98,12 @@ export function PricingSection() {
 
               {/* Price */}
               <div className="mb-8 pb-8 border-b border-foreground/10">
-                {plan.price.monthly !== null ? (
-                  <div className="flex items-baseline gap-2">
-                    <span className="font-display text-5xl lg:text-6xl text-foreground">
-                      ${isAnnual ? plan.price.annual : plan.price.monthly}
-                    </span>
-                    <span className="text-muted-foreground">/month</span>
-                  </div>
-                ) : (
-                  <span className="font-display text-4xl text-foreground">Custom</span>
-                )}
+                <div className="flex items-baseline gap-2">
+                  <span className="font-display text-5xl lg:text-6xl text-foreground">
+                    ${plan.price}
+                  </span>
+                  <span className="text-muted-foreground">/{plan.period}</span>
+                </div>
               </div>
 
               {/* Features */}
