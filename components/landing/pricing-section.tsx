@@ -67,12 +67,14 @@ export function PricingSection() {
             Pricing
           </span>
           <h2 className="font-display text-5xl md:text-6xl lg:text-7xl tracking-tight text-foreground mb-6">
-            Simple, transparent
+            Mentorship
             <br />
             <span className="text-stroke">pricing</span>
           </h2>
           <p className="text-lg text-muted-foreground max-w-xl">
-            Start free and scale as you grow. No hidden fees, no surprises.
+            We offer competitive pricing compared to everyone else.
+          <br />
+            Still not sure? Try the Weekly Plan.
           </p>
         </div>
 
