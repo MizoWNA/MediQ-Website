@@ -3,12 +3,17 @@
 import { useEffect, useState, useRef } from "react";
 
 const locations = [
-  { city: "San Francisco", region: "US West", latency: "12ms" },
-  { city: "New York", region: "US East", latency: "18ms" },
-  { city: "London", region: "Europe", latency: "24ms" },
-  { city: "Tokyo", region: "Asia Pacific", latency: "32ms" },
-  { city: "Sydney", region: "Oceania", latency: "45ms" },
-  { city: "Sao Paulo", region: "South America", latency: "38ms" },
+  { city: "Dr. Ahmed Alsharkawy", region: "Social Media Head & Mentor", latency: "Internship" },
+  { city: "Dr. Nour Farouk", region: "Mentor", latency: "Internship" },
+  { city: "Dr. Hassan Okasha", region: "CEO & Mentor", latency: "5th Year" },
+  { city: "Dr. Ahmed Khaled", region: "Mentor", latency: "5th Year" },
+  { city: "Dr. Hazem Alsaadani", region: "Mentor", latency: "5th Year"},
+  { city: "Dr. Nour Abozeid", region: "Designer & Mentor", latency: "4th Year" },
+  { city: "Dr. Yousef Mohammed", region: "Designer & Mentor", latency: "4th Year" },
+  { city: "Dr. Nouran Khaled", region: "Designer & Mentor", latency: "4th Year" },
+  { city: "Dr. Moataz Alsharkawy", region: "Designer & Tech Head", latency: "2nd Year" },
+  { city: "Dr. Jana Ahmed", region: "Designer", latency: "2nd Year" },
+  { city: "Dr. Khaled Abdelmeniem", region: "Media Productions Head", latency: "2nd Year" },
 ];
 
 export function InfrastructureSection() {
@@ -47,16 +52,15 @@ export function InfrastructureSection() {
           >
             <span className="inline-flex items-center gap-3 text-sm font-mono text-muted-foreground mb-6">
               <span className="w-8 h-px bg-foreground/30" />
-              Infrastructure
+              MediQ Team
             </span>
             <h2 className="text-4xl lg:text-6xl font-display tracking-tight mb-8">
-              Global by
+              Meet Our
               <br />
-              default.
+              Team.
             </h2>
             <p className="text-xl text-muted-foreground leading-relaxed mb-12">
-              Deploy once, run everywhere. Our edge network spans 17 data centers 
-              across 6 continents, delivering sub-50ms latency to 99% of the world.
+              A team of specialists in their respective fields came together under one question; In what way can we help the future?
             </p>
 
             {/* Stats */}
@@ -85,10 +89,10 @@ export function InfrastructureSection() {
             <div className="border border-foreground/10">
               {/* Header */}
               <div className="px-6 py-4 border-b border-foreground/10 flex items-center justify-between">
-                <span className="text-sm font-mono text-muted-foreground">Edge Network</span>
+                <span className="text-sm font-mono text-muted-foreground">List of Members</span>
                 <span className="flex items-center gap-2 text-xs font-mono text-green-600">
                   <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                  All operational
+                  All Ready
                 </span>
               </div>
 

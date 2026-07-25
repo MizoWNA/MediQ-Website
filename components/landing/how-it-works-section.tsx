@@ -5,8 +5,8 @@ import { useEffect, useRef, useState } from "react";
 const steps = [
   {
     number: "I",
-    title: "Connect your tools",
-    description: "Integrate with your existing stack in minutes. We support 200+ data sources out of the box.",
+    title: "Dr. Ahmed Galal",
+    description: "The premier episode of our show, (بعيدا عن الطب), with Dr. Ahmed Galal.",
     code: `import { optimus } from '@optimus/core'
 
 optimus.connect({
@@ -16,7 +16,7 @@ optimus.connect({
   },
   {
     number: "II",
-    title: "Build your workflow",
+    title: "Dr. Ahmed Zahra",
     description: "Design powerful automations with our visual builder or write code directly.",
     code: `optimus.workflow('process', {
   trigger: 'event',
@@ -29,7 +29,7 @@ optimus.connect({
   },
   {
     number: "III",
-    title: "Ship to production",
+    title: "Dr.....?",
     description: "Deploy globally with zero configuration. Your app goes live in under 30 seconds.",
     code: `optimus.deploy({
   target: 'production',
@@ -88,16 +88,16 @@ export function HowItWorksSection() {
         <div className="mb-16 lg:mb-24">
           <span className="inline-flex items-center gap-3 text-sm font-mono text-background/50 mb-6">
             <span className="w-8 h-px bg-background/30" />
-            Process
+            MediQ Media
           </span>
           <h2
             className={`text-4xl lg:text-6xl font-display tracking-tight transition-all duration-700 ${
               isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
             }`}
           >
-            Three steps.
+            Seen our Media Productions?
             <br />
-            <span className="text-background/50">Infinite possibilities.</span>
+            <span className="text-background/50">Check them out below!</span>
           </h2>
         </div>
 
