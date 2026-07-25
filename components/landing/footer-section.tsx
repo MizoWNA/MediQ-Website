@@ -4,23 +4,18 @@ import { ArrowUpRight } from "lucide-react";
 import { AnimatedWave } from "./animated-wave";
 
 const footerLinks = {
-  Product: [
+  MediQ: [
     { name: "Features", href: "#features" },
-    { name: "How it works", href: "#how-it-works" },
-    { name: "Pricing", href: "#pricing" },
-    { name: "Integrations", href: "#integrations" },
+    { name: "Media Productions", href: "#how-it-works" },
+    { name: "Our Team", href: "#infrastructure" },
+    { name: "Samples", href: "#integrations" },
   ],
-  Developers: [
-    { name: "Documentation", href: "#developers" },
-    { name: "API Reference", href: "#" },
-    { name: "SDK", href: "#developers" },
-    { name: "Status", href: "#" },
-  ],
-  Company: [
-    { name: "About", href: "#" },
-    { name: "Blog", href: "#" },
-    { name: "Careers", href: "#", badge: "Hiring" },
-    { name: "Contact", href: "#" },
+
+  Mentorship: [
+    { name: "Prices", href: "#pricing" },
+    { name: "Reviews", href: "#testamonials" },
+    { name: "Apply", href: "#contact", badge: "Hiring" },
+    { name: "Contact", href: "#footer" },
   ],
   Legal: [
     { name: "Privacy", href: "#" },
@@ -31,13 +26,14 @@ const footerLinks = {
 
 const socialLinks = [
   { name: "Instagram", href: "https://www.instagram.com/mediq26_/" },
-  { name: "GitHub", href: "#" },
-  { name: "LinkedIn", href: "#" },
+  { name: "Whatsapp", href: "https://chat.whatsapp.com/ImuE8zaJQXxARov9anUr7s" },
+  { name: "Facebook", href: "https://www.facebook.com/profile.php?id=61572036539747" },
+  { name: "Phone (Dr. Hassan Okasha): 015 5915 3143", href: "tel:+201559153143" },
 ];
 
 export function FooterSection() {
   return (
-    <footer className="relative border-t border-foreground/10">
+    <footer id="footer" className="relative border-t border-foreground/10">
       {/* Animated wave background */}
       <div className="absolute inset-0 h-64 opacity-20 pointer-events-none overflow-hidden">
         <AnimatedWave />
@@ -59,12 +55,14 @@ export function FooterSection() {
               </p>
 
               {/* Social Links */}
-              <div className="flex gap-6">
-                {socialLinks.map((link) => (
+              <div className="grid grid-cols-3 gap-x-6 gap-y-3">
+                {socialLinks.map((link, index) => (
                   <a
                     key={link.name}
                     href={link.href}
-                    className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 group"
+                    className={`text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 group ${
+                      index === 3 ? "col-span-3" : ""
+                    }`}
                   >
                     {link.name}
                     <ArrowUpRight className="w-3 h-3 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
