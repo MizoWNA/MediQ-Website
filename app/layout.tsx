@@ -22,7 +22,7 @@ const jetbrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: 'MediQ - Platform to Learn',
-  description: 'The creative platform for teams who ship. Build, deploy, and scale with unprecedented velocity.',
+  description: 'The platform for Doctors of the future.',
   generator: 'v0.app',
 }
 
