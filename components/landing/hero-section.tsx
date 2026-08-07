@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import { AnimatedSphere } from "./animated-sphere";
 
-const words = ["notes", "mindmaps", "explainations", "mentroship"];
+const words = ["notes", "mindmaps", "explainations", "mentorship"];
 
 export function HeroSection() {
   const [isVisible, setIsVisible] = useState(false);
@@ -30,29 +30,51 @@ export function HeroSection() {
       </div>
       
       {/* Subtle grid lines */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-30">
-        {[...Array(8)].map((_, i) => (
+      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-50">
+      {[...Array(8)].map((_, i) => {
+        const isAccent = i === 1 || i === 5;
+        const isBlue = i === 1;
+
+        return (
           <div
             key={`h-${i}`}
-            className="absolute h-px bg-foreground/10"
+            className="absolute h-px"
             style={{
               top: `${12.5 * (i + 1)}%`,
               left: 0,
               right: 0,
+              backgroundColor: isAccent
+                ? isBlue
+                  ? "var(--mediq-blue)"
+                  : "var(--mediq-green)"
+                : "currentColor",
+              opacity: isAccent ? 0.16 : 0.1,
             }}
           />
-        ))}
-        {[...Array(12)].map((_, i) => (
+        );
+      })}
+      {[...Array(12)].map((_, i) => {
+        const isAccent = i === 3 || i === 9;
+        const isBlue = i === 3;
+
+        return (
           <div
             key={`v-${i}`}
-            className="absolute w-px bg-foreground/10"
+            className="absolute w-px"
             style={{
               left: `${8.33 * (i + 1)}%`,
               top: 0,
               bottom: 0,
+              backgroundColor: isAccent
+                ? isBlue
+                  ? "var(--mediq-blue)"
+                  : "var(--mediq-green)"
+                : "currentColor",
+              opacity: isAccent ? 0.16 : 0.1,
             }}
           />
-        ))}
+        );
+      })}
       </div>
       
       <div className="relative z-10 max-w-[1400px] mx-auto px-6 lg:px-12 py-32 lg:py-40">
@@ -63,7 +85,13 @@ export function HeroSection() {
           }`}
         >
           <span className="inline-flex items-center gap-3 text-sm font-mono text-muted-foreground">
-            <span className="w-8 h-px bg-foreground/30" />
+            <span
+  className="w-8 h-px"
+  style={{
+    background:
+      "linear-gradient(90deg, var(--mediq-blue), var(--mediq-green))",
+  }}
+/>
             The platform for modern doctors
           </span>
         </div>
@@ -79,10 +107,16 @@ export function HeroSection() {
             <span className="block">
               for{" "}
               <span className="relative inline-block">
-                <span 
-                  key={wordIndex}
-                  className="inline-flex"
-                >
+                <span
+  key={wordIndex}
+  className="inline-flex"
+  style={{
+    color:
+      wordIndex % 2 === 0
+        ? "var(--mediq-blue)"
+        : "var(--mediq-green)",
+  }}
+>
                   {words[wordIndex].split("").map((char, i) => (
                     <span
                       key={`${wordIndex}-${i}`}
@@ -95,7 +129,26 @@ export function HeroSection() {
                     </span>
                   ))}
                 </span>
-                <span className="absolute -bottom-2 left-0 right-0 h-3 bg-foreground/10" />
+<span
+  className="absolute -bottom-2 left-0 right-0 h-3 opacity-80"
+  style={{
+    background:
+      "linear-gradient(90deg, var(--mediq-blue), var(--mediq-green))",
+  }}
+/>
+<span
+  className="absolute -right-3 -top-2 w-2 h-2 rounded-full"
+  style={{
+    backgroundColor:
+      wordIndex % 2 === 0
+        ? "var(--mediq-blue)"
+        : "var(--mediq-green)",
+    boxShadow:
+      wordIndex % 2 === 0
+        ? "0 0 12px var(--mediq-blue)"
+        : "0 0 12px var(--mediq-green)",
+  }}
+/>
               </span>
             </span>
           </h1>

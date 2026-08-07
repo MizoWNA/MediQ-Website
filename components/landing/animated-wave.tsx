@@ -14,14 +14,20 @@ export function AnimatedWave() {
     if (!ctx) return;
 
     const chars = "·∘○◯◌●◉";
+
+    const blue = "#1f71a1";
+    const green = "#46a65c";
+
     let time = 0;
 
     const resize = () => {
       const dpr = window.devicePixelRatio || 1;
       const rect = canvas.getBoundingClientRect();
+
       canvas.width = rect.width * dpr;
       canvas.height = rect.height * dpr;
-      ctx.scale(dpr, dpr);
+
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     };
 
     resize();
@@ -29,6 +35,7 @@ export function AnimatedWave() {
 
     const render = () => {
       const rect = canvas.getBoundingClientRect();
+
       ctx.clearRect(0, 0, rect.width, rect.height);
 
       ctx.font = "14px monospace";
@@ -43,24 +50,75 @@ export function AnimatedWave() {
           const px = (x + 0.5) * (rect.width / cols);
           const py = (y + 0.5) * (rect.height / rows);
 
-          // Multiple wave interference
-          const wave1 = Math.sin(x * 0.2 + time * 2) * Math.cos(y * 0.15 + time);
-          const wave2 = Math.sin((x + y) * 0.1 + time * 1.5);
-          const wave3 = Math.cos(x * 0.1 - y * 0.1 + time * 0.8);
-          
-          const combined = (wave1 + wave2 + wave3) / 3;
-          const normalized = (combined + 1) / 2;
-          
-          const charIndex = Math.floor(normalized * (chars.length - 1));
-          const alpha = 0.15 + normalized * 0.5;
+          // Main wave interference
+          const wave1 =
+            Math.sin(x * 0.2 + time * 2) *
+            Math.cos(y * 0.15 + time);
 
-          ctx.fillStyle = `rgba(0, 0, 0, ${alpha})`;
+          const wave2 =
+            Math.sin((x + y) * 0.1 + time * 1.5);
+
+          const wave3 =
+            Math.cos(x * 0.1 - y * 0.1 + time * 0.8);
+
+          const combined =
+            (wave1 + wave2 + wave3) / 3;
+
+          const normalized =
+            (combined + 1) / 2;
+
+          // Character density follows the wave
+          const charIndex = Math.floor(
+            normalized * (chars.length - 1)
+          );
+
+          /*
+           * Create a slower-moving color field.
+           *
+           * This is intentionally separate from the main wave
+           * so the colors form broad flowing regions instead
+           * of rapidly flickering between blue and green.
+           */
+          const colorWave =
+            Math.sin(
+              x * 0.09 -
+                y * 0.045 +
+                time * 0.45
+            );
+
+          const colorNormalized =
+            (colorWave + 1) / 2;
+
+          /*
+           * Mostly broad blue/green regions with a soft
+           * transition between them.
+           */
+          const color =
+            colorNormalized > 0.5
+              ? green
+              : blue;
+
+          /*
+           * Stronger opacity than the original black wave.
+           *
+           * Small circles remain subtle while the larger
+           * circles become much more prominent.
+           */
+          const alpha =
+            0.90 + normalized * 0.9;
+
+          ctx.globalAlpha = Math.min(alpha, 0.95);
+          ctx.fillStyle = color;
+
           ctx.fillText(chars[charIndex], px, py);
         }
       }
 
+      ctx.globalAlpha = 1;
+
       time += 0.03;
-      frameRef.current = requestAnimationFrame(render);
+      frameRef.current =
+        requestAnimationFrame(render);
     };
 
     render();
@@ -79,3 +137,4 @@ export function AnimatedWave() {
     />
   );
 }
+

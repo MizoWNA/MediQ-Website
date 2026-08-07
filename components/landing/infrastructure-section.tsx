@@ -4,14 +4,14 @@ import { useEffect, useState, useRef } from "react";
 
 const locations = [
   { city: "Dr. Ahmed Alsharkawy", region: "Social Media Head & Mentor", latency: "Internship" },
-  { city: "Dr. Nour Farouk", region: "Mentor", latency: "Internship" },
+  { city: "Dr. Nour Farouk", region: "External Relations Head & Mentor", latency: "Internship" },
   { city: "Dr. Hassan Okasha", region: "CEO & Mentor", latency: "5th Year" },
   { city: "Dr. Ahmed Khaled", region: "Mentor", latency: "5th Year" },
   { city: "Dr. Hazem Alsaadani", region: "Mentor", latency: "5th Year"},
   { city: "Dr. Nour Abozeid", region: "Designer & Mentor", latency: "4th Year" },
   { city: "Dr. Yousef Mohammed", region: "Designer & Mentor", latency: "4th Year" },
   { city: "Dr. Nouran Khaled", region: "Designer & Mentor", latency: "4th Year" },
-  { city: "Dr. Moataz Alsharkawy", region: "Designer & Tech Head", latency: "2nd Year" },
+  { city: "Dr. Moataz Alsharkawy", region: "Designer & Technology Head", latency: "2nd Year" },
   { city: "Dr. Jana Ahmed", region: "Designer", latency: "2nd Year" },
   { city: "Dr. Khaled Abdelmeniem", region: "Media Productions Head", latency: "2nd Year" },
 ];
