@@ -21,7 +21,7 @@ const locations = [
   },
   {
     city: "Dr. Ahmed Khaled",
-    region: "Mentor",
+    region: "Designer & Mentor",
     latency: "5th Year",
   },
   {
@@ -30,7 +30,7 @@ const locations = [
     latency: "5th Year",
   },
   {
-    city: "Dr. Nour Abozeid",
+    city: "Dr. Nour Abuzeid",
     region: "Designer & Mentor",
     latency: "4th Year",
   },
@@ -46,17 +46,17 @@ const locations = [
   },
   {
     city: "Dr. Moataz Alsharkawy",
-    region: "Designer & Technology Head",
+    region: "Technology Head & Designer",
     latency: "2nd Year",
   },
   {
     city: "Dr. Jana Ahmed",
-    region: "Designer",
+    region: "Designer & Mentor",
     latency: "2nd Year",
   },
   {
     city: "Dr. Khaled Abdelmeniem",
-    region: "Media Productions Head",
+    region: "Editor, Designer & Mentor",
     latency: "2nd Year",
   },
 ];
@@ -251,11 +251,11 @@ export function InfrastructureSection() {
                   const isBlue = index % 2 === 0;
 
                   return (
-                    <div
-                      key={location.city}
-                      className={`px-6 py-5 border-b border-foreground/5 last:border-b-0 flex items-center justify-between transition-all duration-300 ${
-                        isActive ? "bg-foreground/[0.02]" : ""
-                      }`}
+                  <div
+                    key={location.city}
+                    className={`px-4 sm:px-6 py-4 sm:py-5 border-b border-foreground/5 last:border-b-0 flex items-center justify-between gap-3 transition-all duration-300 ${
+                      isActive ? "bg-foreground/[0.02]" : ""
+                    }`}
                       style={{
                         backgroundColor: isActive
                           ? isBlue
@@ -266,7 +266,7 @@ export function InfrastructureSection() {
                     >
                       {/* Member info */}
 
-                      <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-3 min-w-0">
                         {/* Status dot */}
 
                         <span
@@ -286,7 +286,7 @@ export function InfrastructureSection() {
                           }}
                         />
 
-                        <div>
+                        <div className="min-w-0">
                           <div className="font-medium">
                             {location.city}
                           </div>
@@ -299,7 +299,7 @@ export function InfrastructureSection() {
 
                       {/* Year / status */}
 
-                      <span className="font-mono text-sm text-muted-foreground">
+                      <span className="font-mono text-xs sm:text-sm text-muted-foreground shrink-0 whitespace-nowrap">
                         {location.latency}
                       </span>
                     </div>
