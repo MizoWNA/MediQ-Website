@@ -7,7 +7,7 @@ const SHOW_SUMMER_PLAN = true;
 
 const plans = [
   {
-    name: "Basic",
+    name: "Weekly",
     description: "For those wanting to test it out.",
     price: 350,
     period: "week",
@@ -22,7 +22,7 @@ const plans = [
     popular: false,
   },
   {
-    name: "Gold",
+    name: "Monthly",
     description: "For those who want the best offer.",
     price: 1050,
     period: "month",
