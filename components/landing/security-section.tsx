@@ -1,124 +1,235 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { Shield, Lock, Eye, FileCheck, MessageCircleMore, Camera, Send } from "lucide-react";
+import {
+  MessageCircleMore,
+  Camera,
+  Send,
+} from "lucide-react";
 
 const securityFeatures = [
   {
     icon: MessageCircleMore,
-    title: "Whatsapp Community",
-    description: "Our main communications channel regarding Mentorships & New Drops.",
+    title: "WhatsApp Community",
+    description:
+      "Our main communications channel regarding Mentorships & New Drops.",
   },
   {
     icon: Send,
     title: "Academic Telegram",
-    description: "Our hub & main archive for academic mindmaps, notes, and resources.",
+    description:
+      "Our hub & main archive for academic mindmaps, notes, and resources.",
   },
   {
     icon: Send,
     title: "Clinical Telegram",
-    description: "Our hub & main archive for clinical mindmaps, notes, and resources.",
+    description:
+      "Our hub & main archive for clinical mindmaps, notes, and resources.",
   },
   {
     icon: Camera,
     title: "Instagram Account",
-    description: "Our main comminication channel regarding Media Production releases & other social media related topics.",
+    description:
+      "Our main communication channel regarding Media Production releases & other social media related topics.",
   },
 ];
 
-// Set a custom link (`url`) for each channel below.
 const certifications = [
-  { name: "Academic Telegram", url: "https://t.me/mediqacademic" },
-  { name: "Clinical Telegram", url: "https://t.me/mediqclinical" },
-  { name: "Instagram Account", url: "https://www.instagram.com/mediq26_/" },
-  { name: "TikTok Account", url: "https://www.tiktok.com/@mediq26" },
-  { name: "Youtube Channel", url: "https://www.youtube.com/@MedIQ.1" },
-  { name: "Facebook Account", url: "https://www.facebook.com/profile.php?id=61572036539747" },
-  { name: "Whatsapp Community", url: "https://chat.whatsapp.com/ImuE8zaJQXxARov9anUr7s" },
+  {
+    name: "Academic Telegram",
+    url: "https://t.me/mediqacademic",
+  },
+  {
+    name: "Clinical Telegram",
+    url: "https://t.me/mediqclinical",
+  },
+  {
+    name: "Instagram Account",
+    url: "https://www.instagram.com/mediq26_/",
+  },
+  {
+    name: "TikTok Account",
+    url: "https://www.tiktok.com/@mediq26",
+  },
+  {
+    name: "YouTube Channel",
+    url: "https://www.youtube.com/@MedIQ.1",
+  },
+  {
+    name: "Facebook Account",
+    url: "https://www.facebook.com/profile.php?id=61572036539747",
+  },
+  {
+    name: "WhatsApp Community",
+    url: "https://chat.whatsapp.com/ImuE8zaJQXxARov9anUr7s",
+  },
 ];
 
 export function SecuritySection() {
   const [isVisible, setIsVisible] = useState(false);
-  const sectionRef = useRef<HTMLElement>(null);
+  const sectionRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting) setIsVisible(true);
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+        }
       },
       { threshold: 0.1 }
     );
 
-    if (sectionRef.current) observer.observe(sectionRef.current);
+    if (sectionRef.current) {
+      observer.observe(sectionRef.current);
+    }
+
     return () => observer.disconnect();
   }, []);
 
   return (
-    <section id="security" ref={sectionRef} className="relative py-24 lg:py-32 bg-foreground/[0.02] overflow-hidden">
+    <section
+      ref={sectionRef}
+      id="security"
+      className="py-24 lg:py-32"
+    >
       <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
-        <div className="grid lg:grid-cols-2 gap-16 lg:gap-24">
+        <div className="grid lg:grid-cols-2 gap-16 lg:gap-24 items-start">
+
           {/* Left: Content */}
           <div
             className={`transition-all duration-700 ${
-              isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
+              isVisible
+                ? "opacity-100 translate-y-0"
+                : "opacity-0 translate-y-8"
             }`}
           >
-            <span className="inline-flex items-center gap-3 text-sm font-mono text-muted-foreground mb-6">
-              <span className="w-8 h-px bg-foreground/30" />
-              Our Channels
-            </span>
-            <h2 className="text-4xl lg:text-6xl font-display tracking-tight mb-8">
+            {/* Section label */}
+            <div className="flex items-center gap-3 mb-6">
+              <span
+                className="w-8 h-px"
+                style={{
+                  background:
+                    "linear-gradient(90deg, var(--mediq-blue), var(--mediq-green))",
+                }}
+              />
+
+              <span className="font-mono text-xs tracking-widest uppercase text-muted-foreground">
+                Our Channels
+              </span>
+            </div>
+
+            <h2 className="text-4xl lg:text-6xl font-display tracking-tight leading-[0.95] mb-6">
               Join us Today;
               <br />
-              - It's Free!
+              <span className="text-muted-foreground">
+                It's Free!
+              </span>
             </h2>
-            <p className="text-xl text-muted-foreground leading-relaxed mb-12">
+
+            <p className="text-lg text-muted-foreground leading-relaxed max-w-xl mb-3">
               You can find us in all sorts of places across the internet.
-              <br />
-              Click on any of the Buttons below to find us:
             </p>
 
-            {/* Certifications */}
-            <div className="flex flex-wrap gap-3">
-              {certifications.map((cert, index) => (
-                <a
-                  key={cert.name}
-                  href={cert.url}
-                  className={`px-4 py-2 border border-foreground/10 text-sm font-mono transition-all duration-500 hover:border-foreground/40 hover:bg-foreground hover:text-background cursor-pointer ${
-                    isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
-                  }`}
-                  style={{ transitionDelay: `${index * 50 + 200}ms` }}
-                >
-                  {cert.name}
-                </a>
-              ))}
+            <p className="text-sm font-mono text-muted-foreground mb-8">
+              Click on any of the buttons below to find us.
+            </p>
+
+            {/* Channel Buttons */}
+            <div className="flex flex-wrap gap-2 sm:gap-3">
+              {certifications.map((cert, index) => {
+                const isBlue = index % 2 === 0;
+                const accent = isBlue
+                  ? "var(--mediq-blue)"
+                  : "var(--mediq-green)";
+
+                return (
+                  <a
+                    key={cert.name}
+                    href={cert.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`px-3 py-1.5 sm:px-4 sm:py-2 border text-xs sm:text-sm font-mono transition-all duration-300 cursor-pointer whitespace-nowrap ${
+                      isVisible
+                        ? "opacity-100 translate-y-0"
+                        : "opacity-0 translate-y-4"
+                    }`}
+                    style={{
+                      borderColor: `color-mix(in srgb, ${accent} 25%, transparent)`,
+                      color: accent,
+                      transitionDelay: `${index * 50 + 200}ms`,
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = accent;
+                      e.currentTarget.style.backgroundColor = `color-mix(in srgb, ${accent} 6%, transparent)`;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = `color-mix(in srgb, ${accent} 25%, transparent)`;
+                      e.currentTarget.style.backgroundColor = "transparent";
+                    }}
+                  >
+                    {cert.name}
+                  </a>
+                );
+              })}
             </div>
           </div>
 
           {/* Right: Features */}
-          <div className="grid gap-6">
-            {securityFeatures.map((feature, index) => (
-              <div
-                key={feature.title}
-                className={`p-6 border border-foreground/10 hover:border-foreground/20 transition-all duration-500 group ${
-                  isVisible ? "opacity-100 translate-x-0" : "opacity-0 translate-x-8"
-                }`}
-                style={{ transitionDelay: `${index * 100}ms` }}
-              >
-                <div className="flex items-start gap-4">
-                  <div className="shrink-0 w-10 h-10 flex items-center justify-center border border-foreground/10 group-hover:bg-foreground group-hover:text-background transition-colors duration-300">
-                    <feature.icon className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-medium mb-1 group-hover:translate-x-1 transition-transform duration-300">
-                      {feature.title}
-                    </h3>
-                    <p className="text-muted-foreground">{feature.description}</p>
+          <div className="grid gap-5">
+            {securityFeatures.map((feature, index) => {
+              const isBlue = index % 2 === 0;
+              const accent = isBlue
+                ? "var(--mediq-blue)"
+                : "var(--mediq-green)";
+
+              return (
+                <div
+                  key={feature.title}
+                  className={`p-6 border transition-all duration-500 group ${
+                    isVisible
+                      ? "opacity-100 translate-x-0"
+                      : "opacity-0 translate-x-8"
+                  }`}
+                  style={{
+                    borderColor: `color-mix(in srgb, ${accent} 18%, transparent)`,
+                    transitionDelay: `${index * 100}ms`,
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = `color-mix(in srgb, ${accent} 50%, transparent)`;
+                    e.currentTarget.style.backgroundColor = `color-mix(in srgb, ${accent} 3%, transparent)`;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = `color-mix(in srgb, ${accent} 18%, transparent)`;
+                    e.currentTarget.style.backgroundColor = "transparent";
+                  }}
+                >
+                  <div className="flex items-start gap-4">
+                    {/* Icon */}
+                    <div
+                      className="shrink-0 w-10 h-10 flex items-center justify-center border transition-all duration-300"
+                      style={{
+                        borderColor: `color-mix(in srgb, ${accent} 25%, transparent)`,
+                        color: accent,
+                      }}
+                    >
+                      <feature.icon className="w-5 h-5" />
+                    </div>
+
+                    <div>
+                      <h3 className="text-lg font-medium mb-1 transition-transform duration-300 group-hover:translate-x-1">
+                        {feature.title}
+                      </h3>
+
+                      <p className="text-muted-foreground leading-relaxed">
+                        {feature.description}
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
+
         </div>
       </div>
     </section>
