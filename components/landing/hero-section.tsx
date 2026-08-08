@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import { AnimatedSphere } from "./animated-sphere";
 
-const words = ["notes", "mindmaps", "explainations", "mentorship"];
+const words = ["notes", "mindmaps", "lessons", "mentorship"];
 
 export function HeroSection() {
   const [isVisible, setIsVisible] = useState(false);
@@ -104,9 +104,9 @@ export function HeroSection() {
             }`}
           >
             <span className="block">Your platform</span>
-            <span className="block">
-              for{" "}
-              <span className="relative inline-block">
+            <span className="block mt-3 sm:mt-2 lg:mt-3">
+            for{" "}
+            <span className="relative inline-block">
                 <span
   key={wordIndex}
   className="inline-flex"
@@ -130,14 +130,14 @@ export function HeroSection() {
                   ))}
                 </span>
 <span
-  className="absolute -bottom-2 left-0 right-0 h-3 opacity-80"
+  className="absolute -bottom-1 lg:-bottom-2 left-0 right-0 h-[3px] lg:h-2 opacity-80"
   style={{
     background:
       "linear-gradient(90deg, var(--mediq-blue), var(--mediq-green))",
   }}
 />
 <span
-  className="absolute -right-3 -top-2 w-2 h-2 rounded-full"
+  className="absolute -right-2 lg:-right-3 -top-1.5 lg:-top-2 w-1.5 h-1.5 lg:w-2 lg:h-2 rounded-full"
   style={{
     backgroundColor:
       wordIndex % 2 === 0
@@ -145,7 +145,7 @@ export function HeroSection() {
         : "var(--mediq-green)",
     boxShadow:
       wordIndex % 2 === 0
-        ? "0 0 12px var(--mediq-blue)"
+        ? "0 0 8px var(--mediq-blue)"
         : "0 0 12px var(--mediq-green)",
   }}
 />
