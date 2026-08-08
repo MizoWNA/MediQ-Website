@@ -14,14 +14,18 @@ export function AnimatedTetrahedron() {
     if (!ctx) return;
 
     const chars = "░▒▓█▀▄▌▐│─┤├┴┬╭╮╰╯";
+    const colors = ["#1f71a1", "#46a65c"];
+
     let time = 0;
 
     const resize = () => {
       const dpr = window.devicePixelRatio || 1;
       const rect = canvas.getBoundingClientRect();
+
       canvas.width = rect.width * dpr;
       canvas.height = rect.height * dpr;
-      ctx.scale(dpr, dpr);
+
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     };
 
     resize();
@@ -29,39 +33,52 @@ export function AnimatedTetrahedron() {
 
     // Tetrahedron vertices
     const vertices = [
-      { x: 0, y: 1, z: 0 },           // Top
-      { x: -0.943, y: -0.333, z: -0.5 }, // Bottom left back
-      { x: 0.943, y: -0.333, z: -0.5 },  // Bottom right back
-      { x: 0, y: -0.333, z: 1 },         // Bottom front
+      { x: 0, y: 1, z: 0 },
+      { x: -0.943, y: -0.333, z: -0.5 },
+      { x: 0.943, y: -0.333, z: -0.5 },
+      { x: 0, y: -0.333, z: 1 },
     ];
 
     // Edges connecting vertices
     const edges = [
-      [0, 1], [0, 2], [0, 3], // Top to bottom vertices
-      [1, 2], [2, 3], [3, 1], // Bottom triangle
+      [0, 1],
+      [0, 2],
+      [0, 3],
+      [1, 2],
+      [2, 3],
+      [3, 1],
     ];
 
-    // Faces for filling with points
+    // Faces
     const faces = [
-      [0, 1, 2], // Back face
-      [0, 2, 3], // Right face
-      [0, 3, 1], // Left face
-      [1, 3, 2], // Bottom face
+      [0, 1, 2],
+      [0, 2, 3],
+      [0, 3, 1],
+      [1, 3, 2],
     ];
 
-    const rotateY = (point: { x: number; y: number; z: number }, angle: number) => ({
+    const rotateY = (
+      point: { x: number; y: number; z: number },
+      angle: number
+    ) => ({
       x: point.x * Math.cos(angle) - point.z * Math.sin(angle),
       y: point.y,
       z: point.x * Math.sin(angle) + point.z * Math.cos(angle),
     });
 
-    const rotateX = (point: { x: number; y: number; z: number }, angle: number) => ({
+    const rotateX = (
+      point: { x: number; y: number; z: number },
+      angle: number
+    ) => ({
       x: point.x,
       y: point.y * Math.cos(angle) - point.z * Math.sin(angle),
       z: point.y * Math.sin(angle) + point.z * Math.cos(angle),
     });
 
-    const rotateZ = (point: { x: number; y: number; z: number }, angle: number) => ({
+    const rotateZ = (
+      point: { x: number; y: number; z: number },
+      angle: number
+    ) => ({
       x: point.x * Math.cos(angle) - point.y * Math.sin(angle),
       y: point.x * Math.sin(angle) + point.y * Math.cos(angle),
       z: point.z,
@@ -69,6 +86,7 @@ export function AnimatedTetrahedron() {
 
     const render = () => {
       const rect = canvas.getBoundingClientRect();
+
       ctx.clearRect(0, 0, rect.width, rect.height);
 
       const centerX = rect.width / 2;
@@ -79,12 +97,22 @@ export function AnimatedTetrahedron() {
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
 
-      const points: { x: number; y: number; z: number; char: string }[] = [];
+      const points: {
+        x: number;
+        y: number;
+        z: number;
+        char: string;
+        color: string;
+      }[] = [];
+
+      let pointIndex = 0;
 
       // Generate points along edges
-      edges.forEach(([i, j]) => {
+      edges.forEach(([i, j], edgeIndex) => {
         const v1 = vertices[i];
         const v2 = vertices[j];
+
+        let localIndex = 0;
 
         for (let t = 0; t <= 1; t += 0.05) {
           let point = {
@@ -99,26 +127,42 @@ export function AnimatedTetrahedron() {
           point = rotateZ(point, time * 0.2);
 
           const depth = (point.z + 1.5) / 3;
-          const charIndex = Math.floor(depth * (chars.length - 1));
+
+          const charIndex = Math.floor(
+            depth * (chars.length - 1)
+          );
+
+          // Alternate colors
+          const color =
+            (edgeIndex + localIndex) % 2 === 0
+              ? colors[0]
+              : colors[1];
 
           points.push({
             x: centerX + point.x * scale,
             y: centerY - point.y * scale,
             z: point.z,
             char: chars[Math.min(charIndex, chars.length - 1)],
+            color,
           });
+
+          pointIndex++;
+          localIndex++;
         }
       });
 
-      // Generate points on faces for a filled look
-      faces.forEach(([i, j, k]) => {
+      // Generate points on faces
+      faces.forEach(([i, j, k], faceIndex) => {
         const v1 = vertices[i];
         const v2 = vertices[j];
         const v3 = vertices[k];
 
+        let localIndex = 0;
+
         for (let u = 0; u <= 1; u += 0.12) {
           for (let v = 0; v <= 1 - u; v += 0.12) {
             const w = 1 - u - v;
+
             let point = {
               x: v1.x * u + v2.x * v + v3.x * w,
               y: v1.y * u + v2.y * v + v3.y * w,
@@ -131,14 +175,27 @@ export function AnimatedTetrahedron() {
             point = rotateZ(point, time * 0.2);
 
             const depth = (point.z + 1.5) / 3;
-            const charIndex = Math.floor(depth * (chars.length - 1));
+
+            const charIndex = Math.floor(
+              depth * (chars.length - 1)
+            );
+
+            // Alternate colors across each face
+            const color =
+              (faceIndex + localIndex) % 2 === 0
+                ? colors[0]
+                : colors[1];
 
             points.push({
               x: centerX + point.x * scale,
               y: centerY - point.y * scale,
               z: point.z,
               char: chars[Math.min(charIndex, chars.length - 1)],
+              color,
             });
+
+            pointIndex++;
+            localIndex++;
           }
         }
       });
@@ -148,10 +205,24 @@ export function AnimatedTetrahedron() {
 
       // Draw points
       points.forEach((point) => {
-        const alpha = 0.15 + (point.z + 1.5) * 0.25;
-        ctx.fillStyle = `rgba(0, 0, 0, ${Math.min(alpha, 0.9)})`;
-        ctx.fillText(point.char, point.x, point.y);
+        /*
+         * Keep the actual blue/green colors.
+         * Depth is represented through opacity only.
+         */
+        const alpha =
+          0.65 + (point.z + 1.5) * 0.175;
+
+        ctx.globalAlpha = Math.min(alpha, 1);
+        ctx.fillStyle = point.color;
+
+        ctx.fillText(
+          point.char,
+          point.x,
+          point.y
+        );
       });
+
+      ctx.globalAlpha = 1;
 
       time += 0.015;
       frameRef.current = requestAnimationFrame(render);

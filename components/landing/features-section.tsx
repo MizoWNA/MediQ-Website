@@ -465,7 +465,12 @@ export function FeaturesSection() {
         {/* Header */}
         <div className="mb-16 lg:mb-24">
           <span className="inline-flex items-center gap-3 text-sm font-mono text-muted-foreground mb-6">
-            <span className="w-8 h-px bg-foreground/30" />
+            <span
+  className="w-8 h-px"
+  style={{
+    background: `linear-gradient(90deg, #1f71a1, #46a65c)`,
+  }}
+/>
             What we offer
           </span>
           <h2

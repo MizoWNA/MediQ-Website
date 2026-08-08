@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState, useRef } from "react";
@@ -20,7 +21,7 @@ const integrations = [
 
 export function IntegrationsSection() {
   const [isVisible, setIsVisible] = useState(false);
-  const sectionRef = useRef<HTMLElement>(null);
+  const sectionRef = useRef(null);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -35,30 +36,46 @@ export function IntegrationsSection() {
   }, []);
 
   return (
-    <section id="integrations" ref={sectionRef} className="relative py-24 lg:py-32 overflow-hidden">
-      <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
-        {/* Header */}
-        <div
-          className={`text-center max-w-3xl mx-auto mb-16 lg:mb-24 transition-all duration-700 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
-            }`}
-        >
-          <span className="inline-flex items-center gap-3 text-sm font-mono text-muted-foreground mb-6">
-            <span className="w-8 h-px bg-foreground/30" />
-            Mindmaps
-            <span className="w-8 h-px bg-foreground/30" />
-          </span>
-          <h2 className="text-4xl lg:text-6xl font-display tracking-tight mb-6">
-            Here for everything
-            <br />
-            you will ever study.
-          </h2>
-          <p className="text-xl text-muted-foreground">
-            Hundreds of mindmaps and notes for any stage of your learning journey.
-            <br />
-            Click on one to check it out!
-          </p>
+    <section ref={sectionRef} className="relative py-32 lg:py-40">
+      {/* Header */}
+      <div
+        className={`text-center max-w-3xl mx-auto mb-16 lg:mb-24 transition-all duration-700 ${
+          isVisible
+            ? "opacity-100 translate-y-0"
+            : "opacity-0 translate-y-8"
+        }`}
+      >
+        <div className="flex items-center justify-center gap-3 text-sm font-mono text-muted-foreground mb-6">
+          <span
+            className="w-6 h-px"
+            style={{
+              background:
+                "linear-gradient(90deg, var(--mediq-blue), var(--mediq-green))",
+            }}
+          />
+          Mindmaps
+          <span
+            className="w-6 h-px"
+            style={{
+              background:
+                "linear-gradient(90deg, var(--mediq-green), var(--mediq-blue))",
+            }}
+          />
         </div>
 
+        <h2 className="text-5xl lg:text-7xl font-display leading-[0.95] tracking-tight mb-6">
+          Here for everything
+          <br />
+          you will ever study.
+        </h2>
+
+        <p className="text-lg lg:text-xl text-muted-foreground leading-relaxed">
+          Hundreds of mindmaps and notes for any stage of your learning journey.
+        </p>
+
+        <p className="text-sm font-mono text-muted-foreground mt-4">
+          Click on one to check it out!
+        </p>
       </div>
 
       {/* Full-width marquees outside container */}
@@ -66,18 +83,44 @@ export function IntegrationsSection() {
         <div className="flex gap-6 marquee">
           {[...Array(2)].map((_, setIndex) => (
             <div key={setIndex} className="flex gap-6 shrink-0">
-              {integrations.map((integration) => (
-                <a
-                  key={`${integration.name}-${setIndex}`}
-                  href={integration.url}
-                  className="shrink-0 block px-8 py-6 border border-foreground/10 hover:border-foreground/30 hover:bg-foreground/[0.02] transition-all duration-300 group cursor-pointer"
-                >
-                  <div className="text-lg font-medium group-hover:translate-x-1 transition-transform">
-                    {integration.name}
-                  </div>
-                  <div className="text-sm text-muted-foreground">{integration.category}</div>
-                </a>
-              ))}
+              {integrations.map((integration, index) => {
+                const isBlue = index % 2 === 0;
+                const accent = isBlue
+                  ? "var(--mediq-blue)"
+                  : "var(--mediq-green)";
+
+                return (
+                  <a
+                    key={`${integration.name}-${setIndex}`}
+                    href={integration.url}
+                    className="shrink-0 block px-8 py-6 border transition-all duration-300 group cursor-pointer"
+                    style={{
+                      borderColor: `color-mix(in srgb, ${accent} 18%, transparent)`,
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = accent;
+                      e.currentTarget.style.backgroundColor = `color-mix(in srgb, ${accent} 5%, transparent)`;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = `color-mix(in srgb, ${accent} 18%, transparent)`;
+                      e.currentTarget.style.backgroundColor = "transparent";
+                    }}
+                  >
+                    <div className="text-lg font-medium group-hover:translate-x-1 transition-transform">
+                      {integration.name}
+                    </div>
+
+                    <div
+                      className="text-sm transition-colors duration-300"
+                      style={{
+                        color: accent,
+                      }}
+                    >
+                      {integration.category}
+                    </div>
+                  </a>
+                );
+              })}
             </div>
           ))}
         </div>
@@ -88,18 +131,44 @@ export function IntegrationsSection() {
         <div className="flex gap-6 marquee-reverse">
           {[...Array(2)].map((_, setIndex) => (
             <div key={setIndex} className="flex gap-6 shrink-0">
-              {[...integrations].reverse().map((integration) => (
-                <a
-                  key={`${integration.name}-reverse-${setIndex}`}
-                  href={integration.url}
-                  className="shrink-0 block px-8 py-6 border border-foreground/10 hover:border-foreground/30 hover:bg-foreground/[0.02] transition-all duration-300 group cursor-pointer"
-                >
-                  <div className="text-lg font-medium group-hover:translate-x-1 transition-transform">
-                    {integration.name}
-                  </div>
-                  <div className="text-sm text-muted-foreground">{integration.category}</div>
-                </a>
-              ))}
+              {[...integrations].reverse().map((integration, index) => {
+                const isBlue = index % 2 === 0;
+                const accent = isBlue
+                  ? "var(--mediq-blue)"
+                  : "var(--mediq-green)";
+
+                return (
+                  <a
+                    key={`${integration.name}-reverse-${setIndex}`}
+                    href={integration.url}
+                    className="shrink-0 block px-8 py-6 border transition-all duration-300 group cursor-pointer"
+                    style={{
+                      borderColor: `color-mix(in srgb, ${accent} 18%, transparent)`,
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = accent;
+                      e.currentTarget.style.backgroundColor = `color-mix(in srgb, ${accent} 5%, transparent)`;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = `color-mix(in srgb, ${accent} 18%, transparent)`;
+                      e.currentTarget.style.backgroundColor = "transparent";
+                    }}
+                  >
+                    <div className="text-lg font-medium group-hover:translate-x-1 transition-transform">
+                      {integration.name}
+                    </div>
+
+                    <div
+                      className="text-sm transition-colors duration-300"
+                      style={{
+                        color: accent,
+                      }}
+                    >
+                      {integration.category}
+                    </div>
+                  </a>
+                );
+              })}
             </div>
           ))}
         </div>
