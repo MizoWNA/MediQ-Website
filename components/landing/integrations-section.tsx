@@ -93,7 +93,7 @@ export function IntegrationsSection() {
                   <a
                     key={`${integration.name}-${setIndex}`}
                     href={integration.url}
-                    className="shrink-0 block px-8 py-6 border transition-all duration-300 group cursor-pointer"
+                    className="shrink-0 block px-4 py-3 sm:px-8 sm:py-6 border transition-all duration-300 group cursor-pointer"
                     style={{
                       borderColor: `color-mix(in srgb, ${accent} 18%, transparent)`,
                     }}
@@ -106,7 +106,7 @@ export function IntegrationsSection() {
                       e.currentTarget.style.backgroundColor = "transparent";
                     }}
                   >
-                    <div className="text-lg font-medium group-hover:translate-x-1 transition-transform">
+                    <div className="text-sm sm:text-lg font-medium group-hover:translate-x-1 transition-transform">
                       {integration.name}
                     </div>
 
@@ -141,7 +141,7 @@ export function IntegrationsSection() {
                   <a
                     key={`${integration.name}-reverse-${setIndex}`}
                     href={integration.url}
-                    className="shrink-0 block px-8 py-6 border transition-all duration-300 group cursor-pointer"
+                    className="shrink-0 block px-4 py-3 sm:px-8 sm:py-6 border transition-all duration-300 group cursor-pointer"
                     style={{
                       borderColor: `color-mix(in srgb, ${accent} 18%, transparent)`,
                     }}
@@ -154,7 +154,7 @@ export function IntegrationsSection() {
                       e.currentTarget.style.backgroundColor = "transparent";
                     }}
                   >
-                    <div className="text-lg font-medium group-hover:translate-x-1 transition-transform">
+                    <div className="text-sm sm:text-lg font-medium group-hover:translate-x-1 transition-transform">
                       {integration.name}
                     </div>
 

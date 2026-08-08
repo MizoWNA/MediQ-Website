@@ -47,7 +47,7 @@ export function CtaSection() {
           <div 
             className="absolute inset-0 opacity-10 pointer-events-none transition-opacity duration-300"
             style={{
-              background: `radial-gradient(600px circle at ${mousePosition.x}% ${mousePosition.y}%, rgba(0,0,0,0.15), transparent 40%)`
+              background: `radial-gradient(600px circle at ${mousePosition.x}% ${mousePosition.y}%, rgba(59,130,246,0.12), transparent 40%)`
             }}
           />
           
@@ -71,7 +71,7 @@ export function CtaSection() {
                   
                   <Button
                     size="lg"
-                    className="bg-foreground hover:bg-foreground/90 text-background px-8 h-14 text-base rounded-full group"
+                    className="bg-blue-500 hover:bg-blue-600 text-white px-8 h-14 text-base rounded-full group"
                     onClick={() => window.open("https://forms.gle/18KshEMPAuw6mUAc6", "_blank")}
                   >
                     Apply for Mentorship
@@ -81,7 +81,7 @@ export function CtaSection() {
                   <Button
                     size="lg"
                     variant="outline"
-                    className="h-14 px-8 text-base rounded-full border-foreground/20 hover:bg-foreground/5"
+                    className="h-14 px-8 text-base rounded-full border-green-500/30 text-green-600 hover:bg-green-500/10 hover:border-green-500/50"
                     onClick={() => window.open("https://forms.gle/6eYVutPqRsydLHQf6", "_blank")}
                   >
                     Join our Team
@@ -103,8 +103,8 @@ export function CtaSection() {
           </div>
 
           {/* Decorative corner */}
-          <div className="absolute top-0 right-0 w-32 h-32 border-b border-l border-foreground/10" />
-          <div className="absolute bottom-0 left-0 w-32 h-32 border-t border-r border-foreground/10" />
+          <div className="absolute top-0 right-0 w-32 h-32 border-b border-l border-blue-500/20" />
+          <div className="absolute bottom-0 left-0 w-32 h-32 border-t border-r border-green-500/20" />
         </div>
       </div>
     </section>

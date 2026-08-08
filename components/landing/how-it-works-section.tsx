@@ -7,7 +7,7 @@ const steps = [
   {
     number: "I",
     title: "Medicine Aside, ",
-    description: "We sit down with your favorite professors and ask them intersting questions about life, medicine, and occasionally football!",
+    description: "We sit down with your favorite professors and ask them interesting questions about life, medicine, and occasionally football!",
     image: "/media/step-1.png",
     link: "https://www.youtube.com/watch?v=OhS_e5ZPXHc",
   },

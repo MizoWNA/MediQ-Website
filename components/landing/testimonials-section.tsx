@@ -11,7 +11,7 @@ const testimonials = [
     metric: "Motivation Boosted 10X",
   },
   {
-    quote: "The month i spent in the Mentorship has probably been the most productive month of my life, I got more studying done in that month than in a year!",
+    quote: "The month i spent in the Mentorship has probably been the most productive month of my life, I will definitley resubscribe.",
     author: "Anonymous",
     role: "1st Year",
     company: "Kasr Al Ainy",
@@ -25,14 +25,14 @@ const testimonials = [
     metric: "Full Revision in 1 Week",
   },
   {
-    quote: "The courses I took with you guys saved my *** from failing, I don't know what i would've done without you.",
+    quote: "The courses I took with you guys totally saved me from failing 103 and 104, I don't know what i would've done without you.",
     author: "Anonymous",
     role: "1st Year",
     company: "Memphis University",
     metric: "Passed Year 1",
   },
   {
-    quote: "Thanks to you, I jumped from barely passing in 101 and 102, to getting an Excelent in 104! I never thought i'd be an A Student before.",
+    quote: "Thanks to you, I jumped from barely passing in 103, to getting an Excelent in 104! I never thought i'd be an A Student before.",
     author: "Anonymous",
     role: "2nd Year",
     company: "",
@@ -44,16 +44,18 @@ export function TestimonialsSection() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setIsAnimating(true);
-      setTimeout(() => {
-        setActiveIndex((prev) => (prev + 1) % testimonials.length);
-        setIsAnimating(false);
-      }, 300);
-    }, 5000);
-    return () => clearInterval(interval);
-  }, []);
+    useEffect(() => {
+      const interval = setInterval(() => {
+        setIsAnimating(true);
+
+        setTimeout(() => {
+          setActiveIndex((prev) => (prev + 1) % testimonials.length);
+          setIsAnimating(false);
+        }, 300);
+      }, 5000);
+
+      return () => clearInterval(interval);
+    }, [activeIndex]);
 
   const activeTestimonial = testimonials[activeIndex];
 
@@ -66,8 +68,13 @@ export function TestimonialsSection() {
             What people say
           </span>
           <div className="flex-1 h-px bg-foreground/10" />
-          <span className="font-mono text-xs text-muted-foreground">
-            {String(activeIndex + 1).padStart(2, "0")} / {String(testimonials.length).padStart(2, "0")}
+          <span className="font-mono text-xs">
+            <span className="text-blue-500">
+              {String(activeIndex + 1).padStart(2, "0")}
+            </span>
+            <span className="text-muted-foreground">
+              {" / "}{String(testimonials.length).padStart(2, "0")}
+            </span>
           </span>
         </div>
 
@@ -90,8 +97,8 @@ export function TestimonialsSection() {
                 isAnimating ? "opacity-0" : "opacity-100"
               }`}
             >
-              <div className="w-16 h-16 rounded-full bg-foreground/5 border border-foreground/10 flex items-center justify-center">
-                <span className="font-display text-2xl text-foreground">
+                <div className="w-16 h-16 rounded-full bg-blue-500/5 border border-blue-500/20 flex items-center justify-center">
+                <span className="font-display text-2xl text-blue-500">
                   {activeTestimonial.author.charAt(0)}
                 </span>
               </div>
@@ -107,14 +114,14 @@ export function TestimonialsSection() {
           {/* Metric Highlight */}
           <div className="lg:col-span-4 flex flex-col justify-center">
             <div
-              className={`p-8 border border-foreground/10 transition-all duration-300 ${
-                isAnimating ? "opacity-0 scale-95" : "opacity-100 scale-100"
-              }`}
-            >
-              <span className="font-mono text-xs tracking-widest text-muted-foreground uppercase block mb-4">
+  className={`p-8 border border-blue-500/20 bg-gradient-to-br from-blue-500/[0.04] via-transparent to-green-500/[0.04] transition-all duration-300 ${
+    isAnimating ? "opacity-0 scale-95" : "opacity-100 scale-100"
+  }`}
+>
+              <span className="font-mono text-xs tracking-widest text-green-600 uppercase block mb-4">
                 Key Result
               </span>
-              <p className="font-display text-3xl md:text-4xl text-foreground">
+              <p className="font-display text-3xl md:text-4xl text-blue-500">
                 {activeTestimonial.metric}
               </p>
             </div>
@@ -125,7 +132,10 @@ export function TestimonialsSection() {
                 <button
                   key={idx}
                   onClick={() => {
+                    if (idx === activeIndex) return;
+
                     setIsAnimating(true);
+
                     setTimeout(() => {
                       setActiveIndex(idx);
                       setIsAnimating(false);
@@ -133,8 +143,8 @@ export function TestimonialsSection() {
                   }}
                   className={`h-2 transition-all duration-300 ${
                     idx === activeIndex
-                      ? "w-8 bg-foreground"
-                      : "w-2 bg-foreground/20 hover:bg-foreground/40"
+                    ? "w-8 bg-blue-500"
+                    : "w-2 bg-foreground/20 hover:bg-green-500/60"
                   }`}
                 />
               ))}

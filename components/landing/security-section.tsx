@@ -22,7 +22,7 @@ const securityFeatures = [
   {
     icon: Camera,
     title: "Instagram Account",
-    description: "Our main comminication channel regarding Media Production releases & other social media related topics.",
+    description: "Our main communication channel regarding Media Production releases & other social media related topics.",
   },
 ];
 
@@ -79,12 +79,16 @@ export function SecuritySection() {
             </p>
 
             {/* Certifications */}
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-2 sm:gap-3">
               {certifications.map((cert, index) => (
                 <a
                   key={cert.name}
                   href={cert.url}
-                  className={`px-4 py-2 border border-foreground/10 text-sm font-mono transition-all duration-500 hover:border-foreground/40 hover:bg-foreground hover:text-background cursor-pointer ${
+                  className={`px-3 py-2 sm:px-4 sm:py-2 border text-xs sm:text-sm font-mono whitespace-nowrap transition-all duration-500 cursor-pointer ${
+                    index % 2 === 0
+                      ? "border-[#1f71a1]/30 text-[#1f71a1] hover:border-[#1f71a1] hover:bg-[#1f71a1] hover:text-white"
+                      : "border-[#46a65c]/30 text-[#46a65c] hover:border-[#46a65c] hover:bg-[#46a65c] hover:text-white"
+                  } ${
                     isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
                   }`}
                   style={{ transitionDelay: `${index * 50 + 200}ms` }}
@@ -100,13 +104,21 @@ export function SecuritySection() {
             {securityFeatures.map((feature, index) => (
               <div
                 key={feature.title}
-                className={`p-6 border border-foreground/10 hover:border-foreground/20 transition-all duration-500 group ${
+                className={`p-4 sm:p-6 border transition-all duration-500 group ${
+                  index % 2 === 0
+                    ? "border-[#1f71a1]/20 hover:border-[#1f71a1]/60 hover:bg-[#1f71a1]/[0.03]"
+                    : "border-[#46a65c]/20 hover:border-[#46a65c]/60 hover:bg-[#46a65c]/[0.03]"
+                } ${
                   isVisible ? "opacity-100 translate-x-0" : "opacity-0 translate-x-8"
                 }`}
                 style={{ transitionDelay: `${index * 100}ms` }}
               >
-                <div className="flex items-start gap-4">
-                  <div className="shrink-0 w-10 h-10 flex items-center justify-center border border-foreground/10 group-hover:bg-foreground group-hover:text-background transition-colors duration-300">
+                <div className="flex items-start gap-3 sm:gap-4">
+                  <div className={`shrink-0 w-10 h-10 flex items-center justify-center border transition-colors duration-300 ${
+  index % 2 === 0
+    ? "border-[#1f71a1]/30 group-hover:bg-[#1f71a1] group-hover:text-white"
+    : "border-[#46a65c]/30 group-hover:bg-[#46a65c] group-hover:text-white"
+}`}>
                     <feature.icon className="w-5 h-5" />
                   </div>
                   <div>

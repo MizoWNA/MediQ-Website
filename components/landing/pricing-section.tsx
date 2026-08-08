@@ -20,7 +20,7 @@ const plans = [
     popular: false,
   },
   {
-    name: "Gold",
+    name: "Monthly",
     description: "For those who want the best offer.",
     price: 1050,
     period: "month",
@@ -88,18 +88,21 @@ export function PricingSection() {
             <div
               key={plan.name}
               className={`relative p-8 lg:p-12 bg-background ${
-                plan.popular ? "md:-my-4 md:py-12 lg:py-16 border-2 border-foreground" : ""
+                plan.popular ? "md:-my-4 md:py-12 lg:py-16 border-2 border-[#46a65c]" : ""
               }`}
             >
               {plan.popular && (
-                <span className="absolute -top-3 left-8 px-3 py-1 bg-foreground text-primary-foreground text-xs font-mono uppercase tracking-widest">
-                  Most Popular
+<span className="absolute -top-3 left-8 px-3 py-1 bg-[#46a65c] text-white text-xs font-mono uppercase tracking-widest">                  Most Popular
                 </span>
               )}
 
               {/* Plan Header */}
               <div className="mb-8">
-                <span className="font-mono text-xs text-muted-foreground">
+                                <span
+                  className={`font-mono text-xs ${
+                    plan.popular ? "text-[#46a65c]" : "text-[#1f71a1]"
+                  }`}
+                >
                   {String(idx + 1).padStart(2, "0")}
                 </span>
                 <h3 className="font-display text-3xl text-foreground mt-2">{plan.name}</h3>
@@ -109,7 +112,7 @@ export function PricingSection() {
               {/* Price */}
               <div className="mb-8 pb-8 border-b border-foreground/10">
                 <div className="flex items-baseline gap-2">
-                  <span className="font-display text-5xl lg:text-6xl text-foreground">
+                  <span className="font-display text-5xl lg:text-6xl text-[#1f71a1]">
                     £ {plan.price}
                   </span>
                   <span className="text-muted-foreground">/{plan.period}</span>
@@ -120,8 +123,12 @@ export function PricingSection() {
               <ul className="space-y-4 mb-10">
                 {plan.features.map((feature) => (
                   <li key={feature} className="flex items-start gap-3">
-                    <Check className="w-4 h-4 text-foreground mt-0.5 shrink-0" />
-                    <span className="text-sm text-muted-foreground">{feature}</span>
+                  <Check
+                    className={`w-4 h-4 mt-0.5 shrink-0 ${
+                      plan.popular ? "text-[#46a65c]" : "text-[#1f71a1]"
+                    }`}
+                  />                    
+                  <span className="text-sm text-muted-foreground">{feature}</span>
                   </li>
                 ))}
               </ul>

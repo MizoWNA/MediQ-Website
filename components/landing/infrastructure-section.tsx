@@ -21,16 +21,16 @@ const locations = [
   },
   {
     city: "Dr. Ahmed Khaled",
-    region: "Mentor",
+    region: "Mentor & Designer",
     latency: "5th Year",
   },
   {
     city: "Dr. Hazem Alsaadani",
-    region: "Mentor",
+    region: "Finances Head & Mentor",
     latency: "5th Year",
   },
   {
-    city: "Dr. Nour Abozeid",
+    city: "Dr. Nour Abuzeid",
     region: "Designer & Mentor",
     latency: "4th Year",
   },
@@ -88,11 +88,11 @@ export function InfrastructureSection() {
   }, []);
 
   return (
-<section
-  id="infrastructure"
-  ref={sectionRef}
-  className="relative py-32 lg:py-40"
->
+    <section
+      id="infrastructure"
+      ref={sectionRef}
+      className="relative py-32 lg:py-40"
+    >
       <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
         <div className="grid lg:grid-cols-2 gap-16 lg:gap-24 items-center">
           {/* =========================================
@@ -100,11 +100,10 @@ export function InfrastructureSection() {
               ========================================= */}
 
           <div
-            className={`transition-all duration-700 ${
-              isVisible
+            className={`transition-all duration-700 ${isVisible
                 ? "opacity-100 translate-x-0"
                 : "opacity-0 -translate-x-8"
-            }`}
+              }`}
           >
             {/* Eyebrow */}
 
@@ -193,11 +192,10 @@ export function InfrastructureSection() {
               ========================================= */}
 
           <div
-            className={`transition-all duration-700 delay-200 ${
-              isVisible
+            className={`transition-all duration-700 delay-200 ${isVisible
                 ? "opacity-100 translate-x-0"
                 : "opacity-0 translate-x-8"
-            }`}
+              }`}
           >
             <div className="relative border border-foreground/10">
               {/* =========================================
@@ -253,9 +251,8 @@ export function InfrastructureSection() {
                   return (
                     <div
                       key={location.city}
-                      className={`px-6 py-5 border-b border-foreground/5 last:border-b-0 flex items-center justify-between transition-all duration-300 ${
-                        isActive ? "bg-foreground/[0.02]" : ""
-                      }`}
+                      className={`px-6 py-5 border-b border-foreground/5 last:border-b-0 flex items-center justify-between transition-all duration-300 ${isActive ? "bg-foreground/[0.02]" : ""
+                        }`}
                       style={{
                         backgroundColor: isActive
                           ? isBlue
