@@ -46,8 +46,7 @@ export function FooterSection() {
             {/* Brand Column */}
             <div className="col-span-2">
               <a href="#" className="inline-flex items-center gap-2 mb-6">
-                <span className="text-2xl font-display">MediQ</span>
-                <span className="text-xs text-muted-foreground font-mono">TM</span>
+                <span className="text-2xl font-display" style={{ fontFamily: "MediQLogo, sans-serif" }}>MediQ</span>
               </a>
 
               <p className="text-muted-foreground leading-relaxed mb-8 max-w-xs">
