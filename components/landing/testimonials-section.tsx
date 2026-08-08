@@ -116,8 +116,9 @@ export function TestimonialsSection() {
 
         {/* Main Quote */}
         <div className="grid lg:grid-cols-12 gap-12 lg:gap-20">
-          <div className="lg:col-span-8">
-            <blockquote
+      <div className="lg:col-span-8">
+        <div className="min-h-[300px] md:min-h-[260px] lg:min-h-[330px]">
+          <blockquote
               className={`transition-all duration-300 ${
                 isAnimating
                   ? "opacity-0 translate-y-4"
@@ -128,7 +129,7 @@ export function TestimonialsSection() {
                 "{activeTestimonial.quote}"
               </p>
             </blockquote>
-
+          </div>
             {/* Author */}
             <div
               className={`mt-12 flex items-center gap-6 transition-all duration-300 delay-100 ${
