@@ -66,9 +66,10 @@ export function Navigation() {
             <a
               href="#"
               onClick={closeMobileMenu}
-              className={`font-display tracking-tight transition-all duration-500 ${
-                isScrolled ? "text-xl" : "text-2xl"
-              }`}
+              className={`tracking-tight transition-all duration-500 ${
+    isScrolled ? "text-xl" : "text-2xl"
+  }`}
+  style={{ fontFamily: "MediQLogo, sans-serif" }}
             >
               MediQ
 
@@ -80,7 +81,7 @@ export function Navigation() {
                 }`}
                 style={{ color: "#1f71a1" }}
               >
-                TM
+                
               </span>
             </a>
 
@@ -161,6 +162,7 @@ export function Navigation() {
             href="#"
             onClick={closeMobileMenu}
             className="font-display text-2xl tracking-tight"
+            style={{ fontFamily: "MediQLogo, sans-serif" }}
           >
             MediQ
 
@@ -168,7 +170,7 @@ export function Navigation() {
               className="font-mono text-xs ml-0.5"
               style={{ color: "#1f71a1" }}
             >
-              TM
+              
             </span>
           </a>
 
