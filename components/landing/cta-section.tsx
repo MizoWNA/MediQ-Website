@@ -52,7 +52,7 @@ export function CtaSection() {
           />
           
           <div className="relative z-10 px-8 lg:px-16 py-16 lg:py-24">
-            <div className="flex flex-col lg:flex-row items-center justify-between gap-12">
+            <div className="flex flex-row items-center gap-2 sm:gap-4">
               {/* Left content */}
               <div className="flex-1">
                 <h2 className="text-4xl lg:text-7xl font-display tracking-tight mb-8 leading-[0.95]">
@@ -71,21 +71,49 @@ export function CtaSection() {
                   
                   <Button
                     size="lg"
-                    className="bg-foreground hover:bg-foreground/90 text-background px-8 h-14 text-base rounded-full group"
-                    onClick={() => window.open("https://forms.gle/18KshEMPAuw6mUAc6", "_blank")}
+                    className="relative overflow-hidden bg-foreground text-background hover:text-white px-4 sm:px-8 h-11 sm:h-14 text-xs sm:text-base rounded-full group whitespace-nowrap border-0"
+                    style={{
+                      boxShadow:
+                        "0 0 0 1px rgba(31,113,161,0.4), 0 0 0 2px rgba(70,166,92,0.18)",
+                    }}
+                    onClick={() =>
+                      window.open(
+                        "https://forms.gle/18KshEMPAuw6mUAc6",
+                        "_blank"
+                      )
+                    }
                   >
-                    Apply for Mentorship
-                    <ArrowRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" />
+                    <span
+                      className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                      style={{
+                        background:
+                          "linear-gradient(90deg, var(--mediq-blue), var(--mediq-green))",
+                      }}
+                    />
+
+                    <span className="relative z-10 flex items-center">
+                      Apply for Mentorship
+                      <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 ml-1.5 sm:ml-2 transition-transform group-hover:translate-x-1" />
+                    </span>
                   </Button>
-                  
+
                   <Button
-                    size="lg"
-                    variant="outline"
-                    className="h-14 px-8 text-base rounded-full border-foreground/20 hover:bg-foreground/5"
-                    onClick={() => window.open("https://forms.gle/6eYVutPqRsydLHQf6", "_blank")}
-                  >
-                    Join our Team
-                  </Button>
+                  size="lg"
+                  variant="outline"
+                  className="h-11 sm:h-14 px-4 sm:px-8 text-xs sm:text-base rounded-full whitespace-nowrap transition-all duration-300"
+                  style={{
+                    borderColor: "color-mix(in srgb, var(--mediq-green) 35%, transparent)",
+                    color: "var(--mediq-green)",
+                  }}
+                  onClick={() =>
+                    window.open(
+                      "https://forms.gle/6eYVutPqRsydLHQf6",
+                      "_blank"
+                    )
+                  }
+                >
+                  Join our Team
+                </Button>
                 </div>
 
                 <p className="text-sm text-muted-foreground mt-8 font-mono">
