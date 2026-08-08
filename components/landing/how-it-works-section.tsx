@@ -28,6 +28,9 @@ const steps = [
 ];
 
 export function HowItWorksSection() {
+  const BLUE = "#1f71a1";
+  const GREEN = "#46a65c";
+  
   const [activeStep, setActiveStep] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
   const sectionRef = useRef<HTMLDivElement>(null);
@@ -44,13 +47,13 @@ export function HowItWorksSection() {
     return () => observer.disconnect();
   }, []);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setActiveStep((prev) => (prev + 1) % steps.length);
-    }, 5000);
-    return () => clearInterval(interval);
-  }, []);
+useEffect(() => {
+  const timer = setTimeout(() => {
+    setActiveStep((prev) => (prev + 1) % steps.length);
+  }, 5000);
 
+  return () => clearTimeout(timer);
+}, [activeStep]);
   return (
     <section
       id="how-it-works"
@@ -58,23 +61,35 @@ export function HowItWorksSection() {
       className="relative py-24 lg:py-32 bg-foreground text-background overflow-hidden"
     >
       {/* Diagonal lines pattern */}
-      <div className="absolute inset-0 opacity-[0.03] pointer-events-none">
-        <div className="absolute inset-0" style={{
-          backgroundImage: `repeating-linear-gradient(
-            -45deg,
-            transparent,
-            transparent 40px,
-            currentColor 40px,
-            currentColor 41px
-          )`
-        }} />
-      </div>
+     <div
+  className="absolute inset-0 pointer-events-none"
+  style={{
+    backgroundImage: `
+      repeating-linear-gradient(
+        -45deg,
+        transparent,
+        transparent 40px,
+        ${BLUE}18 40px,
+        ${BLUE}18 41px,
+        transparent 41px,
+        transparent 80px,
+        ${GREEN}18 80px,
+        ${GREEN}18 81px
+      )
+    `,
+  }}
+/>
 
       <div className="relative z-10 max-w-[1400px] mx-auto px-6 lg:px-12">
         {/* Header */}
         <div className="mb-16 lg:mb-24">
           <span className="inline-flex items-center gap-3 text-sm font-mono text-background/50 mb-6">
-            <span className="w-8 h-px bg-background/30" />
+          <span
+            className="w-8 h-px"
+            style={{
+              background: `linear-gradient(90deg, ${BLUE}, ${GREEN})`,
+            }}
+          />
             MediQ Media
           </span>
           <h2
@@ -102,7 +117,19 @@ export function HowItWorksSection() {
                 }`}
               >
                 <div className="flex items-start gap-6">
-                  <span className="font-display text-3xl text-background/30">{step.number}</span>
+<span
+  className="font-display text-3xl transition-colors duration-300"
+  style={{
+    color:
+      activeStep === index
+        ? index % 2 === 0
+          ? BLUE
+          : GREEN
+        : "rgba(255,255,255,0.3)",
+  }}
+>
+  {step.number}
+</span>
                   <div className="flex-1">
                     <h3 className="text-2xl lg:text-3xl font-display mb-3 group-hover:translate-x-2 transition-transform duration-300">
                       {step.title}
@@ -114,10 +141,11 @@ export function HowItWorksSection() {
                     {/* Progress indicator */}
                     {activeStep === index && (
                       <div className="mt-4 h-px bg-background/20 overflow-hidden">
-                        <div 
-                          className="h-full bg-background w-0"
+                        <div
+                          className="h-full w-0"
                           style={{
-                            animation: 'progress 5s linear forwards'
+                            backgroundColor: index % 2 === 0 ? BLUE : GREEN,
+                            animation: "progress 5s linear forwards",
                           }}
                         />
                       </div>
@@ -142,7 +170,14 @@ export function HowItWorksSection() {
               />
               {/* Hover overlay */}
               <div className="absolute inset-0 bg-foreground/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                <span className="inline-flex items-center gap-2 text-sm font-mono text-background border border-background/40 px-4 py-2 backdrop-blur-sm">
+                <span
+  className="inline-flex items-center gap-2 text-sm font-mono text-background px-4 py-2 backdrop-blur-sm"
+  style={{
+    border: `1px solid ${
+      activeStep % 2 === 0 ? `${BLUE}99` : `${GREEN}99`
+    }`,
+  }}
+>
                   Watch
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
                     <path d="M7 17L17 7M17 7H7M17 7V17" />
