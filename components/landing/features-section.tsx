@@ -6,26 +6,34 @@ const features = [
   {
     number: "01",
     title: "Important Mindmaps",
-    description: "Mindmaps & Notes hand-crafted for students of all kinds, ranging from a Y1 student to a graduating clinical doctor.",
+    description:
+      "Mindmaps & Notes hand-crafted for students of all kinds, ranging from a Y1 student to a graduating clinical doctor.",
     visual: "deploy",
+    accent: "#1f71a1",
   },
   {
     number: "02",
     title: "Private Tutoring & Mentorship",
-    description: "Whether you need a professor to teach you 1-on-1 or just need a mentor to guide you, we have what you need.",
+    description:
+      "Whether you need a professor to teach you 1-on-1 or just need a mentor to guide you, we have what you need.",
     visual: "collab",
+    accent: "#46a65c",
   },
   {
     number: "03",
     title: "A Network of Professors",
-    description: "We've worked with and supplied many professors with professionally made mindmaps and materials, including giants like Dr. Galal.",
+    description:
+      "We've worked with and supplied many professors with professionally made mindmaps and materials, including giants like Dr. Galal.",
     visual: "ai",
+    accent: "#1f71a1",
   },
   {
     number: "04",
     title: "Medical Tools",
-    description: "We supply you with the highest-grade medical tools, like stethoscopes, sphygmomanometers, and suture kits.",
+    description:
+      "We supply you with the highest-grade medical tools, like stethoscopes, sphygmomanometers, and suture kits.",
     visual: "steth",
+    accent: "#46a65c",
   },
 ];
 
@@ -387,9 +395,15 @@ function AnimatedVisual({ type }: { type: string }) {
   }
 }
 
-function FeatureCard({ feature, index }: { feature: typeof features[0]; index: number }) {
+function FeatureCard({
+  feature,
+  index,
+}: {
+  feature: typeof features[0];
+  index: number;
+}) {
   const [isVisible, setIsVisible] = useState(false);
-  const cardRef = useRef<HTMLDivElement>(null);
+  const cardRef = useRef(null);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -406,39 +420,75 @@ function FeatureCard({ feature, index }: { feature: typeof features[0]; index: n
   return (
     <div
       ref={cardRef}
-      className={`group relative transition-all duration-700 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-12"
-        }`}
-      style={{ transitionDelay: `${index * 100}ms` }}
+      className={`group relative transition-all duration-700 ${
+        isVisible
+          ? "opacity-100 translate-y-0"
+          : "opacity-0 translate-y-12"
+      }`}
+      style={{
+        transitionDelay: `${index * 100}ms`,
+      }}
     >
-      <div className="flex flex-col lg:flex-row gap-8 lg:gap-16 py-12 lg:py-20 border-b border-foreground/10">
+      {/* Feature separator / accent */}
+      <div
+        className="h-px w-full mb-8 transition-all duration-500"
+        style={{
+          background: `linear-gradient(
+            90deg,
+            ${feature.accent}45,
+            transparent 70%
+          )`,
+        }}
+      />
+
+      <div className="flex items-start gap-6 lg:gap-10">
         {/* Number */}
-        <div className="shrink-0">
-          <span className="font-mono text-sm text-muted-foreground">{feature.number}</span>
+        <div
+          className="shrink-0 font-mono text-sm pt-2 transition-all duration-500"
+          style={{
+            color: feature.accent,
+          }}
+        >
+          {feature.number}
         </div>
 
         {/* Content */}
-        <div className="flex-1 grid lg:grid-cols-2 gap-8 items-center">
+        <div className="flex-1 grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
           <div>
-            <h3 className="text-3xl lg:text-4xl font-display mb-4 group-hover:translate-x-2 transition-transform duration-500">
+            <h3
+              className="text-3xl lg:text-4xl font-display mb-4 transition-all duration-500 group-hover:translate-x-2"
+              style={{
+                textShadow: `0 0 30px ${feature.accent}00`,
+              }}
+            >
               {feature.title}
             </h3>
-            <p className="text-lg text-muted-foreground leading-relaxed">
+
+            <p className="text-base lg:text-lg text-muted-foreground leading-relaxed max-w-xl">
               {feature.description}
             </p>
           </div>
 
           {/* Visual */}
           <div className="flex justify-center lg:justify-end">
-            <div className="w-48 h-40 text-foreground">
+            <div
+              className="w-40 h-36 lg:w-48 lg:h-40 transition-all duration-500 group-hover:scale-105"
+              style={{
+                color: feature.accent,
+                filter: `drop-shadow(0 0 12px ${feature.accent}18)`,
+              }}
+            >
               <AnimatedVisual type={feature.visual} />
             </div>
           </div>
         </div>
       </div>
+
+      {/* Hover accent */}
+
     </div>
   );
 }
-
 export function FeaturesSection() {
   const [isVisible, setIsVisible] = useState(false);
   const sectionRef = useRef<HTMLDivElement>(null);
@@ -463,26 +513,34 @@ export function FeaturesSection() {
     >
       <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
         {/* Header */}
-        <div className="mb-16 lg:mb-24">
-          <span className="inline-flex items-center gap-3 text-sm font-mono text-muted-foreground mb-6">
-            <span
-  className="w-8 h-px"
-  style={{
-    background: `linear-gradient(90deg, #1f71a1, #46a65c)`,
-  }}
-/>
-            What we offer
-          </span>
-          <h2
-            className={`text-4xl lg:text-6xl font-display tracking-tight transition-all duration-700 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
-              }`}
-          >
-            Everything you need.
-            <br />
-            <span className="text-muted-foreground">At your fingertips.</span>
-          </h2>
-        </div>
+<div className="mb-16 lg:mb-24">
+  <div className="flex items-center gap-3 mb-6">
+    <span
+      className="w-8 h-px"
+      style={{
+        background: "linear-gradient(90deg, #1f71a1, #46a65c)",
+      }}
+    />
 
+    <span className="text-sm font-mono text-muted-foreground">
+      What we offer
+    </span>
+  </div>
+
+  <h2
+    className={`text-4xl lg:text-6xl font-display tracking-tight transition-all duration-700 ${
+      isVisible
+        ? "opacity-100 translate-y-0"
+        : "opacity-0 translate-y-4"
+    }`}
+  >
+    Everything you need.
+    <br />
+    <span className="text-muted-foreground">
+      At your fingertips.
+    </span>
+  </h2>
+</div>
         {/* Features List */}
         <div>
           {features.map((feature, index) => (
