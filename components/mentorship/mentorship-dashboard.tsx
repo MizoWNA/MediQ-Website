@@ -11,6 +11,8 @@ import {
   BookOpen,
   Clock3,
   UserRound,
+  CalendarClock,
+  Timer,
 } from "lucide-react";
 
 const days = [
@@ -98,6 +100,24 @@ const objectives = [
   },
 ];
 
+const studentStats = [
+  {
+    label: "Days Until Exam",
+    value: "42 days",
+    icon: CalendarClock,
+  },
+  {
+    label: "Days Left in Plan",
+    value: "18 days",
+    icon: Timer,
+  },
+  {
+    label: "Academic Year",
+    value: "Year 1",
+    icon: GraduationCap,
+  },
+];
+
 const colorClasses = {
   blue: {
     card: "bg-sky-500/10 border-sky-500/20",
@@ -128,14 +148,19 @@ export function MentorshipDashboard() {
           {/* Logo */}
           <div className="flex h-20 items-center border-b border-white/[0.07] px-6">
             <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-sm font-bold text-black">
-                M
+              <div className="flex h-9 w-9 items-center justify-center">
+                <img
+                  src="/mediq.svg"
+                  alt="MediQ"
+                  className="h-9 w-9 object-contain"
+                />
               </div>
 
               <div>
                 <div className="text-sm font-semibold tracking-tight">
                   MediQ
                 </div>
+
                 <div className="text-[11px] text-white/40">
                   Mentorship
                 </div>
@@ -160,7 +185,7 @@ export function MentorshipDashboard() {
           </div>
 
           {/* Mentor */}
-          <div className="px-5 py-6">
+          <div className="border-b border-white/[0.07] px-5 py-6">
             <div className="mb-3 flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-white/35">
               <GraduationCap className="h-3.5 w-3.5" />
               Mentor
@@ -174,6 +199,34 @@ export function MentorshipDashboard() {
               <div className="mt-1 text-xs text-white/35">
                 Academic Mentor
               </div>
+            </div>
+          </div>
+
+          {/* Student information */}
+          <div className="px-5 py-5">
+            <div className="space-y-0">
+              {studentStats.map((stat, index) => {
+                const Icon = stat.icon;
+
+                return (
+                  <div
+                    key={stat.label}
+                    className={`py-4 ${index !== studentStats.length - 1
+                        ? "border-b border-white/[0.06]"
+                        : ""
+                      }`}
+                  >
+                    <div className="flex items-center gap-2 text-[10px] font-medium uppercase tracking-wider text-white/30">
+                      <Icon className="h-3.5 w-3.5" />
+                      {stat.label}
+                    </div>
+
+                    <div className="mt-1.5 text-sm font-medium text-white/75">
+                      {stat.value}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -288,11 +341,10 @@ export function MentorshipDashboard() {
                     )}
 
                     <span
-                      className={`text-sm leading-5 ${
-                        objective.completed
+                      className={`text-sm leading-5 ${objective.completed
                           ? "text-white/35 line-through"
                           : "text-white/70"
-                      }`}
+                        }`}
                     >
                       {objective.text}
                     </span>
@@ -357,11 +409,10 @@ export function MentorshipDashboard() {
                         </div>
 
                         <div
-                          className={`mx-auto mt-2 flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold ${
-                            day.date === "24"
+                          className={`mx-auto mt-2 flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold ${day.date === "24"
                               ? "bg-white text-black"
                               : "text-white/65"
-                          }`}
+                            }`}
                         >
                           {day.date}
                         </div>
@@ -373,7 +424,7 @@ export function MentorshipDashboard() {
                           day.tasks.map((task, index) => {
                             const colors =
                               colorClasses[
-                                task.color as keyof typeof colorClasses
+                              task.color as keyof typeof colorClasses
                               ];
 
                             return (
