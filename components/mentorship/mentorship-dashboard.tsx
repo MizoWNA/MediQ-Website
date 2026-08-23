@@ -17,6 +17,20 @@ import {
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
+/*
+ * ================================================================
+ * TEMPORARY TEST AUTH
+ * ================================================================
+ *
+ * We are not using Supabase Auth yet.
+ * This UUID represents Ahmed, the student we're testing with.
+ *
+ * When real authentication is implemented, this will be replaced
+ * with the authenticated user's ID.
+ */
+
+const TEST_STUDENT_ID = "21a7364d-561b-4b5d-b419-b6c5d6492c63";
+
 type Profile = {
   id: string;
   username: string | null;
@@ -136,6 +150,7 @@ function formatWeekRange(start: Date, end: Date) {
 function formatDays(value: number) {
   if (value < 0) return "Passed";
   if (value === 0) return "Today";
+
   return `${value} ${value === 1 ? "day" : "days"}`;
 }
 
@@ -192,21 +207,21 @@ export function MentorshipDashboard() {
       setError(null);
 
       try {
-        const {
-          data: { user },
-          error: userError,
-        } = await supabase.auth.getUser();
+        /*
+         * ==========================================================
+         * TEMPORARY AUTH
+         * ==========================================================
+         *
+         * We are using Ahmed's UUID directly until authentication
+         * is implemented.
+         */
 
-        if (userError) {
-          throw userError;
-        }
-
-        if (!user) {
-          throw new Error("No authenticated user found.");
-        }
+        const studentId = TEST_STUDENT_ID;
 
         /*
+         * ==========================================================
          * PROFILE
+         * ==========================================================
          */
 
         const { data: profileData, error: profileError } =
@@ -215,21 +230,27 @@ export function MentorshipDashboard() {
             .select(
               "id, username, display_name, role, year, start_date, end_date, exam_date, mentor_id"
             )
-            .eq("id", user.id)
+            .eq("id", studentId)
             .single();
 
         if (profileError) {
-          throw profileError;
+          throw new Error(
+            `Profile query failed: ${profileError.message}`
+          );
+        }
+
+        if (!profileData) {
+          throw new Error("Student profile was not found.");
         }
 
         setProfile(profileData);
 
         /*
+         * ==========================================================
          * MENTOR
+         * ==========================================================
          *
-         * We fetch this separately instead of doing a nested
-         * Supabase relationship query. It's simpler and avoids
-         * relationship-name weirdness while we're building.
+         * We fetch the mentor separately for now.
          */
 
         if (profileData.mentor_id) {
@@ -246,34 +267,44 @@ export function MentorshipDashboard() {
                 mentorData.username ||
                 "Assigned Mentor"
             );
+          } else {
+            setMentorName("Assigned Mentor");
           }
         } else {
           setMentorName(null);
         }
 
         /*
+         * ==========================================================
          * OBJECTIVES
+         * ==========================================================
          *
-         * These are persistent and therefore have NO week filter.
+         * Objectives are persistent.
+         * There is intentionally NO week/date filter here.
          */
 
-        const { data: objectiveData, error: objectiveError } =
-          await supabase
-            .from("objectives")
-            .select("id, text, completed")
-            .eq("student_id", user.id)
-            .order("id");
+const { data: objectiveData, error: objectiveError } =
+  await supabase
+    .from("objectives")
+    .select("id, text, completed")
+    .eq("student_id", TEST_STUDENT_ID)
+    .order("id");
 
-        if (objectiveError) {
-          throw objectiveError;
-        }
+if (objectiveError) {
+  throw objectiveError;
+}
+
+setObjectives(Array.isArray(objectiveData) ? objectiveData : []);
+
 
         setObjectives(objectiveData ?? []);
 
         /*
+         * ==========================================================
          * TASKS
+         * ==========================================================
          *
-         * Tasks ARE date based, so only fetch the currently
+         * Tasks are date-based, so only load the currently
          * displayed week.
          */
 
@@ -283,7 +314,7 @@ export function MentorshipDashboard() {
             .select(
               "id, name, subject, type, student_id, completed, date"
             )
-            .eq("student_id", user.id)
+            .eq("student_id", studentId)
             .gte("date", formatDate(weekStart))
             .lte("date", formatDate(weekEnd))
             .order("date")
@@ -292,6 +323,8 @@ export function MentorshipDashboard() {
         if (taskError) {
           throw taskError;
         }
+
+        setTasks(Array.isArray(taskData) ? taskData : []);
 
         setTasks(taskData ?? []);
       } catch (err) {
@@ -322,7 +355,9 @@ export function MentorshipDashboard() {
       short: day.short,
       date: String(day.date.getDate()),
       isoDate: day.isoDate,
-      tasks: tasks.filter((task) => task.date === day.isoDate),
+      tasks: tasks.filter(
+        (task) => task.date === day.isoDate
+      ),
     }));
   }, [weekDays, tasks]);
 
@@ -335,28 +370,42 @@ export function MentorshipDashboard() {
   async function toggleObjective(objective: Objective) {
     const newCompleted = !objective.completed;
 
-    // Optimistic UI update
+    /*
+     * Optimistic UI update
+     */
+
     setObjectives((current) =>
       current.map((item) =>
         item.id === objective.id
-          ? { ...item, completed: newCompleted }
+          ? {
+              ...item,
+              completed: newCompleted,
+            }
           : item
       )
     );
 
     const { error } = await supabase
       .from("objectives")
-      .update({ completed: newCompleted })
+      .update({
+        completed: newCompleted,
+      })
       .eq("id", objective.id);
 
     if (error) {
       console.error("Objective update failed:", error);
 
-      // Revert if Supabase rejected the change
+      /*
+       * Revert if Supabase rejected the update
+       */
+
       setObjectives((current) =>
         current.map((item) =>
           item.id === objective.id
-            ? { ...item, completed: objective.completed }
+            ? {
+                ...item,
+                completed: objective.completed,
+              }
             : item
         )
       );
@@ -372,28 +421,42 @@ export function MentorshipDashboard() {
   async function toggleTask(task: Task) {
     const newCompleted = !task.completed;
 
-    // Optimistic UI update
+    /*
+     * Optimistic UI update
+     */
+
     setTasks((current) =>
       current.map((item) =>
         item.id === task.id
-          ? { ...item, completed: newCompleted }
+          ? {
+              ...item,
+              completed: newCompleted,
+            }
           : item
       )
     );
 
     const { error } = await supabase
       .from("tasks")
-      .update({ completed: newCompleted })
+      .update({
+        completed: newCompleted,
+      })
       .eq("id", task.id);
 
     if (error) {
       console.error("Task update failed:", error);
 
-      // Revert if Supabase rejected the change
+      /*
+       * Revert if Supabase rejected the update
+       */
+
       setTasks((current) =>
         current.map((item) =>
           item.id === task.id
-            ? { ...item, completed: task.completed }
+            ? {
+                ...item,
+                completed: task.completed,
+              }
             : item
         )
       );
@@ -402,7 +465,7 @@ export function MentorshipDashboard() {
 
   /*
    * ================================================================
-   * NAVIGATION
+   * WEEK NAVIGATION
    * ================================================================
    */
 
@@ -442,7 +505,10 @@ export function MentorshipDashboard() {
       )
     : null;
 
-  const completedTasks = tasks.filter((task) => task.completed).length;
+  const completedTasks = tasks.filter(
+    (task) => task.completed
+  ).length;
+
   const totalTasks = tasks.length;
 
   const completedObjectives = objectives.filter(
