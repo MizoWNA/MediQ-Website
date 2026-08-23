@@ -23,13 +23,20 @@ import { supabase } from "@/lib/supabase";
  * ================================================================
  *
  * We are not using Supabase Auth yet.
+ *
  * This UUID represents Ahmed, the student we're testing with.
  *
- * When real authentication is implemented, this will be replaced
- * with the authenticated user's ID.
+ * Later, this will be replaced with:
+ *
+ * const {
+ *   data: { user },
+ * } = await supabase.auth.getUser();
+ *
+ * const studentId = user.id;
  */
 
-const TEST_STUDENT_ID = "21a7364d-561b-4b5d-b419-b6c5d6492c63";
+const TEST_STUDENT_ID =
+  "21a7364d-561b-4b5d-b419-b6c5d6492c63";
 
 type Profile = {
   id: string;
@@ -197,7 +204,7 @@ export function MentorshipDashboard() {
 
   /*
    * ================================================================
-   * LOAD PROFILE + OBJECTIVES + TASKS
+   * LOAD DASHBOARD
    * ================================================================
    */
 
@@ -211,9 +218,6 @@ export function MentorshipDashboard() {
          * ==========================================================
          * TEMPORARY AUTH
          * ==========================================================
-         *
-         * We are using Ahmed's UUID directly until authentication
-         * is implemented.
          */
 
         const studentId = TEST_STUDENT_ID;
@@ -222,55 +226,96 @@ export function MentorshipDashboard() {
          * ==========================================================
          * PROFILE
          * ==========================================================
+         *
+         * Profile is OPTIONAL for now.
+         *
+         * This is intentional.
+         *
+         * Our tasks/objectives are already tied directly to Ahmed's
+         * UUID, so the dashboard shouldn't completely fail just
+         * because his profile row isn't there yet.
          */
 
-        const { data: profileData, error: profileError } =
-          await supabase
-            .from("profiles")
-            .select(
-              "id, username, display_name, role, year, start_date, end_date, exam_date, mentor_id"
-            )
-            .eq("id", studentId)
-            .single();
+        const {
+          data: profileData,
+          error: profileError,
+        } = await supabase
+          .from("profiles")
+          .select(
+            "id, username, display_name, role, year, start_date, end_date, exam_date, mentor_id"
+          )
+          .eq("id", studentId)
+          .maybeSingle();
 
         if (profileError) {
-          throw new Error(
-            `Profile query failed: ${profileError.message}`
+          console.warn(
+            "Profile query failed. Continuing without profile:",
+            profileError
           );
         }
 
-        if (!profileData) {
-          throw new Error("Student profile was not found.");
-        }
-
-        setProfile(profileData);
-
         /*
-         * ==========================================================
-         * MENTOR
-         * ==========================================================
+         * If a profile exists, use it.
          *
-         * We fetch the mentor separately for now.
+         * If it doesn't, create temporary display data so the
+         * dashboard can still function while we sort out the
+         * profiles table.
          */
 
-        if (profileData.mentor_id) {
-          const { data: mentorData, error: mentorError } =
-            await supabase
+        if (profileData) {
+          setProfile(profileData);
+
+          /*
+           * ========================================================
+           * MENTOR
+           * ========================================================
+           */
+
+          if (profileData.mentor_id) {
+            const {
+              data: mentorData,
+              error: mentorError,
+            } = await supabase
               .from("profiles")
               .select("display_name, username")
               .eq("id", profileData.mentor_id)
-              .single();
+              .maybeSingle();
 
-          if (!mentorError && mentorData) {
-            setMentorName(
-              mentorData.display_name ||
-                mentorData.username ||
-                "Assigned Mentor"
-            );
+            if (!mentorError && mentorData) {
+              setMentorName(
+                mentorData.display_name ||
+                  mentorData.username ||
+                  "Assigned Mentor"
+              );
+            } else {
+              setMentorName("Assigned Mentor");
+            }
           } else {
-            setMentorName("Assigned Mentor");
+            setMentorName(null);
           }
         } else {
+          /*
+           * ========================================================
+           * TEMPORARY PROFILE FALLBACK
+           * ========================================================
+           *
+           * This is NOT written to Supabase.
+           * It only keeps the UI functional while the profile row
+           * is missing.
+           */
+
+          setProfile({
+            id: studentId,
+            username: "ahmed",
+            display_name: "Ahmed",
+            role: "student",
+            year: null,
+            start_date: null,
+            end_date: null,
+            exam_date: null,
+            mentor_id: null,
+          });
+
           setMentorName(null);
         }
 
@@ -280,55 +325,69 @@ export function MentorshipDashboard() {
          * ==========================================================
          *
          * Objectives are persistent.
-         * There is intentionally NO week/date filter here.
+         * There is intentionally NO week/date filter.
          */
 
-const { data: objectiveData, error: objectiveError } =
-  await supabase
-    .from("objectives")
-    .select("id, text, completed")
-    .eq("student_id", TEST_STUDENT_ID)
-    .order("id");
+        const {
+          data: objectiveData,
+          error: objectiveError,
+        } = await supabase
+          .from("objectives")
+          .select("id, text, completed")
+          .eq("student_id", studentId)
+          .order("id");
 
-if (objectiveError) {
-  throw objectiveError;
-}
+        if (objectiveError) {
+          throw new Error(
+            `Objectives query failed: ${objectiveError.message}`
+          );
+        }
 
-setObjectives(Array.isArray(objectiveData) ? objectiveData : []);
-
-
-        setObjectives(objectiveData ?? []);
+        setObjectives(
+          Array.isArray(objectiveData)
+            ? objectiveData
+            : []
+        );
 
         /*
          * ==========================================================
          * TASKS
          * ==========================================================
          *
-         * Tasks are date-based, so only load the currently
-         * displayed week.
+         * Tasks are date-based.
+         * Only load the currently displayed week.
          */
 
-        const { data: taskData, error: taskError } =
-          await supabase
-            .from("tasks")
-            .select(
-              "id, name, subject, type, student_id, completed, date"
-            )
-            .eq("student_id", studentId)
-            .gte("date", formatDate(weekStart))
-            .lte("date", formatDate(weekEnd))
-            .order("date")
-            .order("created_at");
+        const {
+          data: taskData,
+          error: taskError,
+        } = await supabase
+          .from("tasks")
+          .select(
+            "id, name, subject, type, student_id, completed, date"
+          )
+          .eq("student_id", studentId)
+          .gte("date", formatDate(weekStart))
+          .lte("date", formatDate(weekEnd))
+          .order("date")
+          .order("created_at");
 
         if (taskError) {
-          throw taskError;
+          throw new Error(
+            `Tasks query failed: ${taskError.message}`
+          );
         }
 
-        setTasks(Array.isArray(taskData) ? taskData : []);
-
-        setTasks(taskData ?? []);
+        setTasks(
+          Array.isArray(taskData)
+            ? taskData
+            : []
+        );
       } catch (err) {
-        console.error("Dashboard loading error:", err);
+        console.error(
+          "Dashboard loading error:",
+          err
+        );
 
         setError(
           err instanceof Error
@@ -367,12 +426,10 @@ setObjectives(Array.isArray(objectiveData) ? objectiveData : []);
    * ================================================================
    */
 
-  async function toggleObjective(objective: Objective) {
+  async function toggleObjective(
+    objective: Objective
+  ) {
     const newCompleted = !objective.completed;
-
-    /*
-     * Optimistic UI update
-     */
 
     setObjectives((current) =>
       current.map((item) =>
@@ -393,18 +450,18 @@ setObjectives(Array.isArray(objectiveData) ? objectiveData : []);
       .eq("id", objective.id);
 
     if (error) {
-      console.error("Objective update failed:", error);
-
-      /*
-       * Revert if Supabase rejected the update
-       */
+      console.error(
+        "Objective update failed:",
+        error
+      );
 
       setObjectives((current) =>
         current.map((item) =>
           item.id === objective.id
             ? {
                 ...item,
-                completed: objective.completed,
+                completed:
+                  objective.completed,
               }
             : item
         )
@@ -420,10 +477,6 @@ setObjectives(Array.isArray(objectiveData) ? objectiveData : []);
 
   async function toggleTask(task: Task) {
     const newCompleted = !task.completed;
-
-    /*
-     * Optimistic UI update
-     */
 
     setTasks((current) =>
       current.map((item) =>
@@ -444,11 +497,10 @@ setObjectives(Array.isArray(objectiveData) ? objectiveData : []);
       .eq("id", task.id);
 
     if (error) {
-      console.error("Task update failed:", error);
-
-      /*
-       * Revert if Supabase rejected the update
-       */
+      console.error(
+        "Task update failed:",
+        error
+      );
 
       setTasks((current) =>
         current.map((item) =>
@@ -470,11 +522,15 @@ setObjectives(Array.isArray(objectiveData) ? objectiveData : []);
    */
 
   function previousWeek() {
-    setWeekStart((current) => addDays(current, -7));
+    setWeekStart((current) =>
+      addDays(current, -7)
+    );
   }
 
   function nextWeek() {
-    setWeekStart((current) => addDays(current, 7));
+    setWeekStart((current) =>
+      addDays(current, 7)
+    );
   }
 
   function goToToday() {
@@ -491,7 +547,9 @@ setObjectives(Array.isArray(objectiveData) ? objectiveData : []);
 
   const daysUntilExam = profile?.exam_date
     ? Math.ceil(
-        (new Date(profile.exam_date).getTime() -
+        (new Date(
+          profile.exam_date
+        ).getTime() -
           today.getTime()) /
           (1000 * 60 * 60 * 24)
       )
@@ -499,7 +557,9 @@ setObjectives(Array.isArray(objectiveData) ? objectiveData : []);
 
   const daysLeftInPlan = profile?.end_date
     ? Math.ceil(
-        (new Date(profile.end_date).getTime() -
+        (new Date(
+          profile.end_date
+        ).getTime() -
           today.getTime()) /
           (1000 * 60 * 60 * 24)
       )
@@ -511,11 +571,13 @@ setObjectives(Array.isArray(objectiveData) ? objectiveData : []);
 
   const totalTasks = tasks.length;
 
-  const completedObjectives = objectives.filter(
-    (objective) => objective.completed
-  ).length;
+  const completedObjectives =
+    objectives.filter(
+      (objective) => objective.completed
+    ).length;
 
-  const objectiveCount = objectives.length;
+  const objectiveCount =
+    objectives.length;
 
   const studentStats = [
     {
@@ -612,7 +674,8 @@ setObjectives(Array.isArray(objectiveData) ? objectiveData : []);
 
             <div className="rounded-xl border border-white/[0.07] bg-white/[0.025] p-4">
               <div className="text-sm font-medium">
-                {mentorName || "No mentor assigned"}
+                {mentorName ||
+                  "No mentor assigned"}
               </div>
 
               <div className="mt-1 text-xs text-white/35">
@@ -625,29 +688,32 @@ setObjectives(Array.isArray(objectiveData) ? objectiveData : []);
 
           <div className="px-5 py-5">
             <div className="space-y-0">
-              {studentStats.map((stat, index) => {
-                const Icon = stat.icon;
+              {studentStats.map(
+                (stat, index) => {
+                  const Icon = stat.icon;
 
-                return (
-                  <div
-                    key={stat.label}
-                    className={`py-4 ${
-                      index !== studentStats.length - 1
-                        ? "border-b border-white/[0.06]"
-                        : ""
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 text-[10px] font-medium uppercase tracking-wider text-white/30">
-                      <Icon className="h-3.5 w-3.5" />
-                      {stat.label}
-                    </div>
+                  return (
+                    <div
+                      key={stat.label}
+                      className={`py-4 ${
+                        index !==
+                        studentStats.length - 1
+                          ? "border-b border-white/[0.06]"
+                          : ""
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 text-[10px] font-medium uppercase tracking-wider text-white/30">
+                        <Icon className="h-3.5 w-3.5" />
+                        {stat.label}
+                      </div>
 
-                    <div className="mt-1.5 text-sm font-medium text-white/75">
-                      {stat.value}
+                      <div className="mt-1.5 text-sm font-medium text-white/75">
+                        {stat.value}
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                }
+              )}
             </div>
           </div>
 
@@ -673,14 +739,20 @@ setObjectives(Array.isArray(objectiveData) ? objectiveData : []);
                 style={{
                   width:
                     totalTasks > 0
-                      ? `${(completedTasks / totalTasks) * 100}%`
+                      ? `${
+                          (completedTasks /
+                            totalTasks) *
+                          100
+                        }%`
                       : "0%",
                 }}
               />
             </div>
 
             <div className="mt-2 flex justify-between text-[11px] text-white/30">
-              <span>{completedTasks} completed</span>
+              <span>
+                {completedTasks} completed
+              </span>
               <span>{totalTasks} total</span>
             </div>
           </div>
@@ -702,7 +774,10 @@ setObjectives(Array.isArray(objectiveData) ? objectiveData : []);
               </div>
 
               <h1 className="mt-1 text-xl font-semibold tracking-tight sm:text-2xl">
-                {formatWeekRange(weekStart, weekEnd)}
+                {formatWeekRange(
+                  weekStart,
+                  weekEnd
+                )}
               </h1>
             </div>
 
@@ -790,7 +865,8 @@ setObjectives(Array.isArray(objectiveData) ? objectiveData : []);
                   </div>
 
                   <span className="hidden text-xs text-white/30 sm:block">
-                    {completedObjectives} of {objectiveCount} complete
+                    {completedObjectives} of{" "}
+                    {objectiveCount} complete
                   </span>
                 </div>
 
@@ -800,32 +876,36 @@ setObjectives(Array.isArray(objectiveData) ? objectiveData : []);
                   </div>
                 ) : (
                   <div className="grid gap-px bg-white/[0.05] sm:grid-cols-2 lg:grid-cols-4">
-                    {objectives.map((objective) => (
-                      <button
-                        key={objective.id}
-                        type="button"
-                        onClick={() =>
-                          toggleObjective(objective)
-                        }
-                        className="flex items-start gap-3 bg-[#15181d] px-5 py-4 text-left transition hover:bg-white/[0.025]"
-                      >
-                        {objective.completed ? (
-                          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
-                        ) : (
-                          <Circle className="mt-0.5 h-4 w-4 shrink-0 text-white/25" />
-                        )}
-
-                        <span
-                          className={`text-sm leading-5 ${
-                            objective.completed
-                              ? "text-white/35 line-through"
-                              : "text-white/70"
-                          }`}
+                    {objectives.map(
+                      (objective) => (
+                        <button
+                          key={objective.id}
+                          type="button"
+                          onClick={() =>
+                            toggleObjective(
+                              objective
+                            )
+                          }
+                          className="flex items-start gap-3 bg-[#15181d] px-5 py-4 text-left transition hover:bg-white/[0.025]"
                         >
-                          {objective.text}
-                        </span>
-                      </button>
-                    ))}
+                          {objective.completed ? (
+                            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
+                          ) : (
+                            <Circle className="mt-0.5 h-4 w-4 shrink-0 text-white/25" />
+                          )}
+
+                          <span
+                            className={`text-sm leading-5 ${
+                              objective.completed
+                                ? "text-white/35 line-through"
+                                : "text-white/70"
+                            }`}
+                          >
+                            {objective.text}
+                          </span>
+                        </button>
+                      )
+                    )}
                   </div>
                 )}
               </section>
@@ -893,7 +973,8 @@ setObjectives(Array.isArray(objectiveData) ? objectiveData : []);
 
                           <div
                             className={`mx-auto mt-2 flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold ${
-                              day.isoDate === formatDate(today)
+                              day.isoDate ===
+                              formatDate(today)
                                 ? "bg-white text-black"
                                 : "text-white/65"
                             }`}
@@ -905,64 +986,77 @@ setObjectives(Array.isArray(objectiveData) ? objectiveData : []);
                         {/* Tasks */}
 
                         <div className="space-y-2 p-2.5">
-                          {day.tasks.length > 0 ? (
-                            day.tasks.map((task) => {
-                              const color =
-                                getSubjectColor(task.subject);
+                          {day.tasks.length >
+                          0 ? (
+                            day.tasks.map(
+                              (task) => {
+                                const color =
+                                  getSubjectColor(
+                                    task.subject
+                                  );
 
-                              const colors =
-                                colorClasses[color];
+                                const colors =
+                                  colorClasses[
+                                    color
+                                  ];
 
-                              return (
-                                <div
-                                  key={task.id}
-                                  className={`group rounded-xl border p-3 transition hover:bg-white/[0.04] ${colors.card}`}
-                                >
-                                  <div className="flex items-start gap-2.5">
+                                return (
+                                  <div
+                                    key={
+                                      task.id
+                                    }
+                                    className={`group rounded-xl border p-3 transition hover:bg-white/[0.04] ${colors.card}`}
+                                  >
+                                    <div className="flex items-start gap-2.5">
 
-                                    <span
-                                      className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${colors.dot}`}
-                                    />
+                                      <span
+                                        className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${colors.dot}`}
+                                      />
 
-                                    <div className="min-w-0 flex-1">
-                                      <div
-                                        className={`text-[10px] font-medium uppercase tracking-wide ${colors.text}`}
-                                      >
-                                        {task.subject ||
-                                          task.type ||
-                                          "Task"}
+                                      <div className="min-w-0 flex-1">
+                                        <div
+                                          className={`text-[10px] font-medium uppercase tracking-wide ${colors.text}`}
+                                        >
+                                          {task.subject ||
+                                            task.type ||
+                                            "Task"}
+                                        </div>
+
+                                        <div
+                                          className={`mt-1 text-xs font-medium leading-4 ${
+                                            task.completed
+                                              ? "text-white/30 line-through"
+                                              : "text-white/75"
+                                          }`}
+                                        >
+                                          {
+                                            task.name
+                                          }
+                                        </div>
                                       </div>
 
-                                      <div
-                                        className={`mt-1 text-xs font-medium leading-4 ${
-                                          task.completed
-                                            ? "text-white/30 line-through"
-                                            : "text-white/75"
-                                        }`}
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          toggleTask(
+                                            task
+                                          )
+                                        }
+                                        className="shrink-0"
+                                        aria-label={`Complete ${task.name}`}
                                       >
-                                        {task.name}
-                                      </div>
+                                        {task.completed ? (
+                                          <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                                        ) : (
+                                          <Circle className="h-4 w-4 text-white/20 transition hover:text-white/60" />
+                                        )}
+                                      </button>
+
                                     </div>
-
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        toggleTask(task)
-                                      }
-                                      className="shrink-0"
-                                      aria-label={`Complete ${task.name}`}
-                                    >
-                                      {task.completed ? (
-                                        <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                                      ) : (
-                                        <Circle className="h-4 w-4 text-white/20 transition hover:text-white/60" />
-                                      )}
-                                    </button>
-
                                   </div>
-                                </div>
-                              );
-                            })
+                                );
+                              }
+                            )
                           ) : (
                             <div className="flex min-h-[260px] items-center justify-center">
                               <div className="text-center">
