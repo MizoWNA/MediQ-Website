@@ -119,7 +119,7 @@ const colorClasses = {
 export function MentorshipDashboard() {
   return (
     <div className="min-h-screen bg-[#0b0d10] px-4 py-4 text-white sm:px-6 lg:px-8">
-      <div className="mx-auto flex min-h-[calc(100vh-2rem)] max-w-[1600px] overflow-hidden rounded-2xl border border-white/[0.07] bg-[#111419] shadow-2xl">
+      <div className="flex min-h-[calc(100vh-2rem)] w-full overflow-hidden rounded-2xl border border-white/[0.07] bg-[#111419] shadow-2xl">
         {/* ================================================================
             SIDEBAR
         ================================================================= */}
