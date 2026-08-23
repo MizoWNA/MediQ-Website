@@ -17,27 +17,6 @@ import {
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
-/*
- * ================================================================
- * TEMPORARY TEST AUTH
- * ================================================================
- *
- * We are not using Supabase Auth yet.
- *
- * This UUID represents Ahmed, the student we're testing with.
- *
- * Later, this will be replaced with:
- *
- * const {
- *   data: { user },
- * } = await supabase.auth.getUser();
- *
- * const studentId = user.id;
- */
-
-const TEST_STUDENT_ID =
-  "21a7364d-561b-4b5d-b419-b6c5d6492c63";
-
 type Profile = {
   id: string;
   username: string | null;
@@ -206,9 +185,25 @@ export function MentorshipDashboard() {
    * ================================================================
    * LOAD DASHBOARD
    * ================================================================
+   *
+   * Authentication is now handled properly through Supabase Auth.
+   *
+   * The authenticated user's UUID is used everywhere:
+   *
+   * auth.users.id
+   *      ↓
+   * profiles.id
+   *      ↓
+   * tasks.student_id
+   *      ↓
+   * objectives.student_id
+   *
+   * No hardcoded student UUID remains.
    */
 
   useEffect(() => {
+    let cancelled = false;
+
     async function loadDashboard() {
       setLoading(true);
       setError(null);
@@ -216,24 +211,36 @@ export function MentorshipDashboard() {
       try {
         /*
          * ==========================================================
-         * TEMPORARY AUTH
+         * AUTHENTICATED USER
          * ==========================================================
          */
 
-        const studentId = TEST_STUDENT_ID;
+        const {
+          data: { user },
+          error: authError,
+        } = await supabase.auth.getUser();
+
+        if (authError) {
+          throw new Error(
+            `Authentication check failed: ${authError.message}`
+          );
+        }
+
+        if (!user) {
+          throw new Error(
+            "You are not signed in. Please sign in to access your planner."
+          );
+        }
+
+        const studentId = user.id;
 
         /*
          * ==========================================================
          * PROFILE
          * ==========================================================
          *
-         * Profile is OPTIONAL for now.
-         *
-         * This is intentional.
-         *
-         * Our tasks/objectives are already tied directly to Ahmed's
-         * UUID, so the dashboard shouldn't completely fail just
-         * because his profile row isn't there yet.
+         * The profile is expected to use the same UUID as the
+         * authenticated Supabase user.
          */
 
         const {
@@ -248,75 +255,48 @@ export function MentorshipDashboard() {
           .maybeSingle();
 
         if (profileError) {
-          console.warn(
-            "Profile query failed. Continuing without profile:",
-            profileError
+          throw new Error(
+            `Profile query failed: ${profileError.message}`
           );
         }
 
+        if (!profileData) {
+          throw new Error(
+            "Your account is authenticated, but no student profile was found for this account."
+          );
+        }
+
+        if (cancelled) return;
+
+        setProfile(profileData);
+
         /*
-         * If a profile exists, use it.
-         *
-         * If it doesn't, create temporary display data so the
-         * dashboard can still function while we sort out the
-         * profiles table.
+         * ==========================================================
+         * MENTOR
+         * ==========================================================
          */
 
-        if (profileData) {
-          setProfile(profileData);
+        setMentorName(null);
 
-          /*
-           * ========================================================
-           * MENTOR
-           * ========================================================
-           */
+        if (profileData.mentor_id) {
+          const {
+            data: mentorData,
+            error: mentorError,
+          } = await supabase
+            .from("profiles")
+            .select("display_name, username")
+            .eq("id", profileData.mentor_id)
+            .maybeSingle();
 
-          if (profileData.mentor_id) {
-            const {
-              data: mentorData,
-              error: mentorError,
-            } = await supabase
-              .from("profiles")
-              .select("display_name, username")
-              .eq("id", profileData.mentor_id)
-              .maybeSingle();
-
-            if (!mentorError && mentorData) {
-              setMentorName(
-                mentorData.display_name ||
-                  mentorData.username ||
-                  "Assigned Mentor"
-              );
-            } else {
-              setMentorName("Assigned Mentor");
-            }
+          if (!mentorError && mentorData) {
+            setMentorName(
+              mentorData.display_name ||
+                mentorData.username ||
+                "Assigned Mentor"
+            );
           } else {
-            setMentorName(null);
+            setMentorName("Assigned Mentor");
           }
-        } else {
-          /*
-           * ========================================================
-           * TEMPORARY PROFILE FALLBACK
-           * ========================================================
-           *
-           * This is NOT written to Supabase.
-           * It only keeps the UI functional while the profile row
-           * is missing.
-           */
-
-          setProfile({
-            id: studentId,
-            username: "ahmed",
-            display_name: "Ahmed",
-            role: "student",
-            year: null,
-            start_date: null,
-            end_date: null,
-            exam_date: null,
-            mentor_id: null,
-          });
-
-          setMentorName(null);
         }
 
         /*
@@ -325,7 +305,7 @@ export function MentorshipDashboard() {
          * ==========================================================
          *
          * Objectives are persistent.
-         * There is intentionally NO week/date filter.
+         * There is intentionally NO week/date filter here.
          */
 
         const {
@@ -342,6 +322,8 @@ export function MentorshipDashboard() {
             `Objectives query failed: ${objectiveError.message}`
           );
         }
+
+        if (cancelled) return;
 
         setObjectives(
           Array.isArray(objectiveData)
@@ -378,12 +360,16 @@ export function MentorshipDashboard() {
           );
         }
 
+        if (cancelled) return;
+
         setTasks(
           Array.isArray(taskData)
             ? taskData
             : []
         );
       } catch (err) {
+        if (cancelled) return;
+
         console.error(
           "Dashboard loading error:",
           err
@@ -395,11 +381,17 @@ export function MentorshipDashboard() {
             : "Failed to load dashboard."
         );
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     }
 
     loadDashboard();
+
+    return () => {
+      cancelled = true;
+    };
   }, [weekStart, weekEnd]);
 
   /*
@@ -460,8 +452,7 @@ export function MentorshipDashboard() {
           item.id === objective.id
             ? {
                 ...item,
-                completed:
-                  objective.completed,
+                completed: objective.completed,
               }
             : item
         )
