@@ -16,6 +16,7 @@ import {
   Timer,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { useRouter } from "next/navigation";
 
 type Profile = {
   id: string;
@@ -120,7 +121,7 @@ function formatWeekRange(start: Date, end: Date) {
   });
 
   const endMonth = end.toLocaleDateString("en-US", {
-    month: "long",
+    month: "long",ahmed@med.iq
   });
 
   const startDay = start.getDate();
@@ -153,6 +154,7 @@ export function MentorshipDashboard() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
   /*
    * ================================================================
@@ -222,14 +224,13 @@ export function MentorshipDashboard() {
 
         if (authError) {
           throw new Error(
-            `Authentication check failed: ${authError.message}`
+            `Authentication failed: ${authError.message}`
           );
         }
 
         if (!user) {
-          throw new Error(
-            "You are not signed in. Please sign in to access your planner."
-          );
+          router.replace("/login");
+          return;
         }
 
         const studentId = user.id;
