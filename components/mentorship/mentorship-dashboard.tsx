@@ -292,8 +292,8 @@ export function MentorshipDashboard() {
           if (!mentorError && mentorData) {
             setMentorName(
               mentorData.display_name ||
-                mentorData.username ||
-                "Assigned Mentor"
+              mentorData.username ||
+              "Assigned Mentor"
             );
           } else {
             setMentorName("Assigned Mentor");
@@ -428,9 +428,9 @@ export function MentorshipDashboard() {
       current.map((item) =>
         item.id === objective.id
           ? {
-              ...item,
-              completed: newCompleted,
-            }
+            ...item,
+            completed: newCompleted,
+          }
           : item
       )
     );
@@ -452,9 +452,9 @@ export function MentorshipDashboard() {
         current.map((item) =>
           item.id === objective.id
             ? {
-                ...item,
-                completed: objective.completed,
-              }
+              ...item,
+              completed: objective.completed,
+            }
             : item
         )
       );
@@ -474,9 +474,9 @@ export function MentorshipDashboard() {
       current.map((item) =>
         item.id === task.id
           ? {
-              ...item,
-              completed: newCompleted,
-            }
+            ...item,
+            completed: newCompleted,
+          }
           : item
       )
     );
@@ -498,9 +498,9 @@ export function MentorshipDashboard() {
         current.map((item) =>
           item.id === task.id
             ? {
-                ...item,
-                completed: task.completed,
-              }
+              ...item,
+              completed: task.completed,
+            }
             : item
         )
       );
@@ -539,22 +539,22 @@ export function MentorshipDashboard() {
 
   const daysUntilExam = profile?.exam_date
     ? Math.ceil(
-        (new Date(
-          profile.exam_date
-        ).getTime() -
-          today.getTime()) /
-          (1000 * 60 * 60 * 24)
-      )
+      (new Date(
+        profile.exam_date
+      ).getTime() -
+        today.getTime()) /
+      (1000 * 60 * 60 * 24)
+    )
     : null;
 
   const daysLeftInPlan = profile?.end_date
     ? Math.ceil(
-        (new Date(
-          profile.end_date
-        ).getTime() -
-          today.getTime()) /
-          (1000 * 60 * 60 * 24)
-      )
+      (new Date(
+        profile.end_date
+      ).getTime() -
+        today.getTime()) /
+      (1000 * 60 * 60 * 24)
+    )
     : null;
 
   const completedTasks = tasks.filter(
@@ -687,12 +687,11 @@ export function MentorshipDashboard() {
                   return (
                     <div
                       key={stat.label}
-                      className={`py-4 ${
-                        index !==
-                        studentStats.length - 1
+                      className={`py-4 ${index !==
+                          studentStats.length - 1
                           ? "border-b border-white/[0.06]"
                           : ""
-                      }`}
+                        }`}
                     >
                       <div className="flex items-center gap-2 text-[10px] font-medium uppercase tracking-wider text-white/30">
                         <Icon className="h-3.5 w-3.5" />
@@ -731,11 +730,10 @@ export function MentorshipDashboard() {
                 style={{
                   width:
                     totalTasks > 0
-                      ? `${
-                          (completedTasks /
-                            totalTasks) *
-                          100
-                        }%`
+                      ? `${(completedTasks /
+                        totalTasks) *
+                      100
+                      }%`
                       : "0%",
                 }}
               />
@@ -887,11 +885,10 @@ export function MentorshipDashboard() {
                           )}
 
                           <span
-                            className={`text-sm leading-5 ${
-                              objective.completed
+                            className={`text-sm leading-5 ${objective.completed
                                 ? "text-white/35 line-through"
                                 : "text-white/70"
-                            }`}
+                              }`}
                           >
                             {objective.text}
                           </span>
@@ -964,12 +961,11 @@ export function MentorshipDashboard() {
                           </div>
 
                           <div
-                            className={`mx-auto mt-2 flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold ${
-                              day.isoDate ===
-                              formatDate(today)
+                            className={`mx-auto mt-2 flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold ${day.isoDate ===
+                                formatDate(today)
                                 ? "bg-white text-black"
                                 : "text-white/65"
-                            }`}
+                              }`}
                           >
                             {day.date}
                           </div>
@@ -979,7 +975,7 @@ export function MentorshipDashboard() {
 
                         <div className="space-y-2 p-2.5">
                           {day.tasks.length >
-                          0 ? (
+                            0 ? (
                             day.tasks.map(
                               (task) => {
                                 const color =
@@ -989,7 +985,7 @@ export function MentorshipDashboard() {
 
                                 const colors =
                                   colorClasses[
-                                    color
+                                  color
                                   ];
 
                                 return (
@@ -1015,11 +1011,10 @@ export function MentorshipDashboard() {
                                         </div>
 
                                         <div
-                                          className={`mt-1 text-xs font-medium leading-4 ${
-                                            task.completed
+                                          className={`mt-1 text-xs font-medium leading-4 ${task.completed
                                               ? "text-white/30 line-through"
                                               : "text-white/75"
-                                          }`}
+                                            }`}
                                         >
                                           {
                                             task.name
