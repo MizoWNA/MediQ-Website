@@ -121,7 +121,7 @@ function formatWeekRange(start: Date, end: Date) {
   });
 
   const endMonth = end.toLocaleDateString("en-US", {
-    month: "long",ahmed@med.iq
+    month: "long"
   });
 
   const startDay = start.getDate();
