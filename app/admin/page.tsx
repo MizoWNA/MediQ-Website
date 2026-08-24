@@ -23,6 +23,20 @@ type Mentor = {
   display_name: string | null;
 };
 
+type AdminUser = {
+  id: string;
+  username: string | null;
+  display_name: string | null;
+  role: "student" | "mentor";
+  year: number | null;
+  start_date: string | null;
+  end_date: string | null;
+  exam_date: string | null;
+  mentor_id: string | null;
+  mentor: Mentor | null;
+};
+
+
 type Role = "student" | "mentor";
 
 export default function AdminPage() {
@@ -55,6 +69,14 @@ export default function AdminPage() {
 
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+
+  const [userSearch, setUserSearch] = useState("");
+  const [userFilter, setUserFilter] = useState<
+    "all" | "student" | "mentor"
+  >("all");
 
   /*
    * ================================================================
@@ -158,6 +180,67 @@ export default function AdminPage() {
       cancelled = true;
     };
   }, [checkingAuth, role]);
+
+
+  /*
+ * ================================================================
+ * LOAD USERS
+ * ================================================================
+ */
+
+useEffect(() => {
+  if (checkingAuth) {
+    return;
+  }
+
+  let cancelled = false;
+
+  async function loadUsers() {
+    setLoadingUsers(true);
+
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) {
+        router.replace("/login");
+        return;
+      }
+
+      const response = await fetch("/api/admin/users", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          result?.error || "Failed to load users."
+        );
+      }
+
+      if (!cancelled) {
+        setUsers(result.users ?? []);
+      }
+    } catch (err) {
+      console.error("Failed to load users:", err);
+    } finally {
+      if (!cancelled) {
+        setLoadingUsers(false);
+      }
+    }
+  }
+
+  loadUsers();
+
+  return () => {
+    cancelled = true;
+  };
+}, [checkingAuth, router]);
 
   /*
    * ================================================================
@@ -340,6 +423,21 @@ export default function AdminPage() {
     username.trim().length > 0
       ? `${username.trim().toLowerCase()}@med.iq`
       : "username@med.iq";
+
+  const filteredUsers = users.filter((user) => {
+  const search = userSearch.trim().toLowerCase();
+
+  const matchesSearch =
+    !search ||
+    user.display_name?.toLowerCase().includes(search) ||
+    user.username?.toLowerCase().includes(search);
+
+  const matchesFilter =
+    userFilter === "all" ||
+    user.role === userFilter;
+
+  return matchesSearch && matchesFilter;
+});
 
   return (
     <main className="min-h-screen bg-[#0b0d10] text-white">
@@ -787,6 +885,168 @@ export default function AdminPage() {
               </button>
             </form>
           </section>
+
+{/* ==========================================================
+    USER LIST
+========================================================== */}
+
+<section className="overflow-hidden rounded-2xl border border-white/[0.07] bg-[#111419]">
+  {/* Header */}
+
+  <div className="border-b border-white/[0.07] px-5 py-5 sm:px-6">
+    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/[0.05]">
+            <Users className="h-4 w-4 text-white/65" />
+          </div>
+
+          <div>
+            <h2 className="text-sm font-semibold">
+              Users
+            </h2>
+
+            <p className="mt-0.5 text-xs text-white/35">
+              {users.length}{" "}
+              {users.length === 1 ? "account" : "accounts"}{" "}
+              created.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Search */}
+
+      <div className="relative sm:w-64">
+        <input
+          type="text"
+          value={userSearch}
+          onChange={(event) =>
+            setUserSearch(event.target.value)
+          }
+          placeholder="Search users..."
+          className="h-10 w-full rounded-xl border border-white/[0.08] bg-white/[0.025] px-3 text-sm text-white outline-none transition placeholder:text-white/20 hover:border-white/[0.12] focus:border-[#1f71a1]/40 focus:bg-white/[0.04] focus:ring-1 focus:ring-[#1f71a1]/10"
+        />
+      </div>
+    </div>
+
+    {/* Filters */}
+
+    <div className="mt-4 flex items-center gap-1 rounded-xl bg-white/[0.025] p-1">
+      {(
+        [
+          ["all", "All"],
+          ["student", "Students"],
+          ["mentor", "Mentors"],
+        ] as const
+      ).map(([value, label]) => (
+        <button
+          key={value}
+          type="button"
+          onClick={() => setUserFilter(value)}
+          className={`rounded-lg px-3 py-1.5 text-[11px] font-medium transition ${
+            userFilter === value
+              ? "bg-white/[0.08] text-white"
+              : "text-white/30 hover:text-white/60"
+          }`}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  </div>
+
+  {/* Users */}
+
+  <div className="divide-y divide-white/[0.05]">
+    {loadingUsers ? (
+      <div className="flex items-center justify-center px-6 py-12">
+        <Loader2 className="h-5 w-5 animate-spin text-white/30" />
+      </div>
+    ) : filteredUsers.length === 0 ? (
+      <div className="px-6 py-12 text-center">
+        <Users className="mx-auto h-6 w-6 text-white/15" />
+
+        <p className="mt-3 text-sm text-white/40">
+          {users.length === 0
+            ? "No users have been created yet."
+            : "No users match your search."}
+        </p>
+      </div>
+    ) : (
+      filteredUsers.map((user) => (
+        <div
+          key={user.id}
+          className="group flex items-center justify-between gap-4 px-5 py-4 transition hover:bg-white/[0.02] sm:px-6"
+        >
+          {/* User information */}
+
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="truncate text-sm font-medium text-white/80">
+                {user.display_name || "Unnamed User"}
+              </span>
+
+              <span
+                className={`rounded-md px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wider ${
+                  user.role === "student"
+                    ? "bg-[#1f71a1]/10 text-[#5aa9d8]"
+                    : "bg-[#46a65c]/10 text-[#72c681]"
+                }`}
+              >
+                {user.role}
+              </span>
+            </div>
+
+            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-white/25">
+              <span>
+                @{user.username || "unknown"}
+              </span>
+
+              {user.role === "student" &&
+                user.year && (
+                  <>
+                    <span className="text-white/10">
+                      •
+                    </span>
+
+                    <span>
+                      Year {user.year}
+                    </span>
+                  </>
+                )}
+
+              {user.role === "student" &&
+                user.mentor && (
+                  <>
+                    <span className="text-white/10">
+                      •
+                    </span>
+
+                    <span>
+                      Mentor:{" "}
+                      {user.mentor.display_name ||
+                        user.mentor.username ||
+                        "Unknown"}
+                    </span>
+                  </>
+                )}
+            </div>
+          </div>
+
+          {/* Manage */}
+
+          <button
+            type="button"
+            className="shrink-0 rounded-lg border border-white/[0.07] bg-white/[0.025] px-3 py-2 text-[11px] text-white/35 opacity-60 transition hover:border-white/[0.12] hover:bg-white/[0.05] hover:text-white group-hover:opacity-100"
+          >
+            Manage
+          </button>
+        </div>
+      ))
+    )}
+  </div>
+</section>
 
           {/* ==========================================================
               SIDEBAR
