@@ -146,7 +146,7 @@ export async function GET(request: NextRequest) {
      * ------------------------------------------------------------
      * Build query
      * ------------------------------------------------------------
- */
+     */
 
     let query = supabaseAdmin
       .from("profiles")
