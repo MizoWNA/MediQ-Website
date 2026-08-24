@@ -58,7 +58,7 @@ export default function LoginPage() {
         .maybeSingle();
 
       if (profile?.role === "admin") {
-        router.replace("/admin/users");
+        router.replace("/admin/");
         return;
       }
 

@@ -23,7 +23,7 @@ type Mentor = {
   display_name: string | null;
 };
 
-type Role = "student" | "mentor" | "admin";
+type Role = "student" | "mentor";
 
 export default function AdminPage() {
   const router = useRouter();
@@ -596,7 +596,6 @@ export default function AdminPage() {
                   >
                     <option value="student">Student</option>
                     <option value="mentor">Mentor</option>
-                    <option value="admin">Admin</option>
                   </select>
                 </div>
               </div>
