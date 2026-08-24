@@ -545,8 +545,6 @@ const weekDays = useMemo(() => {
    * ================================================================
    */
 
-const currentDate = today ?? new Date();
-
 const daysUntilExam =
   profile?.exam_date && today
     ? Math.ceil(
