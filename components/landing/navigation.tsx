@@ -34,7 +34,7 @@ export function Navigation() {
       }`}
     >
       <nav
-          className={`relative z-[60] mx-auto transition-all duration-500 ${
+        className={`relative z-[60] mx-auto transition-all duration-500 ${
           isScrolled || isMobileMenuOpen
             ? "bg-background/80 backdrop-blur-xl border border-foreground/10 rounded-2xl shadow-lg max-w-[1200px]"
             : "bg-transparent max-w-[1400px]"
@@ -48,7 +48,7 @@ export function Navigation() {
           {/* Logo */}
           <a
             className={`tracking-tight transition-all duration-500 ${
-            isScrolled ? "text-xl" : "text-2xl"
+              isScrolled ? "text-xl" : "text-2xl"
             }`}
             style={{ fontFamily: "MediQLogo, sans-serif" }}
           >
@@ -61,9 +61,7 @@ export function Navigation() {
               style={{
                 color: "#1f71a1",
               }}
-            >
-              
-            </span>
+            ></span>
           </a>
 
           {/* Desktop Navigation */}
@@ -100,23 +98,21 @@ export function Navigation() {
               </span>
             </a>
 
-          <Link href="/login">
-            <Button
-              size="sm"
-              className={`bg-foreground hover:bg-foreground/90 text-background rounded-full transition-all duration-500 ${
-                isScrolled ? "px-4 h-8 text-xs" : "px-6"
-              }`}
-              style={{
-                boxShadow:
-                  "0 0 0 1px rgba(31,113,161,0.35), 0 0 0 2px rgba(70,166,92,0.15)",
-              }}
-            >
-              Log Into Mentorship
-            </Button>
-          </Link>
+            <Link href="/login">
+              <Button
+                size="sm"
+                className={`bg-foreground hover:bg-foreground/90 text-background rounded-full transition-all duration-500 ${
+                  isScrolled ? "px-4 h-8 text-xs" : "px-6"
+                }`}
+                style={{
+                  boxShadow:
+                    "0 0 0 1px rgba(31,113,161,0.35), 0 0 0 2px rgba(70,166,92,0.15)",
+                }}
+              >
+                Log Into Mentorship
+              </Button>
+            </Link>
           </div>
-
-
 
           {/* Mobile Menu Button */}
           <button
@@ -205,16 +201,14 @@ export function Navigation() {
               transitionDelay: isMobileMenuOpen ? "550ms" : "0ms",
             }}
           >
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               {/* Find Us */}
               <a
                 href="#security"
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="h-16 rounded-2xl border border-[#1f71a1]/20 bg-[#1f71a1]/[0.04] flex flex-col items-center justify-center transition-all duration-300 hover:bg-[#1f71a1]/[0.09] hover:border-[#1f71a1]/40"
               >
-                <span className="text-sm font-medium">
-                  Find us
-                </span>
+                <span className="text-sm font-medium">Find us</span>
 
                 <span className="text-[10px] font-mono text-muted-foreground mt-1">
                   OUR CHANNELS
@@ -232,13 +226,28 @@ export function Navigation() {
                 className="h-16 rounded-2xl bg-[#46a65c] text-white flex flex-col items-center justify-center transition-all duration-300 hover:bg-[#3d914f]"
               >
                 <span className="text-sm font-medium">
-                  Apply for Mentorship
+                  Apply
                 </span>
 
                 <span className="text-[10px] font-mono text-white/60 mt-1">
-                  JOIN MEDIQ
+                  JOIN MENTORSHIP
                 </span>
               </button>
+
+              {/* Log In */}
+              <Link
+                href="/login"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="h-16 rounded-2xl bg-foreground text-background flex flex-col items-center justify-center transition-all duration-300 hover:bg-foreground/90"
+              >
+                <span className="text-sm font-medium">
+                  Log In
+                </span>
+
+                <span className="text-[10px] font-mono text-background/50 mt-1">
+                  MENTORSHIP
+                </span>
+              </Link>
             </div>
 
             {/* Tiny footer identity */}
