@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   CalendarDays,
+  Menu,
   ChevronLeft,
   ChevronRight,
   CheckCircle2,
@@ -22,6 +23,7 @@ import {
   Trash2,
   X,
   Save,
+  LogOut,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -137,6 +139,17 @@ function formatDays(value: number) {
 
 export function MentorDashboard() {
   const router = useRouter();
+
+  const [sidebarCollapsed, setSidebarCollapsed] =
+    useState(false);
+
+  const [mobileSidebarOpen, setMobileSidebarOpen] =
+    useState(false);
+
+  async function handleLogout() {
+  await supabase.auth.signOut();
+  router.replace("/login");
+}
 
   const [mentorProfile, setMentorProfile] =
     useState<Profile | null>(null);
@@ -1312,180 +1325,454 @@ export function MentorDashboard() {
 
   return (
     <div
-      className="min-h-screen bg-[#0b0d10] px-4 py-4 text-white sm:px-6 lg:px-8"
+      className="min-h-screen bg-[#0b0d10] px-2 py-2 text-white sm:px-6 sm:py-4 lg:px-8"
       onClick={() => {
         setOpenTaskMenu(null);
         setOpenObjectiveMenu(null);
       }}
     >
-      <div className="flex min-h-[calc(100vh-2rem)] w-full overflow-hidden rounded-2xl border border-white/[0.07] bg-[#111419] shadow-2xl">
+      <div className="relative flex min-h-[calc(100vh-2rem)] w-full overflow-hidden rounded-2xl border border-white/[0.07] bg-[#111419] shadow-2xl">
 
-        <aside className="flex w-[280px] shrink-0 flex-col border-r border-white/[0.07] bg-[#0d0f12]">
-          <div className="flex h-20 items-center border-b border-white/[0.07] px-6">
-            <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center">
-                <img
-                  src="/mediq.svg"
-                  alt="MediQ"
-                  className="h-9 w-9 object-contain"
+        <aside
+  className={`
+    absolute inset-y-0 left-0 z-40
+    flex flex-col
+    border-r border-white/[0.07]
+    bg-[#0d0f12]
+    shadow-2xl
+    transition-all duration-300 ease-in-out
+
+    lg:relative lg:z-auto lg:shadow-none
+
+    ${
+      mobileSidebarOpen
+        ? "translate-x-0"
+        : "-translate-x-full"
+    }
+
+    lg:translate-x-0
+
+    ${
+      sidebarCollapsed
+        ? "lg:w-[76px]"
+        : "lg:w-[280px]"
+    }
+
+    w-[280px]
+    shrink-0
+  `}
+>
+  {/* Sidebar header */}
+  <div
+    className={`
+      flex h-20 shrink-0 items-center
+      border-b border-white/[0.07]
+      ${
+        sidebarCollapsed
+          ? "lg:justify-center lg:px-3"
+          : "justify-between px-6"
+      }
+    `}
+  >
+    <div
+      className={`
+        flex items-center gap-3
+        ${
+          sidebarCollapsed
+            ? "lg:justify-center"
+            : ""
+        }
+      `}
+    >
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center">
+        <img
+          src="/mediq.svg"
+          alt="MediQ"
+          className="h-9 w-9 object-contain"
+        />
+      </div>
+
+      <div
+        className={`
+          min-w-0 transition-all duration-200
+          ${
+            sidebarCollapsed
+              ? "lg:hidden"
+              : ""
+          }
+        `}
+      >
+        <div className="text-sm font-semibold tracking-tight">
+          MediQ
+        </div>
+
+        <div className="text-[11px] text-white/40">
+          Mentorship
+        </div>
+      </div>
+    </div>
+
+    {/* Desktop collapse button */}
+    <button
+      type="button"
+      onClick={() =>
+        setSidebarCollapsed(
+          (current) => !current
+        )
+      }
+      className={`
+        hidden h-8 w-8 items-center justify-center
+        rounded-lg text-white/30
+        transition hover:bg-white/[0.06]
+        hover:text-white
+        lg:flex
+        ${
+          sidebarCollapsed
+            ? "lg:hidden"
+            : ""
+        }
+      `}
+      title="Collapse sidebar"
+    >
+      <ChevronLeft className="h-4 w-4" />
+    </button>
+
+    {/* Mobile close button */}
+    <button
+      type="button"
+      onClick={() =>
+        setMobileSidebarOpen(false)
+      }
+      className="flex h-8 w-8 items-center justify-center rounded-lg text-white/30 transition hover:bg-white/[0.06] hover:text-white lg:hidden"
+      title="Close sidebar"
+    >
+      <X className="h-4 w-4" />
+    </button>
+  </div>
+
+{/* Logout */}
+
+<div className="border-t border-white/[0.07] p-3">
+  <button
+    type="button"
+    onClick={handleLogout}
+    className={`group flex w-full items-center rounded-xl text-white/40 transition-all duration-200 hover:bg-rose-500/[0.06] hover:text-rose-300 ${
+      sidebarCollapsed
+        ? "justify-center px-0 py-2.5"
+        : "gap-3 px-3 py-2.5"
+    }`}
+    aria-label="Log Out"
+    title={sidebarCollapsed ? "Log Out" : undefined}
+  >
+    <LogOut className="h-4 w-4 shrink-0 transition-transform duration-200 group-hover:-translate-x-0.5" />
+
+    {!sidebarCollapsed && (
+      <span className="text-sm">
+        Log Out
+      </span>
+    )}
+  </button>
+</div>
+
+  {/* Collapsed desktop expand button */}
+  {sidebarCollapsed && (
+    <div className="hidden border-b border-white/[0.07] p-3 lg:block">
+      <button
+        type="button"
+        onClick={() =>
+          setSidebarCollapsed(false)
+        }
+        className="flex h-9 w-full items-center justify-center rounded-lg text-white/35 transition hover:bg-white/[0.06] hover:text-white"
+        title="Expand sidebar"
+      >
+        <ChevronRight className="h-4 w-4" />
+      </button>
+    </div>
+  )}
+
+  {/* Mentor information */}
+  <div
+    className={`
+      border-b border-white/[0.07]
+      px-5 py-5
+      ${
+        sidebarCollapsed
+          ? "lg:hidden"
+          : ""
+      }
+    `}
+  >
+    <div className="mb-2 flex items-center gap-2 text-[10px] font-medium uppercase tracking-wider text-white/30">
+      <UserRound className="h-3.5 w-3.5" />
+      Mentor
+    </div>
+
+    <div className="truncate text-lg font-semibold tracking-tight">
+      {mentorProfile?.display_name ||
+        mentorProfile?.username ||
+        "Mentor"}
+    </div>
+
+    <div className="mt-1 text-xs text-white/35">
+      Academic Mentor
+    </div>
+  </div>
+
+  {/* Students */}
+  <div className="min-h-0 flex-1 overflow-y-auto">
+    <div
+      className={`
+        flex items-center justify-between
+        px-5 pb-3 pt-5
+        ${
+          sidebarCollapsed
+            ? "lg:justify-center lg:px-3"
+            : ""
+        }
+      `}
+    >
+      <div className="flex items-center gap-2 text-[10px] font-medium uppercase tracking-wider text-white/30">
+        <Users className="h-3.5 w-3.5 shrink-0" />
+
+        <span
+          className={
+            sidebarCollapsed
+              ? "lg:hidden"
+              : ""
+          }
+        >
+          My Students
+        </span>
+      </div>
+
+      <span
+        className={`
+          text-[10px] text-white/25
+          ${
+            sidebarCollapsed
+              ? "lg:hidden"
+              : ""
+          }
+        `}
+      >
+        {students.length}
+      </span>
+    </div>
+
+    {students.length === 0 ? (
+      <div
+        className={`
+          px-5 py-8 text-center
+          ${
+            sidebarCollapsed
+              ? "lg:hidden"
+              : ""
+          }
+        `}
+      >
+        <Users className="mx-auto h-5 w-5 text-white/15" />
+
+        <div className="mt-3 text-xs text-white/30">
+          No students assigned yet.
+        </div>
+      </div>
+    ) : (
+      <div
+        className={`
+          space-y-1 pb-4
+          ${
+            sidebarCollapsed
+              ? "px-2"
+              : "px-2.5"
+          }
+        `}
+      >
+        {students.map((student) => {
+          const isSelected =
+            student.id === selectedStudentId;
+
+          const progress =
+            student.weeklyTasks > 0
+              ? (student.completedTasks /
+                  student.weeklyTasks) *
+                100
+              : 0;
+
+          return (
+            <button
+              key={student.id}
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+
+                setSelectedStudentId(
+                  student.id
+                );
+
+                // Close drawer after selecting
+                // a student on mobile.
+                setMobileSidebarOpen(false);
+              }}
+              className={`
+                w-full rounded-xl
+                text-left transition
+                ${
+                  sidebarCollapsed
+                    ? "lg:px-0 lg:py-3"
+                    : "px-3.5 py-3"
+                }
+                ${
+                  isSelected
+                    ? "bg-white/[0.07]"
+                    : "hover:bg-white/[0.035]"
+                }
+              `}
+            >
+              {/* Collapsed desktop version */}
+              <div
+                className={`
+                  hidden
+                  ${
+                    sidebarCollapsed
+                      ? "lg:flex"
+                      : ""
+                  }
+                  items-center justify-center
+                `}
+              >
+                <div
+                  className={`
+                    h-2.5 w-2.5 rounded-full
+                    ${
+                      progress === 100 &&
+                      student.weeklyTasks > 0
+                        ? "bg-emerald-400"
+                        : isSelected
+                          ? "bg-white/70"
+                          : "bg-white/20"
+                    }
+                  `}
                 />
               </div>
 
-              <div>
-                <div className="text-sm font-semibold tracking-tight">
-                  MediQ
-                </div>
+              {/* Expanded version */}
+              <div
+                className={`
+                  ${
+                    sidebarCollapsed
+                      ? "lg:hidden"
+                      : ""
+                  }
+                `}
+              >
+                <div className="flex items-start gap-3">
+                  <div
+                    className={`
+                      mt-1.5 h-2 w-2 shrink-0 rounded-full
+                      ${
+                        progress === 100 &&
+                        student.weeklyTasks > 0
+                          ? "bg-emerald-400"
+                          : isSelected
+                            ? "bg-white/70"
+                            : "bg-white/20"
+                      }
+                    `}
+                  />
 
-                <div className="text-[11px] text-white/40">
-                  Mentorship
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="border-b border-white/[0.07] px-5 py-5">
-            <div className="mb-2 flex items-center gap-2 text-[10px] font-medium uppercase tracking-wider text-white/30">
-              <UserRound className="h-3.5 w-3.5" />
-              Mentor
-            </div>
-
-            <div className="text-lg font-semibold tracking-tight">
-              {mentorProfile?.display_name ||
-                mentorProfile?.username ||
-                "Mentor"}
-            </div>
-
-            <div className="mt-1 text-xs text-white/35">
-              Academic Mentor
-            </div>
-          </div>
-
-          <div className="flex-1 overflow-y-auto">
-            <div className="flex items-center justify-between px-5 pb-3 pt-5">
-              <div className="flex items-center gap-2 text-[10px] font-medium uppercase tracking-wider text-white/30">
-                <Users className="h-3.5 w-3.5" />
-                My Students
-              </div>
-
-              <span className="text-[10px] text-white/25">
-                {students.length}
-              </span>
-            </div>
-
-            {students.length === 0 ? (
-              <div className="px-5 py-8 text-center">
-                <Users className="mx-auto h-5 w-5 text-white/15" />
-
-                <div className="mt-3 text-xs text-white/30">
-                  No students assigned yet.
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-1 px-2.5 pb-4">
-                {students.map((student) => {
-                  const isSelected =
-                    student.id ===
-                    selectedStudentId;
-
-                  const progress =
-                    student.weeklyTasks > 0
-                      ? (student.completedTasks /
-                          student.weeklyTasks) *
-                        100
-                      : 0;
-
-                  return (
-                    <button
-                      key={student.id}
-                      type="button"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        setSelectedStudentId(
-                          student.id
-                        );
-                      }}
-                      className={`w-full rounded-xl px-3.5 py-3 text-left transition ${
+                  <div className="min-w-0 flex-1">
+                    <div
+                      className={`truncate text-sm font-medium ${
                         isSelected
-                          ? "bg-white/[0.07]"
-                          : "hover:bg-white/[0.035]"
+                          ? "text-white"
+                          : "text-white/65"
                       }`}
                     >
-                      <div className="flex items-start gap-3">
-                        <div
-                          className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${
-                            progress === 100 &&
-                            student.weeklyTasks > 0
-                              ? "bg-emerald-400"
-                              : isSelected
-                                ? "bg-white/70"
-                                : "bg-white/20"
-                          }`}
-                        />
+                      {student.display_name ||
+                        student.username ||
+                        "Unnamed Student"}
+                    </div>
 
-                        <div className="min-w-0 flex-1">
-                          <div
-                            className={`truncate text-sm font-medium ${
-                              isSelected
-                                ? "text-white"
-                                : "text-white/65"
-                            }`}
-                          >
-                            {student.display_name ||
-                              student.username ||
-                              "Unnamed Student"}
-                          </div>
+                    <div className="mt-1 flex items-center justify-between gap-2">
+                      <span className="text-[10px] text-white/30">
+                        {student.completedTasks} /{" "}
+                        {student.weeklyTasks} tasks
+                      </span>
 
-                          <div className="mt-1 flex items-center justify-between gap-2">
-                            <span className="text-[10px] text-white/30">
-                              {student.completedTasks}{" "}
-                              /{" "}
-                              {student.weeklyTasks}{" "}
-                              tasks
-                            </span>
+                      <span className="text-[10px] text-white/25">
+                        {Math.round(progress)}%
+                      </span>
+                    </div>
 
-                            <span className="text-[10px] text-white/25">
-                              {Math.round(
-                                progress
-                              )}
-                              %
-                            </span>
-                          </div>
-
-                          <div className="mt-2 h-1 overflow-hidden rounded-full bg-white/[0.07]">
-                            <div
-                              className="h-full rounded-full bg-white/60 transition-all"
-                              style={{
-                                width: `${progress}%`,
-                              }}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
+                    <div className="mt-2 h-1 overflow-hidden rounded-full bg-white/[0.07]">
+                      <div
+                        className="h-full rounded-full bg-white/60 transition-all"
+                        style={{
+                          width: `${progress}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
-            )}
-          </div>
+            </button>
+          );
+        })}
+      </div>
+    )}
+  </div>
 
-          <div className="border-t border-white/[0.07] p-5">
-            <div className="text-[10px] font-medium uppercase tracking-wider text-white/25">
-              Students
-            </div>
+  {/* Bottom student count */}
+  <div
+    className={`
+      shrink-0 border-t border-white/[0.07] p-5
+      ${
+        sidebarCollapsed
+          ? "lg:hidden"
+          : ""
+      }
+    `}
+  >
+    <div className="text-[10px] font-medium uppercase tracking-wider text-white/25">
+      Students
+    </div>
 
-            <div className="mt-1 text-2xl font-semibold tracking-tight">
-              {students.length}
-            </div>
+    <div className="mt-1 text-2xl font-semibold tracking-tight">
+      {students.length}
+    </div>
 
-            <div className="mt-1 text-xs text-white/30">
-              assigned to you
-            </div>
-          </div>
-        </aside>
+    <div className="mt-1 text-xs text-white/30">
+      assigned to you
+    </div>
+  </div>
+</aside>
+
+{mobileSidebarOpen && (
+  <button
+    type="button"
+    aria-label="Close sidebar"
+    onClick={() =>
+      setMobileSidebarOpen(false)
+    }
+    className="absolute inset-0 z-30 bg-black/60 backdrop-blur-[2px] lg:hidden"
+  />
+)}
 
         <main className="min-w-0 flex-1">
-          <header className="flex min-h-20 flex-wrap items-center justify-between gap-4 border-b border-white/[0.07] px-5 py-4 sm:px-7">
-            <div>
+          <header className="flex min-h-20 flex-wrap items-center justify-between gap-3 border-b border-white/[0.07] px-4 py-3 sm:px-7 sm:py-4">
+  <div className="flex min-w-0 items-center gap-3">
+    <button
+      type="button"
+      onClick={() =>
+        setMobileSidebarOpen(true)
+      }
+      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.025] text-white/50 transition hover:bg-white/[0.06] hover:text-white lg:hidden"
+      aria-label="Open student sidebar"
+    >
+      <Menu className="h-4 w-4" />
+    </button>
+
+    <div className="min-w-0">
               <div className="flex items-center gap-2 text-xs text-white/35">
                 <CalendarDays className="h-3.5 w-3.5" />
                 Student Planner
@@ -1517,6 +1804,7 @@ export function MentorDashboard() {
                     : ""}
                 </p>
               )}
+            </div>
             </div>
 
             <div className="flex items-center gap-2">
@@ -1640,7 +1928,7 @@ export function MentorDashboard() {
                 </section>
 
                 <section className="rounded-2xl border border-white/[0.07] bg-[#15181d]">
-                  <div className="flex items-center justify-between border-b border-white/[0.07] px-5 py-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.07] px-4 py-4 sm:px-5">
                     <div className="flex items-center gap-3">
                       <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/[0.06]">
                         <Target className="h-4 w-4 text-white/70" />
@@ -1848,201 +2136,389 @@ export function MentorDashboard() {
                     </div>
                   )}
 
-                  <div className="overflow-x-auto">
-                    <div className="grid min-w-[900px] grid-cols-7 divide-x divide-white/[0.06]">
-                      {days.map((day) => (
+{/* Mobile weekly schedule */}
+<div className="lg:hidden">
+  <div className="divide-y divide-white/[0.06]">
+    {days.map((day) => (
+      <div
+        key={day.isoDate}
+        className="bg-[#121519]"
+      >
+        <div className="flex items-center justify-between px-4 py-3">
+          <div className="flex items-center gap-3">
+            <div
+              className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold ${
+                day.isoDate ===
+                formatDate(today)
+                  ? "bg-white text-black"
+                  : "bg-white/[0.05] text-white/65"
+              }`}
+            >
+              {day.date}
+            </div>
+
+            <div>
+              <div className="text-xs font-semibold text-white/70">
+                {day.name}
+              </div>
+
+              <div className="mt-0.5 text-[10px] uppercase tracking-widest text-white/25">
+                {day.short}
+              </div>
+            </div>
+          </div>
+
+          <div className="text-[10px] text-white/25">
+            {day.tasks.length === 0
+              ? "Rest day"
+              : `${day.tasks.length} ${
+                  day.tasks.length === 1
+                    ? "task"
+                    : "tasks"
+                }`}
+          </div>
+        </div>
+
+        <div className="px-3 pb-3">
+          {day.tasks.length > 0 ? (
+            <div className="space-y-2">
+              {day.tasks.map((task) => {
+                const subject =
+                  getSubjectOption(
+                    task.subject
+                  );
+
+                const colors =
+                  subject?.color ??
+                  DEFAULT_SUBJECT_COLOR;
+
+                return (
+                  <div
+                    key={task.id}
+                    onClick={(event) =>
+                      event.stopPropagation()
+                    }
+                    className={`group relative rounded-xl border p-3 ${colors.card}`}
+                  >
+                    <div className="flex items-start gap-2.5">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          toggleTask(task)
+                        }
+                        className="mt-0.5 shrink-0"
+                        title={
+                          task.completed
+                            ? "Mark incomplete"
+                            : "Mark complete"
+                        }
+                      >
+                        {task.completed ? (
+                          <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                        ) : (
+                          <Circle className="h-4 w-4 text-white/20 transition hover:text-white/60" />
+                        )}
+                      </button>
+
+                      <div className="min-w-0 flex-1 pr-7">
                         <div
-                          key={day.isoDate}
-                          className="min-h-[420px] bg-[#121519]"
+                          className={`text-[10px] font-medium uppercase tracking-wide ${colors.text}`}
                         >
-                          <div className="border-b border-white/[0.06] px-3 py-4 text-center">
-                            <div className="text-[10px] font-semibold uppercase tracking-widest text-white/30">
-                              {day.short}
-                            </div>
-
-                            <div
-                              className={`mx-auto mt-2 flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold ${
-                                day.isoDate ===
-                                formatDate(
-                                  today
-                                )
-                                  ? "bg-white text-black"
-                                  : "text-white/65"
-                              }`}
-                            >
-                              {day.date}
-                            </div>
-                          </div>
-
-                          <div className="space-y-2 p-2.5">
-                            {day.tasks.length >
-                            0 ? (
-                              day.tasks.map(
-                                (task) => {
-                                  const subject =
-                                    getSubjectOption(
-                                      task.subject
-                                    );
-
-                                  const colors =
-                                    subject?.color ??
-                                    DEFAULT_SUBJECT_COLOR;
-
-                                  return (
-                                    <div
-                                      key={
-                                        task.id
-                                      }
-                                      onClick={(event) =>
-                                        event.stopPropagation()
-                                      }
-                                      className={`group relative rounded-xl border p-3 transition hover:bg-white/[0.04] ${colors.card}`}
-                                    >
-                                      <div className="flex items-start gap-2.5">
-                                        <button
-                                          type="button"
-                                          onClick={() =>
-                                            toggleTask(
-                                              task
-                                            )
-                                          }
-                                          className="mt-0.5 shrink-0"
-                                          title={
-                                            task.completed
-                                              ? "Mark incomplete"
-                                              : "Mark complete"
-                                          }
-                                        >
-                                          {task.completed ? (
-                                            <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                                          ) : (
-                                            <Circle className="h-4 w-4 text-white/20 transition hover:text-white/60" />
-                                          )}
-                                        </button>
-
-                                        <div className="min-w-0 flex-1 pr-5">
-                                          <div
-                                            className={`text-[10px] font-medium uppercase tracking-wide ${colors.text}`}
-                                          >
-                                            {subject?.label ??
-                                              task.subject ??
-                                              task.type ??
-                                              "Task"}
-                                          </div>
-
-                                          <div
-                                            className={`mt-1 text-xs font-medium leading-4 ${
-                                              task.completed
-                                                ? "text-white/30 line-through"
-                                                : "text-white/75"
-                                            }`}
-                                          >
-                                            {
-                                              task.name
-                                            }
-                                          </div>
-
-                                          {task.type &&
-                                            task.subject && (
-                                              <div className="mt-1 text-[10px] text-white/25">
-                                                {
-                                                  TASK_TYPE_OPTIONS.find(
-                                                    (
-                                                      option
-                                                    ) =>
-                                                      option.value ===
-                                                      task.type?.toLowerCase()
-                                                  )?.label ??
-                                                  task.type
-                                                }
-                                              </div>
-                                            )}
-                                        </div>
-
-                                        <div className="absolute right-2 top-2">
-                                          <button
-                                            type="button"
-                                            onClick={() =>
-                                              setOpenTaskMenu(
-                                                (current) =>
-                                                  current ===
-                                                  task.id
-                                                    ? null
-                                                    : task.id
-                                              )
-                                            }
-                                            className="flex h-7 w-7 items-center justify-center rounded-md text-white/20 opacity-0 transition hover:bg-white/[0.06] hover:text-white group-hover:opacity-100"
-                                          >
-                                            <MoreHorizontal className="h-4 w-4" />
-                                          </button>
-
-                                          {openTaskMenu ===
-                                            task.id && (
-                                            <div className="absolute right-0 top-8 z-20 w-32 overflow-hidden rounded-lg border border-white/[0.09] bg-[#1a1d22] p-1 shadow-xl">
-                                              <button
-                                                type="button"
-                                                onClick={() =>
-                                                  openEditTask(
-                                                    task
-                                                  )
-                                                }
-                                                className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs text-white/60 transition hover:bg-white/[0.06] hover:text-white"
-                                              >
-                                                <Pencil className="h-3.5 w-3.5" />
-                                                Edit
-                                              </button>
-
-                                              <button
-                                                type="button"
-                                                onClick={() =>
-                                                  deleteTask(
-                                                    task
-                                                  )
-                                                }
-                                                className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs text-rose-300/70 transition hover:bg-rose-500/10 hover:text-rose-300"
-                                              >
-                                                <Trash2 className="h-3.5 w-3.5" />
-                                                Delete
-                                              </button>
-                                            </div>
-                                          )}
-                                        </div>
-                                      </div>
-                                    </div>
-                                  );
-                                }
-                              )
-                            ) : (
-                              <div className="flex min-h-[260px] flex-col items-center justify-center">
-                                <div className="text-center">
-                                  <div className="text-xs font-medium text-white/30">
-                                    Rest day
-                                  </div>
-
-                                  <div className="mt-1 text-[10px] text-white/15">
-                                    No tasks scheduled
-                                  </div>
-
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      openAddTask(
-                                        day.isoDate
-                                      )
-                                    }
-                                    className="mt-3 flex items-center gap-1 text-[10px] text-white/25 transition hover:text-white/60"
-                                  >
-                                    <Plus className="h-3 w-3" />
-                                    Add task
-                                  </button>
-                                </div>
-                              </div>
-                            )}
-                          </div>
+                          {subject?.label ??
+                            task.subject ??
+                            task.type ??
+                            "Task"}
                         </div>
-                      ))}
+
+                        <div
+                          className={`mt-1 text-sm font-medium leading-5 ${
+                            task.completed
+                              ? "text-white/30 line-through"
+                              : "text-white/75"
+                          }`}
+                        >
+                          {task.name}
+                        </div>
+
+                        {task.type &&
+                          task.subject && (
+                            <div className="mt-1 text-[10px] text-white/25">
+                              {TASK_TYPE_OPTIONS.find(
+                                (option) =>
+                                  option.value ===
+                                  task.type?.toLowerCase()
+                              )?.label ??
+                                task.type}
+                            </div>
+                          )}
+                      </div>
+
+                      <div className="absolute right-2 top-2">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setOpenTaskMenu(
+                              (current) =>
+                                current ===
+                                task.id
+                                  ? null
+                                  : task.id
+                            )
+                          }
+                          className="flex h-7 w-7 items-center justify-center rounded-md text-white/30 transition hover:bg-white/[0.06] hover:text-white"
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </button>
+
+                        {openTaskMenu ===
+                          task.id && (
+                          <div className="absolute right-0 top-8 z-20 w-32 overflow-hidden rounded-lg border border-white/[0.09] bg-[#1a1d22] p-1 shadow-xl">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                openEditTask(
+                                  task
+                                )
+                              }
+                              className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs text-white/60 transition hover:bg-white/[0.06] hover:text-white"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                              Edit
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                deleteTask(
+                                  task
+                                )
+                              }
+                              className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs text-rose-300/70 transition hover:bg-rose-500/10 hover:text-rose-300"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                              Delete
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="flex items-center justify-between rounded-xl border border-dashed border-white/[0.06] px-3 py-3">
+              <div>
+                <div className="text-xs font-medium text-white/25">
+                  Rest day
+                </div>
+
+                <div className="mt-0.5 text-[10px] text-white/15">
+                  No tasks scheduled
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() =>
+                  openAddTask(
+                    day.isoDate
+                  )
+                }
+                className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-[10px] text-white/30 transition hover:bg-white/[0.05] hover:text-white/70"
+              >
+                <Plus className="h-3 w-3" />
+                Add
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    ))}
+  </div>
+</div>
+
+{/* Desktop weekly schedule */}
+<div className="hidden overflow-x-auto lg:block">
+  <div className="grid min-w-[900px] grid-cols-7 divide-x divide-white/[0.06]">
+    {days.map((day) => (
+      <div
+        key={day.isoDate}
+        className="min-h-[420px] bg-[#121519]"
+      >
+        <div className="border-b border-white/[0.06] px-3 py-4 text-center">
+          <div className="text-[10px] font-semibold uppercase tracking-widest text-white/30">
+            {day.short}
+          </div>
+
+          <div
+            className={`mx-auto mt-2 flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold ${
+              day.isoDate ===
+              formatDate(today)
+                ? "bg-white text-black"
+                : "text-white/65"
+            }`}
+          >
+            {day.date}
+          </div>
+        </div>
+
+        <div className="space-y-2 p-2.5">
+          {day.tasks.length > 0 ? (
+            day.tasks.map((task) => {
+              const subject =
+                getSubjectOption(
+                  task.subject
+                );
+
+              const colors =
+                subject?.color ??
+                DEFAULT_SUBJECT_COLOR;
+
+              return (
+                <div
+                  key={task.id}
+                  onClick={(event) =>
+                    event.stopPropagation()
+                  }
+                  className={`group relative rounded-xl border p-3 transition hover:bg-white/[0.04] ${colors.card}`}
+                >
+                  <div className="flex items-start gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        toggleTask(task)
+                      }
+                      className="mt-0.5 shrink-0"
+                      title={
+                        task.completed
+                          ? "Mark incomplete"
+                          : "Mark complete"
+                      }
+                    >
+                      {task.completed ? (
+                        <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                      ) : (
+                        <Circle className="h-4 w-4 text-white/20 transition hover:text-white/60" />
+                      )}
+                    </button>
+
+                    <div className="min-w-0 flex-1 pr-5">
+                      <div
+                        className={`text-[10px] font-medium uppercase tracking-wide ${colors.text}`}
+                      >
+                        {subject?.label ??
+                          task.subject ??
+                          task.type ??
+                          "Task"}
+                      </div>
+
+                      <div
+                        className={`mt-1 text-xs font-medium leading-4 ${
+                          task.completed
+                            ? "text-white/30 line-through"
+                            : "text-white/75"
+                        }`}
+                      >
+                        {task.name}
+                      </div>
+
+                      {task.type &&
+                        task.subject && (
+                          <div className="mt-1 text-[10px] text-white/25">
+                            {TASK_TYPE_OPTIONS.find(
+                              (option) =>
+                                option.value ===
+                                task.type?.toLowerCase()
+                            )?.label ??
+                              task.type}
+                          </div>
+                        )}
+                    </div>
+
+                    <div className="absolute right-2 top-2">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setOpenTaskMenu(
+                            (current) =>
+                              current ===
+                              task.id
+                                ? null
+                                : task.id
+                          )
+                        }
+                        className="flex h-7 w-7 items-center justify-center rounded-md text-white/20 opacity-0 transition hover:bg-white/[0.06] hover:text-white group-hover:opacity-100"
+                      >
+                        <MoreHorizontal className="h-4 w-4" />
+                      </button>
+
+                      {openTaskMenu ===
+                        task.id && (
+                        <div className="absolute right-0 top-8 z-20 w-32 overflow-hidden rounded-lg border border-white/[0.09] bg-[#1a1d22] p-1 shadow-xl">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              openEditTask(
+                                task
+                              )
+                            }
+                            className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs text-white/60 transition hover:bg-white/[0.06] hover:text-white"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                            Edit
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              deleteTask(
+                                task
+                              )
+                            }
+                            className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs text-rose-300/70 transition hover:bg-rose-500/10 hover:text-rose-300"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            Delete
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="flex min-h-[260px] flex-col items-center justify-center">
+              <div className="text-center">
+                <div className="text-xs font-medium text-white/30">
+                  Rest day
+                </div>
+
+                <div className="mt-1 text-[10px] text-white/15">
+                  No tasks scheduled
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    openAddTask(
+                      day.isoDate
+                    )
+                  }
+                  className="mt-3 flex items-center gap-1 text-[10px] text-white/25 transition hover:text-white/60"
+                >
+                  <Plus className="h-3 w-3" />
+                  Add task
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    ))}
+  </div>
+</div>
 
                   <div className="flex items-center justify-between border-t border-white/[0.07] px-5 py-3">
                     <div className="text-[11px] text-white/30">
