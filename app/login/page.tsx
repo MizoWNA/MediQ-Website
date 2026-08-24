@@ -164,7 +164,7 @@ export default function LoginPage() {
        */
 
       if (profile.role === "admin") {
-        router.replace("/admin/users");
+        router.replace("/admin");
         router.refresh();
         return;
       }
