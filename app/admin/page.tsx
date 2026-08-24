@@ -87,6 +87,35 @@ export default function AdminPage() {
     "all" | "student" | "mentor"
   >("all");
 
+  const [managingUser, setManagingUser] =
+  useState<AdminUser | null>(null);
+
+const [savingUser, setSavingUser] = useState(false);
+
+const [editUsername, setEditUsername] = useState("");
+const [editDisplayName, setEditDisplayName] =
+  useState("");
+const [editRole, setEditRole] =
+  useState<Role>("student");
+
+const [editYear, setEditYear] = useState("");
+const [editStartDate, setEditStartDate] =
+  useState("");
+const [editEndDate, setEditEndDate] =
+  useState("");
+const [editExamDate, setEditExamDate] =
+  useState("");
+const [editMentorId, setEditMentorId] =
+  useState("");
+const [editPassword, setEditPassword] =
+  useState("");
+
+const [showEditPassword, setShowEditPassword] =
+  useState(false);
+
+const [editError, setEditError] = useState("");
+const [editSuccess, setEditSuccess] = useState("");
+
   const [currentPage, setCurrentPage] = useState(1);
   const [totalUsers, setTotalUsers] = useState(0);
 
@@ -424,6 +453,189 @@ export default function AdminPage() {
       setCreating(false);
     }
   }
+
+function openManageUser(user: AdminUser) {
+  setManagingUser(user);
+
+  setEditUsername(user.username ?? "");
+  setEditDisplayName(user.display_name ?? "");
+  setEditRole(user.role);
+
+  setEditYear(
+    user.year !== null
+      ? String(user.year)
+      : ""
+  );
+
+  setEditStartDate(user.start_date ?? "");
+  setEditEndDate(user.end_date ?? "");
+  setEditExamDate(user.exam_date ?? "");
+  setEditMentorId(user.mentor_id ?? "");
+
+  setEditPassword("");
+  setShowEditPassword(false);
+
+  setEditError("");
+  setEditSuccess("");
+}
+
+function closeManageUser() {
+  if (savingUser) return;
+
+  setManagingUser(null);
+  setEditError("");
+  setEditSuccess("");
+}
+
+async function handleUpdateUser(
+  event: FormEvent<HTMLFormElement>
+) {
+  event.preventDefault();
+
+  if (!managingUser) return;
+
+  setEditError("");
+  setEditSuccess("");
+  setSavingUser(true);
+
+  try {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session) {
+      router.replace("/login");
+      return;
+    }
+
+    const cleanUsername =
+      editUsername.trim().toLowerCase();
+
+    const cleanDisplayName =
+      editDisplayName.trim();
+
+    if (!cleanUsername) {
+      throw new Error("Username is required.");
+    }
+
+    if (!cleanDisplayName) {
+      throw new Error(
+        "Display name is required."
+      );
+    }
+
+    if (
+      editRole === "student" &&
+      editYear &&
+      (!Number.isInteger(Number(editYear)) ||
+        Number(editYear) < 1 ||
+        Number(editYear) > 5)
+    ) {
+      throw new Error(
+        "Academic year must be between 1 and 5."
+      );
+    }
+
+    const response = await fetch(
+      "/api/admin/users",
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          id: managingUser.id,
+
+          username: cleanUsername,
+          display_name: cleanDisplayName,
+          role: editRole,
+
+          year:
+            editRole === "student" && editYear
+              ? Number(editYear)
+              : null,
+
+          start_date:
+            editRole === "student" && editStartDate
+              ? editStartDate
+              : null,
+
+          end_date:
+            editRole === "student" && editEndDate
+              ? editEndDate
+              : null,
+
+          exam_date:
+            editRole === "student" && editExamDate
+              ? editExamDate
+              : null,
+
+          mentor_id:
+            editRole === "student" && editMentorId
+              ? editMentorId
+              : null,
+
+          password:
+            editPassword.trim() || null,
+        }),
+      }
+    );
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        result?.error ||
+          "Failed to update user."
+      );
+    }
+
+    setEditSuccess(
+      "User updated successfully."
+    );
+
+    /*
+     * Refresh the list so the changes are immediately
+     * reflected everywhere.
+     */
+    await loadUsers();
+
+    /*
+     * Update the currently open user as well.
+     */
+    if (result.user) {
+      setManagingUser((current) =>
+        current
+          ? {
+              ...current,
+              ...result.user,
+              mentor:
+                current.mentor_id ===
+                result.user.mentor_id
+                  ? current.mentor
+                  : null,
+            }
+          : null
+      );
+    }
+
+    setEditPassword("");
+  } catch (err) {
+    console.error(
+      "User update failed:",
+      err
+    );
+
+    setEditError(
+      err instanceof Error
+        ? err.message
+        : "Failed to update user."
+    );
+  } finally {
+    setSavingUser(false);
+  }
+}
 
   /*
    * ================================================================
@@ -1145,6 +1357,7 @@ export default function AdminPage() {
 
                     <button
                       type="button"
+                      onClick={() => openManageUser(user)}
                       className="shrink-0 rounded-lg border border-white/[0.07] bg-white/[0.025] px-2.5 py-1.5 text-[10px] text-white/35 transition hover:border-white/[0.12] hover:bg-white/[0.05] hover:text-white"
                     >
                       Manage
@@ -1206,6 +1419,450 @@ export default function AdminPage() {
           </section>
         </div>
       </div>
+      {/* ============================================================
+    MANAGE USER MODAL
+============================================================ */}
+
+{managingUser && (
+  <div
+    className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+    onMouseDown={(event) => {
+      if (event.target === event.currentTarget) {
+        closeManageUser();
+      }
+    }}
+  >
+    <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-white/[0.08] bg-[#111419] shadow-2xl">
+
+      {/* Header */}
+
+      <div className="sticky top-0 z-10 border-b border-white/[0.07] bg-[#111419]/95 px-5 py-5 backdrop-blur sm:px-6">
+        <div className="flex items-start justify-between gap-4">
+
+          <div>
+            <div className="text-[10px] font-medium uppercase tracking-[0.16em] text-white/25">
+              Manage Account
+            </div>
+
+            <h2 className="mt-1 text-lg font-semibold">
+              {managingUser.display_name ||
+                managingUser.username ||
+                "User"}
+            </h2>
+
+            <p className="mt-1 text-xs text-white/30">
+              @{managingUser.username ||
+                "unknown"}
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={closeManageUser}
+            disabled={savingUser}
+            className="rounded-lg p-2 text-white/25 transition hover:bg-white/[0.05] hover:text-white/70 disabled:opacity-40"
+            aria-label="Close"
+          >
+            <XCircle className="h-4 w-4" />
+          </button>
+
+        </div>
+      </div>
+
+      {/* Form */}
+
+      <form
+        onSubmit={handleUpdateUser}
+        className="space-y-6 p-5 sm:p-6"
+      >
+
+        {/* Account */}
+
+        <div className="space-y-4">
+
+          <div className="text-[10px] font-medium uppercase tracking-[0.16em] text-white/25">
+            Account Information
+          </div>
+
+          {/* Username */}
+
+          <div>
+            <label
+              htmlFor="edit-username"
+              className="mb-2 block text-xs font-medium text-white/50"
+            >
+              Username
+            </label>
+
+            <div className="relative">
+              <input
+                id="edit-username"
+                type="text"
+                value={editUsername}
+                onChange={(event) =>
+                  setEditUsername(
+                    event.target.value
+                  )
+                }
+                autoComplete="off"
+                required
+                className="h-11 w-full rounded-xl border border-white/[0.08] bg-white/[0.025] px-3 pr-28 text-sm text-white outline-none transition placeholder:text-white/20 hover:border-white/[0.12] focus:border-[#1f71a1]/40 focus:bg-white/[0.04] focus:ring-1 focus:ring-[#1f71a1]/10"
+              />
+
+              <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-white/25">
+                @med.iq
+              </div>
+            </div>
+          </div>
+
+          {/* Display Name */}
+
+          <div>
+            <label
+              htmlFor="edit-display-name"
+              className="mb-2 block text-xs font-medium text-white/50"
+            >
+              Display Name
+            </label>
+
+            <input
+              id="edit-display-name"
+              type="text"
+              value={editDisplayName}
+              onChange={(event) =>
+                setEditDisplayName(
+                  event.target.value
+                )
+              }
+              autoComplete="off"
+              required
+              className="h-11 w-full rounded-xl border border-white/[0.08] bg-white/[0.025] px-3 text-sm text-white outline-none transition placeholder:text-white/20 hover:border-white/[0.12] focus:border-[#1f71a1]/40 focus:bg-white/[0.04] focus:ring-1 focus:ring-[#1f71a1]/10"
+            />
+          </div>
+
+          {/* Role */}
+
+          <div>
+            <label
+              htmlFor="edit-role"
+              className="mb-2 block text-xs font-medium text-white/50"
+            >
+              Role
+            </label>
+
+            <select
+              id="edit-role"
+              value={editRole}
+              onChange={(event) => {
+                setEditRole(
+                  event.target.value as Role
+                );
+                setEditMentorId("");
+              }}
+              className="h-11 w-full rounded-xl border border-white/[0.08] bg-[#15181d] px-3 text-sm text-white outline-none transition hover:border-white/[0.12] focus:border-[#1f71a1]/40 focus:ring-1 focus:ring-[#1f71a1]/10"
+            >
+              <option value="student">
+                Student
+              </option>
+
+              <option value="mentor">
+                Mentor
+              </option>
+            </select>
+          </div>
+        </div>
+
+        {/* Student Information */}
+
+        {editRole === "student" && (
+          <div className="space-y-4 border-t border-white/[0.06] pt-6">
+
+            <div className="text-[10px] font-medium uppercase tracking-[0.16em] text-white/25">
+              Student Information
+            </div>
+
+            {/* Year */}
+
+            <div>
+              <label
+                htmlFor="edit-year"
+                className="mb-2 block text-xs font-medium text-white/50"
+              >
+                Academic Year
+              </label>
+
+              <select
+                id="edit-year"
+                value={editYear}
+                onChange={(event) =>
+                  setEditYear(
+                    event.target.value
+                  )
+                }
+                className="h-11 w-full rounded-xl border border-white/[0.08] bg-[#15181d] px-3 text-sm text-white outline-none transition hover:border-white/[0.12] focus:border-[#1f71a1]/40 focus:ring-1 focus:ring-[#1f71a1]/10"
+              >
+                <option value="">
+                  Not set
+                </option>
+
+                <option value="1">
+                  Year 1
+                </option>
+
+                <option value="2">
+                  Year 2
+                </option>
+
+                <option value="3">
+                  Year 3
+                </option>
+
+                <option value="4">
+                  Year 4
+                </option>
+
+                <option value="5">
+                  Year 5
+                </option>
+              </select>
+            </div>
+
+            {/* Dates */}
+
+            <div className="grid gap-4 sm:grid-cols-2">
+
+              <div>
+                <label
+                  htmlFor="edit-start-date"
+                  className="mb-2 block text-xs font-medium text-white/50"
+                >
+                  Start Date
+                </label>
+
+                <input
+                  id="edit-start-date"
+                  type="date"
+                  value={editStartDate}
+                  onChange={(event) =>
+                    setEditStartDate(
+                      event.target.value
+                    )
+                  }
+                  className="h-11 w-full rounded-xl border border-white/[0.08] bg-white/[0.025] px-3 text-sm text-white outline-none transition focus:border-[#1f71a1]/40 focus:ring-1 focus:ring-[#1f71a1]/10"
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="edit-end-date"
+                  className="mb-2 block text-xs font-medium text-white/50"
+                >
+                  End Date
+                </label>
+
+                <input
+                  id="edit-end-date"
+                  type="date"
+                  value={editEndDate}
+                  onChange={(event) =>
+                    setEditEndDate(
+                      event.target.value
+                    )
+                  }
+                  className="h-11 w-full rounded-xl border border-white/[0.08] bg-white/[0.025] px-3 text-sm text-white outline-none transition focus:border-[#1f71a1]/40 focus:ring-1 focus:ring-[#1f71a1]/10"
+                />
+              </div>
+
+            </div>
+
+            {/* Exam Date */}
+
+            <div>
+              <label
+                htmlFor="edit-exam-date"
+                className="mb-2 block text-xs font-medium text-white/50"
+              >
+                Exam Date
+              </label>
+
+              <input
+                id="edit-exam-date"
+                type="date"
+                value={editExamDate}
+                onChange={(event) =>
+                  setEditExamDate(
+                    event.target.value
+                  )
+                }
+                className="h-11 w-full rounded-xl border border-white/[0.08] bg-white/[0.025] px-3 text-sm text-white outline-none transition focus:border-[#1f71a1]/40 focus:ring-1 focus:ring-[#1f71a1]/10"
+              />
+            </div>
+
+            {/* Mentor */}
+
+            <div>
+              <label
+                htmlFor="edit-mentor"
+                className="mb-2 block text-xs font-medium text-white/50"
+              >
+                Mentor
+              </label>
+
+              <select
+                id="edit-mentor"
+                value={editMentorId}
+                onChange={(event) =>
+                  setEditMentorId(
+                    event.target.value
+                  )
+                }
+                disabled={loadingMentors}
+                className="h-11 w-full rounded-xl border border-white/[0.08] bg-[#15181d] px-3 text-sm text-white outline-none transition disabled:cursor-not-allowed disabled:opacity-50 focus:border-[#1f71a1]/40 focus:ring-1 focus:ring-[#1f71a1]/10"
+              >
+                <option value="">
+                  {loadingMentors
+                    ? "Loading mentors..."
+                    : mentors.length === 0
+                      ? "No mentors available"
+                      : "No mentor assigned"}
+                </option>
+
+                {mentors.map((mentor) => (
+                  <option
+                    key={mentor.id}
+                    value={mentor.id}
+                  >
+                    {mentor.display_name ||
+                      mentor.username ||
+                      "Unnamed Mentor"}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
+
+        {/* Password */}
+
+        <div className="border-t border-white/[0.06] pt-6">
+
+          <div className="mb-4">
+            <div className="text-[10px] font-medium uppercase tracking-[0.16em] text-white/25">
+              Authentication
+            </div>
+
+            <p className="mt-1 text-[10px] text-white/20">
+              Leave the password blank to keep the
+              current password.
+            </p>
+          </div>
+
+          <div>
+            <label
+              htmlFor="edit-password"
+              className="mb-2 block text-xs font-medium text-white/50"
+            >
+              New Password
+            </label>
+
+            <div className="relative">
+              <LockKeyhole className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-white/25" />
+
+              <input
+                id="edit-password"
+                type={
+                  showEditPassword
+                    ? "text"
+                    : "password"
+                }
+                value={editPassword}
+                onChange={(event) =>
+                  setEditPassword(
+                    event.target.value
+                  )
+                }
+                placeholder="Leave blank to keep current password"
+                autoComplete="new-password"
+                className="h-11 w-full rounded-xl border border-white/[0.08] bg-white/[0.025] pl-10 pr-11 text-sm text-white outline-none transition placeholder:text-white/20 hover:border-white/[0.12] focus:border-[#1f71a1]/40 focus:bg-white/[0.04] focus:ring-1 focus:ring-[#1f71a1]/10"
+              />
+
+              <button
+                type="button"
+                onClick={() =>
+                  setShowEditPassword(
+                    (current) => !current
+                  )
+                }
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/25 transition hover:text-white/60"
+              >
+                {showEditPassword ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Feedback */}
+
+        {editError && (
+          <div className="flex items-start gap-3 rounded-xl border border-rose-500/20 bg-rose-500/[0.07] px-3.5 py-3">
+            <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-rose-400" />
+
+            <div className="text-xs leading-5 text-rose-300">
+              {editError}
+            </div>
+          </div>
+        )}
+
+        {editSuccess && (
+          <div className="flex items-start gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/[0.07] px-3.5 py-3">
+            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
+
+            <div className="text-xs leading-5 text-emerald-300">
+              {editSuccess}
+            </div>
+          </div>
+        )}
+
+        {/* Actions */}
+
+        <div className="flex gap-3">
+
+          <button
+            type="button"
+            onClick={closeManageUser}
+            disabled={savingUser}
+            className="h-11 flex-1 rounded-xl border border-white/[0.08] bg-white/[0.025] text-sm font-medium text-white/50 transition hover:bg-white/[0.05] hover:text-white disabled:opacity-40"
+          >
+            Cancel
+          </button>
+
+          <button
+            type="submit"
+            disabled={savingUser}
+            className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-white text-sm font-medium text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {savingUser ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                Save Changes
+                <CheckCircle2 className="h-4 w-4" />
+              </>
+            )}
+          </button>
+
+        </div>
+      </form>
+    </div>
+  </div>
+)}
     </main>
   );
 }

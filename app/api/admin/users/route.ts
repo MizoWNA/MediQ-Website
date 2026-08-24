@@ -103,17 +103,14 @@ export async function GET(request: NextRequest) {
     );
 
     const requestedPageSize = Number(
-      searchParams.get("page_size") ||
-        DEFAULT_PAGE_SIZE
+      searchParams.get("page_size") || DEFAULT_PAGE_SIZE
     );
 
     const page = Number.isInteger(requestedPage)
       ? Math.max(1, requestedPage)
       : 1;
 
-    const pageSize = Number.isInteger(
-      requestedPageSize
-    )
+    const pageSize = Number.isInteger(requestedPageSize)
       ? Math.min(
           MAX_PAGE_SIZE,
           Math.max(1, requestedPageSize)
@@ -251,9 +248,7 @@ export async function GET(request: NextRequest) {
       const { data: mentorData, error: mentorError } =
         await supabaseAdmin
           .from("profiles")
-          .select(
-            "id, username, display_name"
-          )
+          .select("id, username, display_name")
           .in("id", mentorIds)
           .eq("role", "mentor");
 
@@ -268,10 +263,7 @@ export async function GET(request: NextRequest) {
     }
 
     const mentorMap = new Map(
-      mentors.map((mentor) => [
-        mentor.id,
-        mentor,
-      ])
+      mentors.map((mentor) => [mentor.id, mentor])
     );
 
     /*
@@ -280,25 +272,22 @@ export async function GET(request: NextRequest) {
      * ------------------------------------------------------------
      */
 
-    const formattedUsers = (users ?? []).map(
-      (user) => {
-        const mentor = user.mentor_id
-          ? mentorMap.get(user.mentor_id) ?? null
-          : null;
+    const formattedUsers = (users ?? []).map((user) => {
+      const mentor = user.mentor_id
+        ? mentorMap.get(user.mentor_id) ?? null
+        : null;
 
-        return {
-          ...user,
-          mentor: mentor
-            ? {
-                id: mentor.id,
-                username: mentor.username,
-                display_name:
-                  mentor.display_name,
-              }
-            : null,
-        };
-      }
-    );
+      return {
+        ...user,
+        mentor: mentor
+          ? {
+              id: mentor.id,
+              username: mentor.username,
+              display_name: mentor.display_name,
+            }
+          : null,
+      };
+    });
 
     /*
      * ------------------------------------------------------------
@@ -343,18 +332,21 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     /*
-     * Authenticate the requesting user.
+     * ------------------------------------------------------------
+     * Authenticate requesting user
+     * ------------------------------------------------------------
      */
 
-    const { error } =
-      await authenticateAdmin(request);
+    const { error } = await authenticateAdmin(request);
 
     if (error) {
       return error;
     }
 
     /*
-     * Read request body.
+     * ------------------------------------------------------------
+     * Read request body
+     * ------------------------------------------------------------
      */
 
     const body = await request.json();
@@ -372,7 +364,9 @@ export async function POST(request: NextRequest) {
     } = body;
 
     /*
-     * Basic validation.
+     * ------------------------------------------------------------
+     * Basic validation
+     * ------------------------------------------------------------
      */
 
     if (
@@ -390,9 +384,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (
-      !["student", "mentor"].includes(role)
-    ) {
+    if (!["student", "mentor"].includes(role)) {
       return NextResponse.json(
         { error: "Invalid role." },
         { status: 400 }
@@ -403,11 +395,9 @@ export async function POST(request: NextRequest) {
       .trim()
       .toLowerCase();
 
-    if (
-      !/^[a-z0-9._-]+$/.test(
-        cleanUsername
-      )
-    ) {
+    const cleanDisplayName = display_name.trim();
+
+    if (!/^[a-z0-9._-]+$/.test(cleanUsername)) {
       return NextResponse.json(
         {
           error:
@@ -417,8 +407,61 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const email =
-      `${cleanUsername}${MEDIQ_DOMAIN}`;
+    if (!cleanDisplayName) {
+      return NextResponse.json(
+        { error: "Display name is required." },
+        { status: 400 }
+      );
+    }
+
+    /*
+     * ------------------------------------------------------------
+     * Validate academic year
+     * ------------------------------------------------------------
+     */
+
+    if (
+      role === "student" &&
+      year !== null &&
+      year !== undefined &&
+      year !== ""
+    ) {
+      const numericYear = Number(year);
+
+      if (
+        !Number.isInteger(numericYear) ||
+        numericYear < 1 ||
+        numericYear > 5
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "Academic year must be between 1 and 5.",
+          },
+          { status: 400 }
+        );
+      }
+    }
+
+    /*
+     * ------------------------------------------------------------
+     * Check username uniqueness
+     * ------------------------------------------------------------
+     */
+
+    const { data: usernameConflict } =
+      await supabaseAdmin
+        .from("profiles")
+        .select("id")
+        .eq("username", cleanUsername)
+        .maybeSingle();
+
+    if (usernameConflict) {
+      return NextResponse.json(
+        { error: "That username is already in use." },
+        { status: 409 }
+      );
+    }
 
     /*
      * ------------------------------------------------------------
@@ -426,17 +469,17 @@ export async function POST(request: NextRequest) {
      * ------------------------------------------------------------
      */
 
+    const email = `${cleanUsername}${MEDIQ_DOMAIN}`;
+
     const {
       data: authData,
       error: createAuthError,
     } =
-      await supabaseAdmin.auth.admin.createUser(
-        {
-          email,
-          password,
-          email_confirm: true,
-        }
-      );
+      await supabaseAdmin.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+      });
 
     if (
       createAuthError ||
@@ -452,8 +495,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const newUserId =
-      authData.user.id;
+    const newUserId = authData.user.id;
 
     /*
      * ------------------------------------------------------------
@@ -461,41 +503,40 @@ export async function POST(request: NextRequest) {
      * ------------------------------------------------------------
      */
 
-    const {
-      error: createProfileError,
-    } = await supabaseAdmin
-      .from("profiles")
-      .insert({
-        id: newUserId,
-        username: cleanUsername,
-        display_name,
-        role,
+    const { error: createProfileError } =
+      await supabaseAdmin
+        .from("profiles")
+        .insert({
+          id: newUserId,
+          username: cleanUsername,
+          display_name: cleanDisplayName,
+          role,
 
-        year:
-          role === "student"
-            ? year ?? null
-            : null,
+          year:
+            role === "student"
+              ? year ?? null
+              : null,
 
-        start_date:
-          role === "student"
-            ? start_date || null
-            : null,
+          start_date:
+            role === "student"
+              ? start_date || null
+              : null,
 
-        end_date:
-          role === "student"
-            ? end_date || null
-            : null,
+          end_date:
+            role === "student"
+              ? end_date || null
+              : null,
 
-        exam_date:
-          role === "student"
-            ? exam_date || null
-            : null,
+          exam_date:
+            role === "student"
+              ? exam_date || null
+              : null,
 
-        mentor_id:
-          role === "student"
-            ? mentor_id || null
-            : null,
-      });
+          mentor_id:
+            role === "student"
+              ? mentor_id || null
+              : null,
+        });
 
     /*
      * ------------------------------------------------------------
@@ -536,6 +577,378 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error(
       "Admin user creation failed:",
+      error
+    );
+
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Unexpected server error.",
+      },
+      { status: 500 }
+    );
+  }
+}
+
+/*
+ * ================================================================
+ * PATCH — UPDATE USER
+ * ================================================================
+ */
+
+export async function PATCH(request: NextRequest) {
+  try {
+    /*
+     * ------------------------------------------------------------
+     * Authenticate requesting user
+     * ------------------------------------------------------------
+     */
+
+    const { error } = await authenticateAdmin(request);
+
+    if (error) {
+      return error;
+    }
+
+    /*
+     * ------------------------------------------------------------
+     * Read request body
+     * ------------------------------------------------------------
+     */
+
+    const body = await request.json();
+
+    const {
+      id,
+      username,
+      password,
+      display_name,
+      role,
+      year,
+      start_date,
+      end_date,
+      exam_date,
+      mentor_id,
+    } = body;
+
+    /*
+     * ------------------------------------------------------------
+     * Basic validation
+     * ------------------------------------------------------------
+     */
+
+    if (!id) {
+      return NextResponse.json(
+        { error: "User ID is required." },
+        { status: 400 }
+      );
+    }
+
+    if (!username || !display_name || !role) {
+      return NextResponse.json(
+        {
+          error:
+            "Username, display name, and role are required.",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (!["student", "mentor"].includes(role)) {
+      return NextResponse.json(
+        { error: "Invalid role." },
+        { status: 400 }
+      );
+    }
+
+    const cleanUsername = username
+      .trim()
+      .toLowerCase();
+
+    const cleanDisplayName = display_name.trim();
+
+    if (!/^[a-z0-9._-]+$/.test(cleanUsername)) {
+      return NextResponse.json(
+        {
+          error:
+            "Username may only contain letters, numbers, dots, underscores, and hyphens.",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (!cleanDisplayName) {
+      return NextResponse.json(
+        { error: "Display name is required." },
+        { status: 400 }
+      );
+    }
+
+    /*
+     * ------------------------------------------------------------
+     * Validate academic year
+     * ------------------------------------------------------------
+     */
+
+    if (
+      role === "student" &&
+      year !== null &&
+      year !== undefined &&
+      year !== ""
+    ) {
+      const numericYear = Number(year);
+
+      if (
+        !Number.isInteger(numericYear) ||
+        numericYear < 1 ||
+        numericYear > 5
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "Academic year must be between 1 and 5.",
+          },
+          { status: 400 }
+        );
+      }
+    }
+
+    /*
+     * ------------------------------------------------------------
+     * Make sure target user exists
+     * ------------------------------------------------------------
+     */
+
+    const {
+      data: existingUser,
+      error: existingUserError,
+    } = await supabaseAdmin
+      .from("profiles")
+      .select("id, username, role")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (existingUserError) {
+      console.error(
+        "Failed to find user:",
+        existingUserError.message
+      );
+
+      return NextResponse.json(
+        { error: "Failed to find user." },
+        { status: 500 }
+      );
+    }
+
+    if (!existingUser) {
+      return NextResponse.json(
+        { error: "User not found." },
+        { status: 404 }
+      );
+    }
+
+    /*
+     * ------------------------------------------------------------
+     * Check username uniqueness
+     * ------------------------------------------------------------
+     */
+
+    const {
+      data: usernameConflict,
+      error: usernameConflictError,
+    } = await supabaseAdmin
+      .from("profiles")
+      .select("id")
+      .eq("username", cleanUsername)
+      .neq("id", id)
+      .maybeSingle();
+
+    if (usernameConflictError) {
+      console.error(
+        "Username uniqueness check failed:",
+        usernameConflictError.message
+      );
+
+      return NextResponse.json(
+        { error: "Failed to validate username." },
+        { status: 500 }
+      );
+    }
+
+    if (usernameConflict) {
+      return NextResponse.json(
+        { error: "That username is already in use." },
+        { status: 409 }
+      );
+    }
+
+    /*
+     * ------------------------------------------------------------
+     * Update Supabase Auth password if supplied
+     * ------------------------------------------------------------
+     */
+
+    if (
+      typeof password === "string" &&
+      password.trim().length > 0
+    ) {
+      const { error: passwordError } =
+        await supabaseAdmin.auth.admin.updateUserById(
+          id,
+          {
+            password,
+          }
+        );
+
+      if (passwordError) {
+        return NextResponse.json(
+          {
+            error:
+              passwordError.message ||
+              "Failed to update password.",
+          },
+          { status: 400 }
+        );
+      }
+    }
+
+    /*
+     * ------------------------------------------------------------
+     * Update profile
+     * ------------------------------------------------------------
+     *
+     * If the user is changed to a mentor, all student-only
+     * fields are cleared.
+     *
+     * ------------------------------------------------------------
+     */
+
+    const { data: updatedProfile, error: profileError } =
+      await supabaseAdmin
+        .from("profiles")
+        .update({
+          username: cleanUsername,
+          display_name: cleanDisplayName,
+          role,
+
+          year:
+            role === "student" && year !== ""
+              ? Number(year)
+              : null,
+
+          start_date:
+            role === "student" && start_date
+              ? start_date
+              : null,
+
+          end_date:
+            role === "student" && end_date
+              ? end_date
+              : null,
+
+          exam_date:
+            role === "student" && exam_date
+              ? exam_date
+              : null,
+
+          mentor_id:
+            role === "student" && mentor_id
+              ? mentor_id
+              : null,
+        })
+        .eq("id", id)
+        .select(
+          `
+            id,
+            username,
+            display_name,
+            role,
+            year,
+            start_date,
+            end_date,
+            exam_date,
+            mentor_id
+          `
+        )
+        .single();
+
+    if (profileError) {
+      return NextResponse.json(
+        {
+          error:
+            `Failed to update profile: ${profileError.message}`,
+        },
+        { status: 400 }
+      );
+    }
+
+    /*
+     * ------------------------------------------------------------
+     * Update Auth email if username changed
+     * ------------------------------------------------------------
+     */
+
+    const newEmail =
+      `${cleanUsername}${MEDIQ_DOMAIN}`;
+
+    const {
+      data: authUserData,
+      error: authLookupError,
+    } =
+      await supabaseAdmin.auth.admin.getUserById(id);
+
+    if (authLookupError) {
+      console.error(
+        "Failed to retrieve Auth user:",
+        authLookupError.message
+      );
+    }
+
+    if (
+      authUserData.user &&
+      authUserData.user.email !== newEmail
+    ) {
+      const { error: emailError } =
+        await supabaseAdmin.auth.admin.updateUserById(
+          id,
+          {
+            email: newEmail,
+            email_confirm: true,
+          }
+        );
+
+      if (emailError) {
+        console.error(
+          "Profile updated but Auth email update failed:",
+          emailError.message
+        );
+
+        return NextResponse.json(
+          {
+            error:
+              `Profile updated, but authentication email could not be updated: ${emailError.message}`,
+            user: updatedProfile,
+          },
+          { status: 400 }
+        );
+      }
+    }
+
+    /*
+     * ------------------------------------------------------------
+     * Success
+     * ------------------------------------------------------------
+     */
+
+    return NextResponse.json({
+      success: true,
+      user: updatedProfile,
+    });
+  } catch (error) {
+    console.error(
+      "Admin user update failed:",
       error
     );
 
