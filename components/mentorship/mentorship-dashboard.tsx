@@ -88,7 +88,6 @@ function addDays(date: Date, amount: number) {
   result.setDate(result.getDate() + amount);
   return result;
 }
-
 function formatWeekRange(
   start: Date | null,
   end: Date | null
@@ -97,13 +96,23 @@ function formatWeekRange(
     return "Loading week...";
   }
 
-  const startMonth = start.toLocaleDateString("en-US", {
-    month: "long",
-  });
+  const months = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+  ];
 
-  const endMonth = end.toLocaleDateString("en-US", {
-    month: "long",
-  });
+  const startMonth = months[start.getMonth()];
+  const endMonth = months[end.getMonth()];
 
   const startDay = start.getDate();
   const endDay = end.getDate();
@@ -161,20 +170,34 @@ useEffect(() => {
 const weekDays = useMemo(() => {
   if (!weekStart) return [];
 
+  const weekdayNames = [
+    "Sunday",
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+  ];
+
+  const weekdayShortNames = [
+    "SUN",
+    "MON",
+    "TUE",
+    "WED",
+    "THU",
+    "FRI",
+    "SAT",
+  ];
+
   return Array.from({ length: 7 }, (_, index) => {
     const date = addDays(weekStart, index);
 
     return {
       date,
       isoDate: formatDate(date),
-      name: date.toLocaleDateString("en-US", {
-        weekday: "long",
-      }),
-      short: date
-        .toLocaleDateString("en-US", {
-          weekday: "short",
-        })
-        .toUpperCase(),
+      name: weekdayNames[date.getDay()],
+      short: weekdayShortNames[date.getDay()],
     };
   });
 }, [weekStart]);
@@ -525,19 +548,19 @@ const weekDays = useMemo(() => {
 const currentDate = today ?? new Date();
 
 const daysUntilExam =
-  profile?.exam_date && currentDate
+  profile?.exam_date && today
     ? Math.ceil(
         (new Date(profile.exam_date).getTime() -
-          currentDate.getTime()) /
+          today.getTime()) /
           (1000 * 60 * 60 * 24)
       )
     : null;
 
 const daysLeftInPlan =
-  profile?.end_date && currentDate
+  profile?.end_date && today
     ? Math.ceil(
         (new Date(profile.end_date).getTime() -
-          currentDate.getTime()) /
+          today.getTime()) /
           (1000 * 60 * 60 * 24)
       )
     : null;
