@@ -69,17 +69,6 @@ async function authenticateAdmin(request: NextRequest) {
  * ================================================================
  * GET — LIST USERS
  * ================================================================
- *
- * Supports:
- *
- * ?page=1
- * ?page_size=8
- * ?search=ahmed
- * ?role=student
- *
- * Only the requested page is returned.
- *
- * ================================================================
  */
 
 export async function GET(request: NextRequest) {
@@ -91,12 +80,6 @@ export async function GET(request: NextRequest) {
     }
 
     const searchParams = request.nextUrl.searchParams;
-
-    /*
-     * ------------------------------------------------------------
-     * Pagination
-     * ------------------------------------------------------------
-     */
 
     const requestedPage = Number(
       searchParams.get("page") || "1"
@@ -120,12 +103,6 @@ export async function GET(request: NextRequest) {
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
 
-    /*
-     * ------------------------------------------------------------
-     * Search
-     * ------------------------------------------------------------
-     */
-
     const rawSearch =
       searchParams.get("search")?.trim() || "";
 
@@ -134,19 +111,7 @@ export async function GET(request: NextRequest) {
       .replace(/\s+/g, " ")
       .trim();
 
-    /*
-     * ------------------------------------------------------------
-     * Role filter
-     * ------------------------------------------------------------
-     */
-
     const role = searchParams.get("role");
-
-    /*
-     * ------------------------------------------------------------
-     * Build query
-     * ------------------------------------------------------------
-     */
 
     let query = supabaseAdmin
       .from("profiles")
@@ -204,9 +169,7 @@ export async function GET(request: NextRequest) {
     }
 
     /*
-     * ------------------------------------------------------------
-     * Fetch mentor names
-     * ------------------------------------------------------------
+     * Fetch mentors for the current page.
      */
 
     const mentorIds = [
@@ -244,12 +207,6 @@ export async function GET(request: NextRequest) {
     const mentorMap = new Map(
       mentors.map((mentor) => [mentor.id, mentor])
     );
-
-    /*
-     * ------------------------------------------------------------
-     * Format response
-     * ------------------------------------------------------------
-     */
 
     const formattedUsers = (users ?? []).map((user) => {
       const mentor = user.mentor_id
@@ -304,23 +261,11 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    /*
-     * ------------------------------------------------------------
-     * Authenticate
-     * ------------------------------------------------------------
-     */
-
     const { error } = await authenticateAdmin(request);
 
     if (error) {
       return error;
     }
-
-    /*
-     * ------------------------------------------------------------
-     * Read request body
-     * ------------------------------------------------------------
-     */
 
     const body = await request.json();
 
@@ -335,12 +280,6 @@ export async function POST(request: NextRequest) {
       exam_date,
       mentor_id,
     } = body;
-
-    /*
-     * ------------------------------------------------------------
-     * Basic validation
-     * ------------------------------------------------------------
-     */
 
     if (
       !username ||
@@ -411,9 +350,7 @@ export async function POST(request: NextRequest) {
     }
 
     /*
-     * ------------------------------------------------------------
-     * Check username uniqueness
-     * ------------------------------------------------------------
+     * Check username uniqueness.
      */
 
     const { data: usernameConflict } =
@@ -430,14 +367,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    /*
-     * ------------------------------------------------------------
-     * Create Supabase Auth user
-     * ------------------------------------------------------------
-     */
-
     const email =
       `${cleanUsername}${MEDIQ_DOMAIN}`;
+
+    /*
+     * Create Auth user.
+     */
 
     const {
       data: authData,
@@ -466,9 +401,7 @@ export async function POST(request: NextRequest) {
     const newUserId = authData.user.id;
 
     /*
-     * ------------------------------------------------------------
-     * Create linked profile
-     * ------------------------------------------------------------
+     * Create profile.
      */
 
     const { error: createProfileError } =
@@ -479,27 +412,22 @@ export async function POST(request: NextRequest) {
           username: cleanUsername,
           display_name: cleanDisplayName,
           role,
-
           year:
             role === "student"
               ? year ?? null
               : null,
-
           start_date:
             role === "student"
               ? start_date || null
               : null,
-
           end_date:
             role === "student"
               ? end_date || null
               : null,
-
           exam_date:
             role === "student"
               ? exam_date || null
               : null,
-
           mentor_id:
             role === "student"
               ? mentor_id || null
@@ -507,9 +435,7 @@ export async function POST(request: NextRequest) {
         });
 
     /*
-     * ------------------------------------------------------------
-     * Roll back Auth user if profile creation failed
-     * ------------------------------------------------------------
+     * Roll back Auth user if profile creation failed.
      */
 
     if (createProfileError) {
@@ -525,12 +451,6 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-
-    /*
-     * ------------------------------------------------------------
-     * Success
-     * ------------------------------------------------------------
-     */
 
     return NextResponse.json(
       {
@@ -561,27 +481,19 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// ================================================================
-// PATCH — UPDATE USER
-// ================================================================
+/*
+ * ================================================================
+ * PATCH — UPDATE USER
+ * ================================================================
+ */
 
 export async function PATCH(request: NextRequest) {
   try {
-    // ------------------------------------------------------------
-    // Authenticate
-    // ------------------------------------------------------------
-
     const { error } = await authenticateAdmin(request);
 
     if (error) {
       return error;
     }
-
-    /*
-     * ------------------------------------------------------------
-     * Read request body
-     * ------------------------------------------------------------
-     */
 
     const body = await request.json();
 
@@ -683,7 +595,7 @@ export async function PATCH(request: NextRequest) {
 
     /*
      * ------------------------------------------------------------
-     * Make sure target user exists
+     * Find existing user
      * ------------------------------------------------------------
      */
 
@@ -738,7 +650,7 @@ export async function PATCH(request: NextRequest) {
 
     /*
      * ------------------------------------------------------------
-     * Update password if supplied
+     * Update Auth password if supplied
      * ------------------------------------------------------------
      */
 
@@ -749,9 +661,7 @@ export async function PATCH(request: NextRequest) {
       const { error: passwordError } =
         await supabaseAdmin.auth.admin.updateUserById(
           id,
-          {
-            password,
-          }
+          { password }
         );
 
       if (passwordError) {
@@ -783,8 +693,7 @@ export async function PATCH(request: NextRequest) {
         role,
 
         year:
-          role === "student" &&
-          year !== ""
+          role === "student" && year !== ""
             ? Number(year)
             : null,
 
@@ -845,10 +754,27 @@ export async function PATCH(request: NextRequest) {
 
     const {
       data: authUserData,
+      error: authLookupError,
     } =
       await supabaseAdmin.auth.admin.getUserById(
         id
       );
+
+    if (authLookupError) {
+      console.error(
+        "Failed to retrieve Auth user:",
+        authLookupError.message
+      );
+
+      return NextResponse.json(
+        {
+          error:
+            "Profile updated, but the authentication account could not be verified.",
+          user: updatedProfile,
+        },
+        { status: 500 }
+      );
+    }
 
     if (
       authUserData.user &&
