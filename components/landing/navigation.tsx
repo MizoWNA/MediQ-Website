@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
+import Link from "next/link";
 
 const navLinks = [
   { name: "Features", href: "#features" },
@@ -95,10 +96,11 @@ export function Navigation() {
               }`}
             >
               <span className="transition-colors duration-300 group-hover:text-[#1f71a1]">
-                Find us
+                Apply To Mentorship
               </span>
             </a>
 
+          <Link href="/login">
             <Button
               size="sm"
               className={`bg-foreground hover:bg-foreground/90 text-background rounded-full transition-all duration-500 ${
@@ -108,15 +110,10 @@ export function Navigation() {
                 boxShadow:
                   "0 0 0 1px rgba(31,113,161,0.35), 0 0 0 2px rgba(70,166,92,0.15)",
               }}
-              onClick={() =>
-                window.open(
-                  "https://forms.gle/18KshEMPAuw6mUAc6",
-                  "_blank"
-                )
-              }
             >
-              LogIntoMento
+              Log Into Mentorship
             </Button>
+          </Link>
           </div>
 
           {/* Mobile Menu Button */}
