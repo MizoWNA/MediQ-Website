@@ -25,6 +25,14 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import {
+  SUBJECT_OPTIONS,
+  TASK_TYPE_OPTIONS,
+  getSubjectOption,
+  DEFAULT_SUBJECT_COLOR,
+} from "@/lib/task-options";
+
+
 
 type Profile = {
   id: string;
@@ -89,43 +97,6 @@ type TaskForm = {
  * No database enum is required.
  */
 
-const SUBJECT_OPTIONS = [
-  { value: "anatomy", label: "Anatomy" },
-  { value: "physiology", label: "Physiology" },
-  { value: "histology", label: "Histology" },
-];
-
-const TASK_TYPE_OPTIONS = [
-  { value: "lecture", label: "Lecture" },
-  { value: "revision", label: "Revision" },
-  { value: "practical", label: "Practical" },
-  { value: "tutorial", label: "Tutorial" },
-  { value: "exam", label: "Exam" },
-  { value: "assignment", label: "Assignment" },
-];
-
-const colorClasses = {
-  blue: {
-    card: "bg-sky-500/10 border-sky-500/20",
-    dot: "bg-sky-400",
-    text: "text-sky-300",
-  },
-  red: {
-    card: "bg-rose-500/10 border-rose-500/20",
-    dot: "bg-rose-400",
-    text: "text-rose-300",
-  },
-  green: {
-    card: "bg-emerald-500/10 border-emerald-500/20",
-    dot: "bg-emerald-400",
-    text: "text-emerald-300",
-  },
-  default: {
-    card: "bg-white/[0.025] border-white/[0.08]",
-    dot: "bg-white/40",
-    text: "text-white/50",
-  },
-};
 
 function formatDate(date: Date) {
   const year = date.getFullYear();
@@ -151,18 +122,6 @@ function addDays(date: Date, amount: number) {
   const result = new Date(date);
   result.setDate(result.getDate() + amount);
   return result;
-}
-
-function getSubjectColor(subject: string | null) {
-  if (!subject) return "default";
-
-  const normalized = subject.toLowerCase();
-
-  if (normalized.includes("anatom")) return "blue";
-  if (normalized.includes("physio")) return "red";
-  if (normalized.includes("histo")) return "green";
-
-  return "default";
 }
 
 function formatWeekRange(start: Date, end: Date) {
@@ -1999,15 +1958,12 @@ export function MentorDashboard() {
                             0 ? (
                               day.tasks.map(
                                 (task) => {
-                                  const color =
-                                    getSubjectColor(
-                                      task.subject
-                                    );
+                                  const subjectOption =
+                                    getSubjectOption(task.subject);
 
                                   const colors =
-                                    colorClasses[
-                                      color
-                                    ];
+                                    subjectOption?.color ??
+                                    DEFAULT_SUBJECT_COLOR;
 
                                   return (
                                     <div
