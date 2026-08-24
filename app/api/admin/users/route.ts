@@ -69,17 +69,6 @@ async function authenticateAdmin(request: NextRequest) {
  * ================================================================
  * GET — LIST USERS
  * ================================================================
- *
- * Supports:
- *
- * ?page=1
- * ?page_size=8
- * ?search=ahmed
- * ?role=student
- *
- * Only the requested page is returned.
- *
- * ================================================================
  */
 
 export async function GET(request: NextRequest) {
@@ -91,12 +80,6 @@ export async function GET(request: NextRequest) {
     }
 
     const searchParams = request.nextUrl.searchParams;
-
-    /*
-     * ------------------------------------------------------------
-     * Pagination
-     * ------------------------------------------------------------
-     */
 
     const requestedPage = Number(
       searchParams.get("page") || "1"
@@ -120,38 +103,15 @@ export async function GET(request: NextRequest) {
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
 
-    /*
-     * ------------------------------------------------------------
-     * Search
-     * ------------------------------------------------------------
-     */
-
     const rawSearch =
       searchParams.get("search")?.trim() || "";
-
-    /*
-     * Prevent PostgREST filter syntax from being
-     * accidentally injected through the search field.
-     */
 
     const search = rawSearch
       .replace(/[(),]/g, " ")
       .replace(/\s+/g, " ")
       .trim();
 
-    /*
-     * ------------------------------------------------------------
-     * Role filter
-     * ------------------------------------------------------------
-     */
-
     const role = searchParams.get("role");
-
-    /*
-     * ------------------------------------------------------------
-     * Build query
-     * ------------------------------------------------------------
-     */
 
     let query = supabaseAdmin
       .from("profiles")
@@ -173,27 +133,15 @@ export async function GET(request: NextRequest) {
       )
       .in("role", ["student", "mentor"]);
 
-    /*
-     * Role filtering.
-     */
-
     if (role === "student" || role === "mentor") {
       query = query.eq("role", role);
     }
-
-    /*
-     * Search both display name and username.
-     */
 
     if (search) {
       query = query.or(
         `display_name.ilike.%${search}%,username.ilike.%${search}%`
       );
     }
-
-    /*
-     * Stable ordering + pagination.
-     */
 
     query = query
       .order("display_name", {
@@ -219,16 +167,6 @@ export async function GET(request: NextRequest) {
         { status: 500 }
       );
     }
-
-    /*
-     * ------------------------------------------------------------
-     * Fetch mentor names
-     * ------------------------------------------------------------
-     *
-     * We only fetch mentors belonging to users on the
-     * current page.
-     * ------------------------------------------------------------
-     */
 
     const mentorIds = [
       ...new Set(
@@ -266,12 +204,6 @@ export async function GET(request: NextRequest) {
       mentors.map((mentor) => [mentor.id, mentor])
     );
 
-    /*
-     * ------------------------------------------------------------
-     * Format response
-     * ------------------------------------------------------------
-     */
-
     const formattedUsers = (users ?? []).map((user) => {
       const mentor = user.mentor_id
         ? mentorMap.get(user.mentor_id) ?? null
@@ -288,12 +220,6 @@ export async function GET(request: NextRequest) {
           : null,
       };
     });
-
-    /*
-     * ------------------------------------------------------------
-     * Response
-     * ------------------------------------------------------------
-     */
 
     return NextResponse.json({
       users: formattedUsers,
@@ -331,23 +257,11 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    /*
-     * ------------------------------------------------------------
-     * Authenticate requesting user
-     * ------------------------------------------------------------
-     */
-
     const { error } = await authenticateAdmin(request);
 
     if (error) {
       return error;
     }
-
-    /*
-     * ------------------------------------------------------------
-     * Read request body
-     * ------------------------------------------------------------
-     */
 
     const body = await request.json();
 
@@ -362,12 +276,6 @@ export async function POST(request: NextRequest) {
       exam_date,
       mentor_id,
     } = body;
-
-    /*
-     * ------------------------------------------------------------
-     * Basic validation
-     * ------------------------------------------------------------
-     */
 
     if (
       !username ||
@@ -414,12 +322,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    /*
-     * ------------------------------------------------------------
-     * Validate academic year
-     * ------------------------------------------------------------
-     */
-
     if (
       role === "student" &&
       year !== null &&
@@ -443,12 +345,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    /*
-     * ------------------------------------------------------------
-     * Check username uniqueness
-     * ------------------------------------------------------------
-     */
-
     const { data: usernameConflict } =
       await supabaseAdmin
         .from("profiles")
@@ -462,12 +358,6 @@ export async function POST(request: NextRequest) {
         { status: 409 }
       );
     }
-
-    /*
-     * ------------------------------------------------------------
-     * Create Supabase Auth user
-     * ------------------------------------------------------------
-     */
 
     const email = `${cleanUsername}${MEDIQ_DOMAIN}`;
 
@@ -497,12 +387,6 @@ export async function POST(request: NextRequest) {
 
     const newUserId = authData.user.id;
 
-    /*
-     * ------------------------------------------------------------
-     * Create linked profile
-     * ------------------------------------------------------------
-     */
-
     const { error: createProfileError } =
       await supabaseAdmin
         .from("profiles")
@@ -511,38 +395,27 @@ export async function POST(request: NextRequest) {
           username: cleanUsername,
           display_name: cleanDisplayName,
           role,
-
           year:
             role === "student"
               ? year ?? null
               : null,
-
           start_date:
             role === "student"
               ? start_date || null
               : null,
-
           end_date:
             role === "student"
               ? end_date || null
               : null,
-
           exam_date:
             role === "student"
               ? exam_date || null
               : null,
-
           mentor_id:
             role === "student"
               ? mentor_id || null
               : null,
         });
-
-    /*
-     * ------------------------------------------------------------
-     * Roll back Auth user if profile creation failed
-     * ------------------------------------------------------------
-     */
 
     if (createProfileError) {
       await supabaseAdmin.auth.admin.deleteUser(
@@ -556,12 +429,6 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-
-    /*
-     * ------------------------------------------------------------
-     * Success
-     * ------------------------------------------------------------
-     */
 
     return NextResponse.json(
       {
@@ -600,23 +467,11 @@ export async function POST(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
-    /*
-     * ------------------------------------------------------------
-     * Authenticate requesting user
-     * ------------------------------------------------------------
-     */
-
     const { error } = await authenticateAdmin(request);
 
     if (error) {
       return error;
     }
-
-    /*
-     * ------------------------------------------------------------
-     * Read request body
-     * ------------------------------------------------------------
-     */
 
     const body = await request.json();
 
@@ -632,12 +487,6 @@ export async function PATCH(request: NextRequest) {
       exam_date,
       mentor_id,
     } = body;
-
-    /*
-     * ------------------------------------------------------------
-     * Basic validation
-     * ------------------------------------------------------------
-     */
 
     if (!id) {
       return NextResponse.json(
@@ -686,12 +535,6 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    /*
-     * ------------------------------------------------------------
-     * Validate academic year
-     * ------------------------------------------------------------
-     */
-
     if (
       role === "student" &&
       year !== null &&
@@ -715,12 +558,6 @@ export async function PATCH(request: NextRequest) {
       }
     }
 
-    /*
-     * ------------------------------------------------------------
-     * Make sure target user exists
-     * ------------------------------------------------------------
-     */
-
     const {
       data: existingUser,
       error: existingUserError,
@@ -731,11 +568,6 @@ export async function PATCH(request: NextRequest) {
       .maybeSingle();
 
     if (existingUserError) {
-      console.error(
-        "Failed to find user:",
-        existingUserError.message
-      );
-
       return NextResponse.json(
         { error: "Failed to find user." },
         { status: 500 }
@@ -749,12 +581,6 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    /*
-     * ------------------------------------------------------------
-     * Check username uniqueness
-     * ------------------------------------------------------------
-     */
-
     const {
       data: usernameConflict,
       error: usernameConflictError,
@@ -766,11 +592,6 @@ export async function PATCH(request: NextRequest) {
       .maybeSingle();
 
     if (usernameConflictError) {
-      console.error(
-        "Username uniqueness check failed:",
-        usernameConflictError.message
-      );
-
       return NextResponse.json(
         { error: "Failed to validate username." },
         { status: 500 }
@@ -785,9 +606,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     /*
-     * ------------------------------------------------------------
-     * Update Supabase Auth password if supplied
-     * ------------------------------------------------------------
+     * Update password only when a new one was supplied.
      */
 
     if (
@@ -797,9 +616,7 @@ export async function PATCH(request: NextRequest) {
       const { error: passwordError } =
         await supabaseAdmin.auth.admin.updateUserById(
           id,
-          {
-            password,
-          }
+          { password }
         );
 
       if (passwordError) {
@@ -815,14 +632,10 @@ export async function PATCH(request: NextRequest) {
     }
 
     /*
-     * ------------------------------------------------------------
-     * Update profile
-     * ------------------------------------------------------------
+     * Update profile.
      *
-     * If the user is changed to a mentor, all student-only
-     * fields are cleared.
-     *
-     * ------------------------------------------------------------
+     * Student-only fields are automatically cleared
+     * when changing the user to a mentor.
      */
 
     const { data: updatedProfile, error: profileError } =
@@ -832,27 +645,22 @@ export async function PATCH(request: NextRequest) {
           username: cleanUsername,
           display_name: cleanDisplayName,
           role,
-
           year:
             role === "student" && year !== ""
               ? Number(year)
               : null,
-
           start_date:
             role === "student" && start_date
               ? start_date
               : null,
-
           end_date:
             role === "student" && end_date
               ? end_date
               : null,
-
           exam_date:
             role === "student" && exam_date
               ? exam_date
               : null,
-
           mentor_id:
             role === "student" && mentor_id
               ? mentor_id
@@ -885,9 +693,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     /*
-     * ------------------------------------------------------------
-     * Update Auth email if username changed
-     * ------------------------------------------------------------
+     * Update authentication email if username changed.
      */
 
     const newEmail =
@@ -895,16 +701,8 @@ export async function PATCH(request: NextRequest) {
 
     const {
       data: authUserData,
-      error: authLookupError,
     } =
       await supabaseAdmin.auth.admin.getUserById(id);
-
-    if (authLookupError) {
-      console.error(
-        "Failed to retrieve Auth user:",
-        authLookupError.message
-      );
-    }
 
     if (
       authUserData.user &&
@@ -935,12 +733,6 @@ export async function PATCH(request: NextRequest) {
         );
       }
     }
-
-    /*
-     * ------------------------------------------------------------
-     * Success
-     * ------------------------------------------------------------
-     */
 
     return NextResponse.json({
       success: true,
