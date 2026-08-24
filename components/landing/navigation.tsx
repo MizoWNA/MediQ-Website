@@ -115,7 +115,7 @@ export function Navigation() {
                 )
               }
             >
-              LogIntoMentoship
+              LogIntoMento
             </Button>
           </div>
 
