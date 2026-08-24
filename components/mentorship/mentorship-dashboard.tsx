@@ -14,6 +14,10 @@ import {
   UserRound,
   CalendarClock,
   Timer,
+  Menu,
+  X,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
@@ -58,8 +62,6 @@ type CalendarDay = {
   tasks: Task[];
 };
 
-
-
 function formatDate(date: Date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -86,14 +88,13 @@ function addDays(date: Date, amount: number) {
   return result;
 }
 
-
 function formatWeekRange(start: Date, end: Date) {
   const startMonth = start.toLocaleDateString("en-US", {
     month: "long",
   });
 
   const endMonth = end.toLocaleDateString("en-US", {
-    month: "long"
+    month: "long",
   });
 
   const startDay = start.getDate();
@@ -126,6 +127,10 @@ export function MentorshipDashboard() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
   const router = useRouter();
 
   /*
@@ -159,20 +164,6 @@ export function MentorshipDashboard() {
    * ================================================================
    * LOAD DASHBOARD
    * ================================================================
-   *
-   * Authentication is now handled properly through Supabase Auth.
-   *
-   * The authenticated user's UUID is used everywhere:
-   *
-   * auth.users.id
-   *      ↓
-   * profiles.id
-   *      ↓
-   * tasks.student_id
-   *      ↓
-   * objectives.student_id
-   *
-   * No hardcoded student UUID remains.
    */
 
   useEffect(() => {
@@ -183,12 +174,6 @@ export function MentorshipDashboard() {
       setError(null);
 
       try {
-        /*
-         * ==========================================================
-         * AUTHENTICATED USER
-         * ==========================================================
-         */
-
         const {
           data: { user },
           error: authError,
@@ -208,12 +193,7 @@ export function MentorshipDashboard() {
         const studentId = user.id;
 
         /*
-         * ==========================================================
          * PROFILE
-         * ==========================================================
-         *
-         * The profile is expected to use the same UUID as the
-         * authenticated Supabase user.
          */
 
         const {
@@ -244,9 +224,7 @@ export function MentorshipDashboard() {
         setProfile(profileData);
 
         /*
-         * ==========================================================
          * MENTOR
-         * ==========================================================
          */
 
         setMentorName(null);
@@ -264,8 +242,8 @@ export function MentorshipDashboard() {
           if (!mentorError && mentorData) {
             setMentorName(
               mentorData.display_name ||
-              mentorData.username ||
-              "Assigned Mentor"
+                mentorData.username ||
+                "Assigned Mentor"
             );
           } else {
             setMentorName("Assigned Mentor");
@@ -273,12 +251,7 @@ export function MentorshipDashboard() {
         }
 
         /*
-         * ==========================================================
          * OBJECTIVES
-         * ==========================================================
-         *
-         * Objectives are persistent.
-         * There is intentionally NO week/date filter here.
          */
 
         const {
@@ -299,18 +272,11 @@ export function MentorshipDashboard() {
         if (cancelled) return;
 
         setObjectives(
-          Array.isArray(objectiveData)
-            ? objectiveData
-            : []
+          Array.isArray(objectiveData) ? objectiveData : []
         );
 
         /*
-         * ==========================================================
          * TASKS
-         * ==========================================================
-         *
-         * Tasks are date-based.
-         * Only load the currently displayed week.
          */
 
         const {
@@ -336,17 +302,12 @@ export function MentorshipDashboard() {
         if (cancelled) return;
 
         setTasks(
-          Array.isArray(taskData)
-            ? taskData
-            : []
+          Array.isArray(taskData) ? taskData : []
         );
       } catch (err) {
         if (cancelled) return;
 
-        console.error(
-          "Dashboard loading error:",
-          err
-        );
+        console.error("Dashboard loading error:", err);
 
         setError(
           err instanceof Error
@@ -385,31 +346,35 @@ export function MentorshipDashboard() {
     }));
   }, [weekDays, tasks]);
 
-const weekSubjects = useMemo(() => {
-  const subjects = new Set<string>();
+  /*
+   * ================================================================
+   * WEEK SUBJECTS
+   * ================================================================
+   */
 
-  tasks.forEach((task) => {
-    if (task.subject) {
-      const option = getSubjectOption(task.subject);
+  const weekSubjects = useMemo(() => {
+    const subjects = new Set<string>();
 
-      if (option) {
-        subjects.add(option.value);
+    tasks.forEach((task) => {
+      if (task.subject) {
+        const option = getSubjectOption(task.subject);
+
+        if (option) {
+          subjects.add(option.value);
+        }
       }
-    }
-  });
+    });
 
-  return Array.from(subjects)
-    .map((value) =>
-      getSubjectOption(value)
-    )
-    .filter(
-      (
-        option
-      ): option is NonNullable<
-        ReturnType<typeof getSubjectOption>
-      > => option !== null
-    );
-}, [tasks]);
+    return Array.from(subjects)
+      .map((value) => getSubjectOption(value))
+      .filter(
+        (
+          option
+        ): option is NonNullable<
+          ReturnType<typeof getSubjectOption>
+        > => option !== null
+      );
+  }, [tasks]);
 
   /*
    * ================================================================
@@ -417,18 +382,16 @@ const weekSubjects = useMemo(() => {
    * ================================================================
    */
 
-  async function toggleObjective(
-    objective: Objective
-  ) {
+  async function toggleObjective(objective: Objective) {
     const newCompleted = !objective.completed;
 
     setObjectives((current) =>
       current.map((item) =>
         item.id === objective.id
           ? {
-            ...item,
-            completed: newCompleted,
-          }
+              ...item,
+              completed: newCompleted,
+            }
           : item
       )
     );
@@ -450,9 +413,9 @@ const weekSubjects = useMemo(() => {
         current.map((item) =>
           item.id === objective.id
             ? {
-              ...item,
-              completed: objective.completed,
-            }
+                ...item,
+                completed: objective.completed,
+              }
             : item
         )
       );
@@ -472,9 +435,9 @@ const weekSubjects = useMemo(() => {
       current.map((item) =>
         item.id === task.id
           ? {
-            ...item,
-            completed: newCompleted,
-          }
+              ...item,
+              completed: newCompleted,
+            }
           : item
       )
     );
@@ -496,9 +459,9 @@ const weekSubjects = useMemo(() => {
         current.map((item) =>
           item.id === task.id
             ? {
-              ...item,
-              completed: task.completed,
-            }
+                ...item,
+                completed: task.completed,
+              }
             : item
         )
       );
@@ -537,22 +500,22 @@ const weekSubjects = useMemo(() => {
 
   const daysUntilExam = profile?.exam_date
     ? Math.ceil(
-      (new Date(
-        profile.exam_date
-      ).getTime() -
-        today.getTime()) /
-      (1000 * 60 * 60 * 24)
-    )
+        (new Date(
+          profile.exam_date
+        ).getTime() -
+          today.getTime()) /
+          (1000 * 60 * 60 * 24)
+      )
     : null;
 
   const daysLeftInPlan = profile?.end_date
     ? Math.ceil(
-      (new Date(
-        profile.end_date
-      ).getTime() -
-        today.getTime()) /
-      (1000 * 60 * 60 * 24)
-    )
+        (new Date(
+          profile.end_date
+        ).getTime() -
+          today.getTime()) /
+          (1000 * 60 * 60 * 24)
+      )
     : null;
 
   const completedTasks = tasks.filter(
@@ -597,47 +560,61 @@ const weekSubjects = useMemo(() => {
 
   /*
    * ================================================================
-   * RENDER
+   * SIDEBAR CONTENT
    * ================================================================
    */
 
-  return (
-    <div className="min-h-screen bg-[#0b0d10] px-4 py-4 text-white sm:px-6 lg:px-8">
-      <div className="flex min-h-[calc(100vh-2rem)] w-full overflow-hidden rounded-2xl border border-white/[0.07] bg-[#111419] shadow-2xl">
+  const sidebarContent = (
+    <>
+      {/* Logo */}
 
-        {/* ============================================================
-            SIDEBAR
-        ============================================================= */}
-
-        <aside className="hidden w-[260px] shrink-0 border-r border-white/[0.07] bg-[#0d0f12] lg:flex lg:flex-col">
-
-          {/* Logo */}
-
-          <div className="flex h-20 items-center border-b border-white/[0.07] px-6">
-            <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center">
-                <img
-                  src="/mediq.svg"
-                  alt="MediQ"
-                  className="h-9 w-9 object-contain"
-                />
-              </div>
-
-              <div>
-                <div className="text-sm font-semibold tracking-tight">
-                  MediQ
-                </div>
-
-                <div className="text-[11px] text-white/40">
-                  Mentorship
-                </div>
-              </div>
-            </div>
+      <div
+        className={`flex h-20 shrink-0 items-center border-b border-white/[0.07] ${
+          sidebarCollapsed
+            ? "justify-center px-3"
+            : "px-6"
+        }`}
+      >
+        <div
+          className={`flex items-center ${
+            sidebarCollapsed
+              ? "justify-center"
+              : "gap-3"
+          }`}
+        >
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center">
+            <img
+              src="/mediq.svg"
+              alt="MediQ"
+              className="h-9 w-9 object-contain"
+            />
           </div>
 
-          {/* Student */}
+          {!sidebarCollapsed && (
+            <div>
+              <div className="text-sm font-semibold tracking-tight">
+                MediQ
+              </div>
 
-          <div className="border-b border-white/[0.07] px-5 py-6">
+              <div className="text-[11px] text-white/40">
+                Mentorship
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Student */}
+
+      <div
+        className={`border-b border-white/[0.07] ${
+          sidebarCollapsed
+            ? "px-3 py-5"
+            : "px-5 py-6"
+        }`}
+      >
+        {!sidebarCollapsed ? (
+          <>
             <div className="mb-3 flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-white/35">
               <UserRound className="h-3.5 w-3.5" />
               Student
@@ -652,11 +629,32 @@ const weekSubjects = useMemo(() => {
             <div className="mt-1 text-sm text-white/40">
               Medical Student
             </div>
+          </>
+        ) : (
+          <div className="flex justify-center">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.04] text-sm font-semibold text-white/70">
+              {(profile?.display_name ||
+                profile?.username ||
+                "S"
+              )
+                .charAt(0)
+                .toUpperCase()}
+            </div>
           </div>
+        )}
+      </div>
 
-          {/* Mentor */}
+      {/* Mentor */}
 
-          <div className="border-b border-white/[0.07] px-5 py-6">
+      <div
+        className={`border-b border-white/[0.07] ${
+          sidebarCollapsed
+            ? "px-3 py-5"
+            : "px-5 py-6"
+        }`}
+      >
+        {!sidebarCollapsed ? (
+          <>
             <div className="mb-3 flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-white/35">
               <GraduationCap className="h-3.5 w-3.5" />
               Mentor
@@ -672,43 +670,92 @@ const weekSubjects = useMemo(() => {
                 Academic Mentor
               </div>
             </div>
-          </div>
-
-          {/* Student information */}
-
-          <div className="px-5 py-5">
-            <div className="space-y-0">
-              {studentStats.map(
-                (stat, index) => {
-                  const Icon = stat.icon;
-
-                  return (
-                    <div
-                      key={stat.label}
-                      className={`py-4 ${index !==
-                          studentStats.length - 1
-                          ? "border-b border-white/[0.06]"
-                          : ""
-                        }`}
-                    >
-                      <div className="flex items-center gap-2 text-[10px] font-medium uppercase tracking-wider text-white/30">
-                        <Icon className="h-3.5 w-3.5" />
-                        {stat.label}
-                      </div>
-
-                      <div className="mt-1.5 text-sm font-medium text-white/75">
-                        {stat.value}
-                      </div>
-                    </div>
-                  );
-                }
-              )}
+          </>
+        ) : (
+          <div className="flex justify-center">
+            <div
+              title={
+                mentorName ||
+                "No mentor assigned"
+              }
+              className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.07] bg-white/[0.025]"
+            >
+              <GraduationCap className="h-4 w-4 text-white/50" />
             </div>
           </div>
+        )}
+      </div>
 
-          {/* Week summary */}
+      {/* Student information */}
 
-          <div className="mt-auto border-t border-white/[0.07] p-5">
+      <div
+        className={`${
+          sidebarCollapsed
+            ? "px-3 py-4"
+            : "px-5 py-5"
+        }`}
+      >
+        {!sidebarCollapsed ? (
+          <div className="space-y-0">
+            {studentStats.map(
+              (stat, index) => {
+                const Icon = stat.icon;
+
+                return (
+                  <div
+                    key={stat.label}
+                    className={`py-4 ${
+                      index !==
+                      studentStats.length - 1
+                        ? "border-b border-white/[0.06]"
+                        : ""
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 text-[10px] font-medium uppercase tracking-wider text-white/30">
+                      <Icon className="h-3.5 w-3.5" />
+                      {stat.label}
+                    </div>
+
+                    <div className="mt-1.5 text-sm font-medium text-white/75">
+                      {stat.value}
+                    </div>
+                  </div>
+                );
+              }
+            )}
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {studentStats.map(
+              (stat) => {
+                const Icon = stat.icon;
+
+                return (
+                  <div
+                    key={stat.label}
+                    title={`${stat.label}: ${stat.value}`}
+                    className="flex justify-center"
+                  >
+                    <Icon className="h-4 w-4 text-white/35" />
+                  </div>
+                );
+              }
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Week summary */}
+
+      <div
+        className={`mt-auto border-t border-white/[0.07] ${
+          sidebarCollapsed
+            ? "p-3"
+            : "p-5"
+        }`}
+      >
+        {!sidebarCollapsed ? (
+          <>
             <div className="mb-3 flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-white/35">
               <Clock3 className="h-3.5 w-3.5" />
               This Week
@@ -728,10 +775,11 @@ const weekSubjects = useMemo(() => {
                 style={{
                   width:
                     totalTasks > 0
-                      ? `${(completedTasks /
-                        totalTasks) *
-                      100
-                      }%`
+                      ? `${
+                          (completedTasks /
+                            totalTasks) *
+                          100
+                        }%`
                       : "0%",
                 }}
               />
@@ -741,9 +789,140 @@ const weekSubjects = useMemo(() => {
               <span>
                 {completedTasks} completed
               </span>
-              <span>{totalTasks} total</span>
+
+              <span>
+                {totalTasks} total
+              </span>
+            </div>
+          </>
+        ) : (
+          <div
+            title={`${completedTasks} of ${totalTasks} tasks completed`}
+            className="flex flex-col items-center gap-3"
+          >
+            <Clock3 className="h-4 w-4 text-white/35" />
+
+            <div className="h-24 w-1.5 overflow-hidden rounded-full bg-white/[0.07]">
+              <div
+                className="w-full rounded-full bg-white transition-all"
+                style={{
+                  height:
+                    totalTasks > 0
+                      ? `${
+                          (completedTasks /
+                            totalTasks) *
+                          100
+                        }%`
+                      : "0%",
+                }}
+              />
             </div>
           </div>
+        )}
+      </div>
+
+      {/* Desktop collapse control */}
+
+      <div className="hidden border-t border-white/[0.07] p-3 lg:block">
+        <button
+          type="button"
+          onClick={() =>
+            setSidebarCollapsed(
+              (current) => !current
+            )
+          }
+          className={`flex h-9 w-full items-center rounded-lg border border-white/[0.07] bg-white/[0.02] text-white/40 transition hover:bg-white/[0.05] hover:text-white ${
+            sidebarCollapsed
+              ? "justify-center"
+              : "justify-center gap-2"
+          }`}
+          aria-label={
+            sidebarCollapsed
+              ? "Expand sidebar"
+              : "Collapse sidebar"
+          }
+        >
+          {sidebarCollapsed ? (
+            <PanelLeftOpen className="h-4 w-4" />
+          ) : (
+            <>
+              <PanelLeftClose className="h-4 w-4" />
+              <span className="text-xs">
+                Collapse
+              </span>
+            </>
+          )}
+        </button>
+      </div>
+    </>
+  );
+
+  /*
+   * ================================================================
+   * RENDER
+   * ================================================================
+   */
+
+  return (
+    <div className="min-h-screen bg-[#0b0d10] px-0 py-0 text-white sm:px-4 sm:py-4">
+      <div className="relative flex min-h-screen w-full overflow-hidden rounded-none border border-white/[0.07] bg-[#111419] shadow-2xl sm:min-h-[calc(100vh-2rem)] sm:rounded-2xl">
+
+        {/* ============================================================
+            MOBILE OVERLAY
+        ============================================================= */}
+
+        {sidebarOpen && (
+          <button
+            type="button"
+            aria-label="Close sidebar"
+            onClick={() =>
+              setSidebarOpen(false)
+            }
+            className="fixed inset-0 z-40 bg-black/60 backdrop-blur-[2px] lg:hidden"
+          />
+        )}
+
+        {/* ============================================================
+            DESKTOP SIDEBAR
+        ============================================================= */}
+
+        <aside
+          className={`hidden shrink-0 border-r border-white/[0.07] bg-[#0d0f12] transition-[width] duration-300 lg:flex lg:flex-col ${
+            sidebarCollapsed
+              ? "w-[76px]"
+              : "w-[280px]"
+          }`}
+        >
+          {sidebarContent}
+        </aside>
+
+        {/* ============================================================
+            MOBILE SIDEBAR
+        ============================================================= */}
+
+        <aside
+          className={`fixed inset-y-0 left-0 z-50 flex w-[280px] flex-col border-r border-white/[0.07] bg-[#0d0f12] shadow-2xl transition-transform duration-300 lg:hidden ${
+            sidebarOpen
+              ? "translate-x-0"
+              : "-translate-x-full"
+          }`}
+        >
+          {/* Mobile close button */}
+
+          <div className="absolute right-4 top-6">
+            <button
+              type="button"
+              onClick={() =>
+                setSidebarOpen(false)
+              }
+              className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/[0.07] bg-white/[0.03] text-white/40 transition hover:bg-white/[0.07] hover:text-white"
+              aria-label="Close sidebar"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          {sidebarContent}
         </aside>
 
         {/* ============================================================
@@ -754,46 +933,80 @@ const weekSubjects = useMemo(() => {
 
           {/* Header */}
 
-          <header className="flex min-h-20 flex-wrap items-center justify-between gap-4 border-b border-white/[0.07] px-5 py-4 sm:px-7">
-            <div>
-              <div className="flex items-center gap-2 text-xs text-white/35">
-                <CalendarDays className="h-3.5 w-3.5" />
-                Weekly Planner
+          <header className="border-b border-white/[0.07] px-4 py-4 sm:px-6 lg:px-7">
+            <div className="flex items-center justify-between gap-3">
+
+              {/* Left */}
+
+              <div className="flex min-w-0 items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSidebarOpen(true)
+                  }
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.025] text-white/50 transition hover:bg-white/[0.06] hover:text-white lg:hidden"
+                  aria-label="Open sidebar"
+                >
+                  <Menu className="h-4 w-4" />
+                </button>
+
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 text-xs text-white/35">
+                    <CalendarDays className="h-3.5 w-3.5 shrink-0" />
+                    <span>
+                      Weekly Planner
+                    </span>
+                  </div>
+
+                  <h1 className="mt-1 truncate text-lg font-semibold tracking-tight sm:text-2xl">
+                    {formatWeekRange(
+                      weekStart,
+                      weekEnd
+                    )}
+                  </h1>
+                </div>
               </div>
 
-              <h1 className="mt-1 text-xl font-semibold tracking-tight sm:text-2xl">
-                {formatWeekRange(
-                  weekStart,
-                  weekEnd
-                )}
-              </h1>
+              {/* Week navigation */}
+
+              <div className="flex shrink-0 items-center gap-2">
+                <button
+                  type="button"
+                  onClick={previousWeek}
+                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.025] text-white/50 transition hover:bg-white/[0.06] hover:text-white"
+                  aria-label="Previous week"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={goToToday}
+                  className="hidden h-9 rounded-lg border border-white/[0.08] bg-white/[0.025] px-3 text-xs font-medium text-white/60 transition hover:bg-white/[0.06] hover:text-white sm:block"
+                >
+                  Today
+                </button>
+
+                <button
+                  type="button"
+                  onClick={nextWeek}
+                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.025] text-white/50 transition hover:bg-white/[0.06] hover:text-white"
+                  aria-label="Next week"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
             </div>
 
-            {/* Week navigation */}
+            {/* Mobile Today button */}
 
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={previousWeek}
-                className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.025] text-white/50 transition hover:bg-white/[0.06] hover:text-white"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-
+            <div className="mt-3 sm:hidden">
               <button
                 type="button"
                 onClick={goToToday}
-                className="hidden h-9 rounded-lg border border-white/[0.08] bg-white/[0.025] px-3 text-xs font-medium text-white/60 transition hover:bg-white/[0.06] hover:text-white sm:block"
+                className="h-8 rounded-lg border border-white/[0.08] bg-white/[0.025] px-3 text-xs font-medium text-white/50 transition hover:bg-white/[0.06] hover:text-white"
               >
                 Today
-              </button>
-
-              <button
-                type="button"
-                onClick={nextWeek}
-                className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.025] text-white/50 transition hover:bg-white/[0.06] hover:text-white"
-              >
-                <ChevronRight className="h-4 w-4" />
               </button>
             </div>
           </header>
@@ -811,7 +1024,7 @@ const weekSubjects = useMemo(() => {
           {/* Error */}
 
           {!loading && error && (
-            <div className="p-6">
+            <div className="p-4 sm:p-6">
               <div className="rounded-2xl border border-rose-500/20 bg-rose-500/10 p-5">
                 <div className="text-sm font-medium text-rose-300">
                   Could not load your planner
@@ -835,9 +1048,9 @@ const weekSubjects = useMemo(() => {
 
               <section className="rounded-2xl border border-white/[0.07] bg-[#15181d]">
 
-                <div className="flex items-center justify-between border-b border-white/[0.07] px-5 py-4">
+                <div className="flex items-center justify-between border-b border-white/[0.07] px-4 py-4 sm:px-5">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/[0.06]">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/[0.06]">
                       <Target className="h-4 w-4 text-white/70" />
                     </div>
 
@@ -852,7 +1065,7 @@ const weekSubjects = useMemo(() => {
                     </div>
                   </div>
 
-                  <span className="hidden text-xs text-white/30 sm:block">
+                  <span className="text-[11px] text-white/30 sm:text-xs">
                     {completedObjectives} of{" "}
                     {objectiveCount} complete
                   </span>
@@ -874,7 +1087,7 @@ const weekSubjects = useMemo(() => {
                               objective
                             )
                           }
-                          className="flex items-start gap-3 bg-[#15181d] px-5 py-4 text-left transition hover:bg-white/[0.025]"
+                          className="flex items-start gap-3 bg-[#15181d] px-4 py-4 text-left transition hover:bg-white/[0.025] sm:px-5"
                         >
                           {objective.completed ? (
                             <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
@@ -883,10 +1096,11 @@ const weekSubjects = useMemo(() => {
                           )}
 
                           <span
-                            className={`text-sm leading-5 ${objective.completed
+                            className={`text-sm leading-5 ${
+                              objective.completed
                                 ? "text-white/35 line-through"
                                 : "text-white/70"
-                              }`}
+                            }`}
                           >
                             {objective.text}
                           </span>
@@ -905,9 +1119,9 @@ const weekSubjects = useMemo(() => {
 
                 {/* Calendar heading */}
 
-                <div className="flex items-center justify-between border-b border-white/[0.07] px-5 py-4">
+                <div className="flex flex-col gap-3 border-b border-white/[0.07] px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/[0.06]">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/[0.06]">
                       <BookOpen className="h-4 w-4 text-white/70" />
                     </div>
 
@@ -922,27 +1136,33 @@ const weekSubjects = useMemo(() => {
                     </div>
                   </div>
 
-                                  {weekSubjects.length > 0 && (
-                  <div className="hidden items-center gap-4 text-[11px] text-white/35 sm:flex">
-                    {weekSubjects.map((subject) => (
-                      <div
-                        key={subject.value}
-                        className="flex items-center gap-1.5"
-                      >
-                        <span
-                          className={`h-2 w-2 rounded-full ${subject.color.dot}`}
-                        />
-                        {subject.label}
-                      </div>
-                    ))}
-                  </div>
-                )}
+                  {weekSubjects.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] text-white/35">
+                      {weekSubjects.map(
+                        (subject) => (
+                          <div
+                            key={
+                              subject.value
+                            }
+                            className="flex items-center gap-1.5"
+                          >
+                            <span
+                              className={`h-2 w-2 rounded-full ${subject.color.dot}`}
+                            />
+                            {subject.label}
+                          </div>
+                        )
+                      )}
+                    </div>
+                  )}
                 </div>
 
-                {/* Calendar */}
+                {/* ==================================================
+                    DESKTOP CALENDAR
+                ================================================== */}
 
-                <div className="overflow-x-auto">
-                  <div className="grid min-w-[900px] grid-cols-7 divide-x divide-white/[0.06]">
+                <div className="hidden overflow-x-auto md:block">
+                  <div className="grid grid-cols-7 divide-x divide-white/[0.06]">
 
                     {days.map((day) => (
                       <div
@@ -958,11 +1178,12 @@ const weekSubjects = useMemo(() => {
                           </div>
 
                           <div
-                            className={`mx-auto mt-2 flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold ${day.isoDate ===
-                                formatDate(today)
+                            className={`mx-auto mt-2 flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold ${
+                              day.isoDate ===
+                              formatDate(today)
                                 ? "bg-white text-black"
                                 : "text-white/65"
-                              }`}
+                            }`}
                           >
                             {day.date}
                           </div>
@@ -972,11 +1193,13 @@ const weekSubjects = useMemo(() => {
 
                         <div className="space-y-2 p-2.5">
                           {day.tasks.length >
-                            0 ? (
+                          0 ? (
                             day.tasks.map(
                               (task) => {
                                 const subject =
-                                  getSubjectOption(task.subject);
+                                  getSubjectOption(
+                                    task.subject
+                                  );
 
                                 const colors =
                                   subject?.color ??
@@ -1005,10 +1228,11 @@ const weekSubjects = useMemo(() => {
                                         </div>
 
                                         <div
-                                          className={`mt-1 text-xs font-medium leading-4 ${task.completed
+                                          className={`mt-1 text-xs font-medium leading-4 ${
+                                            task.completed
                                               ? "text-white/30 line-through"
                                               : "text-white/75"
-                                            }`}
+                                          }`}
                                         >
                                           {
                                             task.name
@@ -1052,11 +1276,149 @@ const weekSubjects = useMemo(() => {
                             </div>
                           )}
                         </div>
-
                       </div>
                     ))}
-
                   </div>
+                </div>
+
+                {/* ==================================================
+                    MOBILE CALENDAR
+                ================================================== */}
+
+                <div className="divide-y divide-white/[0.06] md:hidden">
+                  {days.map((day) => {
+                    const isToday =
+                      day.isoDate ===
+                      formatDate(today);
+
+                    return (
+                      <div
+                        key={day.isoDate}
+                        className="bg-[#121519]"
+                      >
+                        {/* Mobile day header */}
+
+                        <div className="flex items-center justify-between px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <div
+                              className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold ${
+                                isToday
+                                  ? "bg-white text-black"
+                                  : "bg-white/[0.04] text-white/65"
+                              }`}
+                            >
+                              {day.date}
+                            </div>
+
+                            <div>
+                              <div className="text-xs font-semibold uppercase tracking-wider text-white/60">
+                                {day.name}
+                              </div>
+
+                              {isToday && (
+                                <div className="mt-0.5 text-[10px] font-medium uppercase tracking-wider text-white/30">
+                                  Today
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="text-[11px] text-white/25">
+                            {day.tasks.length}{" "}
+                            {day.tasks.length ===
+                            1
+                              ? "task"
+                              : "tasks"}
+                          </div>
+                        </div>
+
+                        {/* Mobile tasks */}
+
+                        <div className="space-y-2 px-3 pb-3">
+                          {day.tasks.length >
+                          0 ? (
+                            day.tasks.map(
+                              (task) => {
+                                const subject =
+                                  getSubjectOption(
+                                    task.subject
+                                  );
+
+                                const colors =
+                                  subject?.color ??
+                                  DEFAULT_SUBJECT_COLOR;
+
+                                return (
+                                  <div
+                                    key={
+                                      task.id
+                                    }
+                                    className={`rounded-xl border p-3.5 ${colors.card}`}
+                                  >
+                                    <div className="flex items-start gap-3">
+
+                                      <span
+                                        className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${colors.dot}`}
+                                      />
+
+                                      <div className="min-w-0 flex-1">
+                                        <div
+                                          className={`text-[10px] font-medium uppercase tracking-wide ${colors.text}`}
+                                        >
+                                          {task.subject ||
+                                            task.type ||
+                                            "Task"}
+                                        </div>
+
+                                        <div
+                                          className={`mt-1 text-sm font-medium leading-5 ${
+                                            task.completed
+                                              ? "text-white/30 line-through"
+                                              : "text-white/75"
+                                          }`}
+                                        >
+                                          {
+                                            task.name
+                                          }
+                                        </div>
+                                      </div>
+
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          toggleTask(
+                                            task
+                                          )
+                                        }
+                                        className="shrink-0"
+                                        aria-label={`Complete ${task.name}`}
+                                      >
+                                        {task.completed ? (
+                                          <CheckCircle2 className="h-5 w-5 text-emerald-400" />
+                                        ) : (
+                                          <Circle className="h-5 w-5 text-white/20 transition hover:text-white/60" />
+                                        )}
+                                      </button>
+                                    </div>
+                                  </div>
+                                );
+                              }
+                            )
+                          ) : (
+                            <div className="rounded-xl border border-white/[0.04] bg-white/[0.01] px-4 py-5 text-center">
+                              <div className="text-xs font-medium text-white/25">
+                                Rest day
+                              </div>
+
+                              <div className="mt-1 text-[10px] text-white/15">
+                                No tasks scheduled
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </section>
             </div>
