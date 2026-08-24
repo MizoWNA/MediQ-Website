@@ -28,11 +28,9 @@ import { supabase } from "@/lib/supabase";
 import {
   SUBJECT_OPTIONS,
   TASK_TYPE_OPTIONS,
-  getSubjectOption,
   DEFAULT_SUBJECT_COLOR,
+  getSubjectOption,
 } from "@/lib/task-options";
-
-
 
 type Profile = {
   id: string;
@@ -84,19 +82,6 @@ type TaskForm = {
   type: string;
   date: string;
 };
-
-/*
- * ================================================================
- * TASK OPTIONS
- * ================================================================
- *
- * The value is what gets stored in Supabase.
- * The label is what the mentor sees in the dropdown.
- *
- * Add/remove options here whenever you want.
- * No database enum is required.
- */
-
 
 function formatDate(date: Date) {
   const year = date.getFullYear();
@@ -182,12 +167,6 @@ export function MentorDashboard() {
   const [studentError, setStudentError] =
     useState<string | null>(null);
 
-  /*
-   * ================================================================
-   * MODAL STATE
-   * ================================================================
-   */
-
   const [modal, setModal] =
     useState<ModalType>(null);
 
@@ -218,12 +197,6 @@ export function MentorDashboard() {
   const [openObjectiveMenu, setOpenObjectiveMenu] =
     useState<string | null>(null);
 
-  /*
-   * ================================================================
-   * WEEK DATES
-   * ================================================================
-   */
-
   const weekDays = useMemo(() => {
     return Array.from({ length: 7 }, (_, index) => {
       const date = addDays(weekStart, index);
@@ -248,9 +221,48 @@ export function MentorDashboard() {
 
   /*
    * ================================================================
-   * LOAD MENTOR + STUDENTS
+   * SUBJECTS USED THIS WEEK
    * ================================================================
+   *
+   * Only subjects that actually appear in the current week's tasks
+   * are shown in the legend.
+   *
+   * Unknown/custom subjects are also included using the default color.
    */
+
+  const weekSubjects = useMemo(() => {
+    const seen = new Set<string>();
+
+    return tasks.reduce<
+      Array<{
+        value: string;
+        label: string;
+        color: typeof DEFAULT_SUBJECT_COLOR;
+      }>
+    >((result, task) => {
+      if (!task.subject) return result;
+
+      const normalized = task.subject.toLowerCase();
+
+      if (seen.has(normalized)) return result;
+
+      seen.add(normalized);
+
+      const option = getSubjectOption(task.subject);
+
+      result.push({
+        value: normalized,
+        label:
+          option?.label ??
+          task.subject,
+        color:
+          option?.color ??
+          DEFAULT_SUBJECT_COLOR,
+      });
+
+      return result;
+    }, []);
+  }, [tasks]);
 
   useEffect(() => {
     let cancelled = false;
@@ -441,12 +453,6 @@ export function MentorDashboard() {
     };
   }, [router, weekStart, weekEnd]);
 
-  /*
-   * ================================================================
-   * LOAD SELECTED STUDENT
-   * ================================================================
-   */
-
   useEffect(() => {
     let cancelled = false;
 
@@ -578,12 +584,6 @@ export function MentorDashboard() {
     weekEnd,
   ]);
 
-  /*
-   * ================================================================
-   * GROUP TASKS INTO DAYS
-   * ================================================================
-   */
-
   const days: CalendarDay[] = useMemo(() => {
     return weekDays.map((day) => ({
       name: day.name,
@@ -596,12 +596,6 @@ export function MentorDashboard() {
       ),
     }));
   }, [weekDays, tasks]);
-
-  /*
-   * ================================================================
-   * UPDATE SIDEBAR PROGRESS
-   * ================================================================
-   */
 
   function updateStudentTaskSummary(
     taskStudentId: string,
@@ -626,12 +620,6 @@ export function MentorDashboard() {
       )
     );
   }
-
-  /*
-   * ================================================================
-   * OBJECTIVE ACTIONS
-   * ================================================================
-   */
 
   function openAddObjective() {
     setActionError(null);
@@ -835,12 +823,6 @@ export function MentorDashboard() {
     }
   }
 
-  /*
-   * ================================================================
-   * TASK ACTIONS
-   * ================================================================
-   */
-
   function openAddTask(
     date?: string
   ) {
@@ -864,13 +846,6 @@ export function MentorDashboard() {
     setActionError(null);
     setEditingTask(task);
 
-    /*
-     * Existing rows may contain "Lecture"/"Anatomy"
-     * from before the dropdowns existed.
-     *
-     * Normalize them so they still match the
-     * lowercase dropdown values.
-     */
     setTaskForm({
       name: task.name,
       subject: task.subject
@@ -937,12 +912,6 @@ export function MentorDashboard() {
           throw error;
         }
 
-        /*
-         * The current view only contains the selected week.
-         * If the mentor moves a task outside this week,
-         * remove it from the current local list.
-         */
-
         if (
           data.date >=
             formatDate(weekStart) &&
@@ -982,9 +951,6 @@ export function MentorDashboard() {
           );
         }
 
-        /*
-         * Recalculate sidebar progress after editing.
-         */
         const nextTasks = tasks
           .map((task) =>
             task.id === editingTask.id
@@ -1057,10 +1023,6 @@ export function MentorDashboard() {
           );
         }
 
-        /*
-         * Refresh the sidebar because a newly created
-         * task may affect the student's weekly count.
-         */
         await refreshStudentSummary();
       }
 
@@ -1179,12 +1141,6 @@ export function MentorDashboard() {
     }
   }
 
-  /*
-   * ================================================================
-   * REFRESH SIDEBAR SUMMARY
-   * ================================================================
-   */
-
   async function refreshStudentSummary() {
     if (!selectedStudentId) return;
 
@@ -1240,12 +1196,6 @@ export function MentorDashboard() {
     );
   }
 
-  /*
-   * ================================================================
-   * WEEK NAVIGATION
-   * ================================================================
-   */
-
   function previousWeek() {
     setWeekStart((current) =>
       addDays(current, -7)
@@ -1261,12 +1211,6 @@ export function MentorDashboard() {
   function goToToday() {
     setWeekStart(getMonday(new Date()));
   }
-
-  /*
-   * ================================================================
-   * SELECTED STUDENT STATS
-   * ================================================================
-   */
 
   const today = new Date();
 
@@ -1333,12 +1277,6 @@ export function MentorDashboard() {
     },
   ];
 
-  /*
-   * ================================================================
-   * RENDER
-   * ================================================================
-   */
-
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#0b0d10] text-white">
@@ -1382,12 +1320,7 @@ export function MentorDashboard() {
     >
       <div className="flex min-h-[calc(100vh-2rem)] w-full overflow-hidden rounded-2xl border border-white/[0.07] bg-[#111419] shadow-2xl">
 
-        {/* ============================================================
-            SIDEBAR
-        ============================================================= */}
-
         <aside className="flex w-[280px] shrink-0 flex-col border-r border-white/[0.07] bg-[#0d0f12]">
-
           <div className="flex h-20 items-center border-b border-white/[0.07] px-6">
             <div className="flex items-center gap-3">
               <div className="flex h-9 w-9 items-center justify-center">
@@ -1550,12 +1483,7 @@ export function MentorDashboard() {
           </div>
         </aside>
 
-        {/* ============================================================
-            MAIN CONTENT
-        ============================================================= */}
-
         <main className="min-w-0 flex-1">
-
           <header className="flex min-h-20 flex-wrap items-center justify-between gap-4 border-b border-white/[0.07] px-5 py-4 sm:px-7">
             <div>
               <div className="flex items-center gap-2 text-xs text-white/35">
@@ -1685,11 +1613,6 @@ export function MentorDashboard() {
             !studentError &&
             selectedStudent && (
               <div className="space-y-5 p-4 sm:p-6">
-
-                {/* ====================================================
-                    STUDENT INFO
-                ==================================================== */}
-
                 <section className="rounded-2xl border border-white/[0.07] bg-[#15181d]">
                   <div className="grid gap-px bg-white/[0.05] sm:grid-cols-3">
                     {studentStats.map(
@@ -1715,10 +1638,6 @@ export function MentorDashboard() {
                     )}
                   </div>
                 </section>
-
-                {/* ====================================================
-                    OBJECTIVES
-                ==================================================== */}
 
                 <section className="rounded-2xl border border-white/[0.07] bg-[#15181d]">
                   <div className="flex items-center justify-between border-b border-white/[0.07] px-5 py-4">
@@ -1862,10 +1781,6 @@ export function MentorDashboard() {
                   )}
                 </section>
 
-                {/* ====================================================
-                    WEEKLY CALENDAR
-                ==================================================== */}
-
                 <section className="rounded-2xl border border-white/[0.07] bg-[#15181d]">
                   <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.07] px-5 py-4">
                     <div className="flex items-center gap-3">
@@ -1888,22 +1803,28 @@ export function MentorDashboard() {
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <div className="hidden items-center gap-4 text-[11px] text-white/35 sm:flex">
-                        <div className="flex items-center gap-1.5">
-                          <span className="h-2 w-2 rounded-full bg-sky-400" />
-                          Anatomy
-                        </div>
+                      {/* Dynamic weekly subject legend */}
 
-                        <div className="flex items-center gap-1.5">
-                          <span className="h-2 w-2 rounded-full bg-rose-400" />
-                          Physiology
-                        </div>
+                      {weekSubjects.length > 0 && (
+                        <div className="hidden items-center gap-4 text-[11px] text-white/35 sm:flex">
+                          {weekSubjects.map(
+                            (subject) => (
+                              <div
+                                key={
+                                  subject.value
+                                }
+                                className="flex items-center gap-1.5"
+                              >
+                                <span
+                                  className={`h-2 w-2 rounded-full ${subject.color.dot}`}
+                                />
 
-                        <div className="flex items-center gap-1.5">
-                          <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                          Histology
+                                {subject.label}
+                              </div>
+                            )
+                          )}
                         </div>
-                      </div>
+                      )}
 
                       <button
                         type="button"
@@ -1958,11 +1879,13 @@ export function MentorDashboard() {
                             0 ? (
                               day.tasks.map(
                                 (task) => {
-                                  const subjectOption =
-                                    getSubjectOption(task.subject);
+                                  const subject =
+                                    getSubjectOption(
+                                      task.subject
+                                    );
 
                                   const colors =
-                                    subjectOption?.color ??
+                                    subject?.color ??
                                     DEFAULT_SUBJECT_COLOR;
 
                                   return (
@@ -2001,8 +1924,9 @@ export function MentorDashboard() {
                                           <div
                                             className={`text-[10px] font-medium uppercase tracking-wide ${colors.text}`}
                                           >
-                                            {task.subject ||
-                                              task.type ||
+                                            {subject?.label ??
+                                              task.subject ??
+                                              task.type ??
                                               "Task"}
                                           </div>
 
@@ -2022,6 +1946,13 @@ export function MentorDashboard() {
                                             task.subject && (
                                               <div className="mt-1 text-[10px] text-white/25">
                                                 {
+                                                  TASK_TYPE_OPTIONS.find(
+                                                    (
+                                                      option
+                                                    ) =>
+                                                      option.value ===
+                                                      task.type?.toLowerCase()
+                                                  )?.label ??
                                                   task.type
                                                 }
                                               </div>
@@ -2129,10 +2060,6 @@ export function MentorDashboard() {
         </main>
       </div>
 
-      {/* ================================================================
-          MODAL
-      ================================================================ */}
-
       {modal && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
@@ -2149,8 +2076,6 @@ export function MentorDashboard() {
               event.stopPropagation()
             }
           >
-            {/* Modal header */}
-
             <div className="flex items-center justify-between border-b border-white/[0.07] px-5 py-4">
               <div>
                 <h2 className="text-sm font-semibold">
@@ -2181,8 +2106,6 @@ export function MentorDashboard() {
                 <X className="h-4 w-4" />
               </button>
             </div>
-
-            {/* Objective form */}
 
             {modal === "objective" && (
               <div className="space-y-5 p-5">
@@ -2244,8 +2167,6 @@ export function MentorDashboard() {
               </div>
             )}
 
-            {/* Task form */}
-
             {modal === "task" && (
               <div className="space-y-4 p-5">
                 <div>
@@ -2271,8 +2192,6 @@ export function MentorDashboard() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
-                  {/* Subject dropdown */}
-
                   <div>
                     <label className="mb-2 block text-[10px] font-medium uppercase tracking-wider text-white/30">
                       Subject
@@ -2316,8 +2235,6 @@ export function MentorDashboard() {
                       )}
                     </select>
                   </div>
-
-                  {/* Type dropdown */}
 
                   <div>
                     <label className="mb-2 block text-[10px] font-medium uppercase tracking-wider text-white/30">

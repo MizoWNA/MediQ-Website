@@ -17,6 +17,17 @@ export const SUBJECT_OPTIONS = [
       text: "text-rose-300",
     },
   },
+
+{
+    value: "biochemisty",
+    label: "Biochemistry",
+    color: {
+      card: "bg-amber-500/10 border-amber-500/20",
+      dot: "bg-amber-400",
+      text: "text-amber-300",
+    },
+  },
+
   {
     value: "histology",
     label: "Histology",
