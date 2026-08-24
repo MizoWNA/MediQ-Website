@@ -10,13 +10,18 @@ import {
   GraduationCap,
   Target,
   BookOpen,
-  Clock3,
   UserRound,
   CalendarClock,
   Timer,
   Users,
   Loader2,
   AlertCircle,
+  Plus,
+  MoreHorizontal,
+  Pencil,
+  Trash2,
+  X,
+  Save,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -47,6 +52,7 @@ type Task = {
   student_id: string;
   completed: boolean;
   date: string;
+  created_at?: string;
 };
 
 type StudentSummary = Profile & {
@@ -60,6 +66,15 @@ type CalendarDay = {
   date: string;
   isoDate: string;
   tasks: Task[];
+};
+
+type ModalType = "objective" | "task" | null;
+
+type TaskForm = {
+  name: string;
+  subject: string;
+  type: string;
+  date: string;
 };
 
 const colorClasses = {
@@ -183,6 +198,42 @@ export function MentorDashboard() {
 
   /*
    * ================================================================
+   * MODAL STATE
+   * ================================================================
+   */
+
+  const [modal, setModal] =
+    useState<ModalType>(null);
+
+  const [editingObjective, setEditingObjective] =
+    useState<Objective | null>(null);
+
+  const [editingTask, setEditingTask] =
+    useState<Task | null>(null);
+
+  const [objectiveText, setObjectiveText] =
+    useState("");
+
+  const [taskForm, setTaskForm] = useState<TaskForm>({
+    name: "",
+    subject: "",
+    type: "",
+    date: formatDate(new Date()),
+  });
+
+  const [saving, setSaving] = useState(false);
+
+  const [actionError, setActionError] =
+    useState<string | null>(null);
+
+  const [openTaskMenu, setOpenTaskMenu] =
+    useState<string | null>(null);
+
+  const [openObjectiveMenu, setOpenObjectiveMenu] =
+    useState<string | null>(null);
+
+  /*
+   * ================================================================
    * WEEK DATES
    * ================================================================
    */
@@ -223,12 +274,6 @@ export function MentorDashboard() {
       setError(null);
 
       try {
-        /*
-         * ==========================================================
-         * AUTHENTICATED USER
-         * ==========================================================
-         */
-
         const {
           data: { user },
           error: authError,
@@ -244,12 +289,6 @@ export function MentorDashboard() {
           router.replace("/login");
           return;
         }
-
-        /*
-         * ==========================================================
-         * MENTOR PROFILE
-         * ==========================================================
-         */
 
         const {
           data: mentorData,
@@ -283,15 +322,6 @@ export function MentorDashboard() {
 
         setMentorProfile(mentorData);
 
-        /*
-         * ==========================================================
-         * ASSIGNED STUDENTS
-         * ==========================================================
-         *
-         * RLS ensures that this only returns students assigned to
-         * the authenticated mentor.
-         */
-
         const {
           data: studentData,
           error: studentsError,
@@ -316,12 +346,6 @@ export function MentorDashboard() {
           Array.isArray(studentData)
             ? studentData
             : [];
-
-        /*
-         * ==========================================================
-         * LOAD CURRENT WEEK TASK COUNTS
-         * ==========================================================
-         */
 
         let summaries: StudentSummary[] =
           assignedStudents.map((student) => ({
@@ -394,10 +418,6 @@ export function MentorDashboard() {
 
         setStudents(summaries);
 
-        /*
-         * Automatically select the first student.
-         */
-
         setSelectedStudentId(
           (current) =>
             current &&
@@ -456,12 +476,6 @@ export function MentorDashboard() {
       setStudentError(null);
 
       try {
-        /*
-         * ==========================================================
-         * STUDENT PROFILE
-         * ==========================================================
-         */
-
         const {
           data: studentData,
           error: profileError,
@@ -485,20 +499,12 @@ export function MentorDashboard() {
           );
         }
 
-        /*
-         * ==========================================================
-         * OBJECTIVES
-         * ==========================================================
-         */
-
         const {
           data: objectiveData,
           error: objectiveError,
         } = await supabase
           .from("objectives")
-          .select(
-            "id, text, completed"
-          )
+          .select("id, text, completed")
           .eq(
             "student_id",
             selectedStudentId
@@ -511,19 +517,13 @@ export function MentorDashboard() {
           );
         }
 
-        /*
-         * ==========================================================
-         * TASKS
-         * ==========================================================
-         */
-
         const {
           data: taskData,
           error: taskError,
         } = await supabase
           .from("tasks")
           .select(
-            "id, name, subject, type, student_id, completed, date"
+            "id, name, subject, type, student_id, completed, date, created_at"
           )
           .eq(
             "student_id",
@@ -613,6 +613,683 @@ export function MentorDashboard() {
 
   /*
    * ================================================================
+   * UPDATE SIDEBAR PROGRESS
+   * ================================================================
+   */
+
+  function updateStudentTaskSummary(
+    taskStudentId: string,
+    taskList: Task[]
+  ) {
+    const weeklyTasks = taskList.length;
+
+    const completedTasks =
+      taskList.filter(
+        (task) => task.completed
+      ).length;
+
+    setStudents((current) =>
+      current.map((student) =>
+        student.id === taskStudentId
+          ? {
+              ...student,
+              weeklyTasks,
+              completedTasks,
+            }
+          : student
+      )
+    );
+  }
+
+  /*
+   * ================================================================
+   * OBJECTIVE ACTIONS
+   * ================================================================
+   */
+
+  function openAddObjective() {
+    setActionError(null);
+    setEditingObjective(null);
+    setObjectiveText("");
+    setModal("objective");
+  }
+
+  function openEditObjective(
+    objective: Objective
+  ) {
+    setActionError(null);
+    setEditingObjective(objective);
+    setObjectiveText(objective.text);
+    setOpenObjectiveMenu(null);
+    setModal("objective");
+  }
+
+  async function saveObjective() {
+    if (!selectedStudentId) return;
+
+    const text = objectiveText.trim();
+
+    if (!text) {
+      setActionError(
+        "Objective text cannot be empty."
+      );
+      return;
+    }
+
+    setSaving(true);
+    setActionError(null);
+
+    try {
+      if (editingObjective) {
+        const {
+          data,
+          error,
+        } = await supabase
+          .from("objectives")
+          .update({
+            text,
+          })
+          .eq(
+            "id",
+            editingObjective.id
+          )
+          .eq(
+            "student_id",
+            selectedStudentId
+          )
+          .select(
+            "id, text, completed"
+          )
+          .single();
+
+        if (error) {
+          throw error;
+        }
+
+        setObjectives((current) =>
+          current.map((objective) =>
+            objective.id === data.id
+              ? data
+              : objective
+          )
+        );
+      } else {
+        const {
+          data,
+          error,
+        } = await supabase
+          .from("objectives")
+          .insert({
+            student_id: selectedStudentId,
+            text,
+            completed: false,
+          })
+          .select(
+            "id, text, completed"
+          )
+          .single();
+
+        if (error) {
+          throw error;
+        }
+
+        setObjectives((current) => [
+          ...current,
+          data,
+        ]);
+      }
+
+      setModal(null);
+      setEditingObjective(null);
+      setObjectiveText("");
+    } catch (err) {
+      console.error(
+        "Objective save error:",
+        err
+      );
+
+      setActionError(
+        err instanceof Error
+          ? err.message
+          : "Failed to save objective."
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function toggleObjective(
+    objective: Objective
+  ) {
+    setActionError(null);
+
+    const nextCompleted =
+      !objective.completed;
+
+    setObjectives((current) =>
+      current.map((item) =>
+        item.id === objective.id
+          ? {
+              ...item,
+              completed: nextCompleted,
+            }
+          : item
+      )
+    );
+
+    const {
+      error,
+    } = await supabase
+      .from("objectives")
+      .update({
+        completed: nextCompleted,
+      })
+      .eq("id", objective.id)
+      .eq(
+        "student_id",
+        selectedStudentId
+      );
+
+    if (error) {
+      setObjectives((current) =>
+        current.map((item) =>
+          item.id === objective.id
+            ? {
+                ...item,
+                completed:
+                  objective.completed,
+              }
+            : item
+        )
+      );
+
+      setActionError(
+        `Failed to update objective: ${error.message}`
+      );
+    }
+  }
+
+  async function deleteObjective(
+    objective: Objective
+  ) {
+    const confirmed = window.confirm(
+      `Delete "${objective.text}"?`
+    );
+
+    if (!confirmed) return;
+
+    setActionError(null);
+
+    const previous = objectives;
+
+    setObjectives((current) =>
+      current.filter(
+        (item) =>
+          item.id !== objective.id
+      )
+    );
+
+    const {
+      error,
+    } = await supabase
+      .from("objectives")
+      .delete()
+      .eq("id", objective.id)
+      .eq(
+        "student_id",
+        selectedStudentId
+      );
+
+    if (error) {
+      setObjectives(previous);
+
+      setActionError(
+        `Failed to delete objective: ${error.message}`
+      );
+    }
+  }
+
+  /*
+   * ================================================================
+   * TASK ACTIONS
+   * ================================================================
+   */
+
+  function openAddTask(
+    date?: string
+  ) {
+    setActionError(null);
+    setEditingTask(null);
+
+    setTaskForm({
+      name: "",
+      subject: "",
+      type: "",
+      date:
+        date ||
+        weekDays[0]?.isoDate ||
+        formatDate(new Date()),
+    });
+
+    setModal("task");
+  }
+
+  function openEditTask(task: Task) {
+    setActionError(null);
+    setEditingTask(task);
+
+    setTaskForm({
+      name: task.name,
+      subject: task.subject || "",
+      type: task.type || "",
+      date: task.date,
+    });
+
+    setOpenTaskMenu(null);
+    setModal("task");
+  }
+
+  async function saveTask() {
+    if (!selectedStudentId) return;
+
+    const name = taskForm.name.trim();
+
+    if (!name) {
+      setActionError(
+        "Task name cannot be empty."
+      );
+      return;
+    }
+
+    if (!taskForm.date) {
+      setActionError(
+        "Please select a date."
+      );
+      return;
+    }
+
+    setSaving(true);
+    setActionError(null);
+
+    try {
+      if (editingTask) {
+        const {
+          data,
+          error,
+        } = await supabase
+          .from("tasks")
+          .update({
+            name,
+            subject:
+              taskForm.subject.trim() ||
+              null,
+            type:
+              taskForm.type.trim() ||
+              null,
+            date: taskForm.date,
+          })
+          .eq("id", editingTask.id)
+          .eq(
+            "student_id",
+            selectedStudentId
+          )
+          .select(
+            "id, name, subject, type, student_id, completed, date, created_at"
+          )
+          .single();
+
+        if (error) {
+          throw error;
+        }
+
+        /*
+         * The current view only contains the selected week.
+         * If the mentor moves a task outside this week,
+         * remove it from the current local list.
+         */
+
+        if (
+          data.date >=
+            formatDate(weekStart) &&
+          data.date <=
+            formatDate(weekEnd)
+        ) {
+          setTasks((current) =>
+            current
+              .map((task) =>
+                task.id === data.id
+                  ? data
+                  : task
+              )
+              .sort((a, b) => {
+                const dateCompare =
+                  a.date.localeCompare(
+                    b.date
+                  );
+
+                if (dateCompare !== 0) {
+                  return dateCompare;
+                }
+
+                return (
+                  (a.created_at || "").localeCompare(
+                    b.created_at || ""
+                  )
+                );
+              })
+          );
+        } else {
+          setTasks((current) =>
+            current.filter(
+              (task) =>
+                task.id !== data.id
+            )
+          );
+        }
+      } else {
+        const {
+          data,
+          error,
+        } = await supabase
+          .from("tasks")
+          .insert({
+            student_id:
+              selectedStudentId,
+            name,
+            subject:
+              taskForm.subject.trim() ||
+              null,
+            type:
+              taskForm.type.trim() ||
+              null,
+            date: taskForm.date,
+            completed: false,
+          })
+          .select(
+            "id, name, subject, type, student_id, completed, date, created_at"
+          )
+          .single();
+
+        if (error) {
+          throw error;
+        }
+
+        if (
+          data.date >=
+            formatDate(weekStart) &&
+          data.date <=
+            formatDate(weekEnd)
+        ) {
+          setTasks((current) =>
+            [...current, data].sort(
+              (a, b) => {
+                const dateCompare =
+                  a.date.localeCompare(
+                    b.date
+                  );
+
+                if (dateCompare !== 0) {
+                  return dateCompare;
+                }
+
+                return (
+                  (a.created_at || "").localeCompare(
+                    b.created_at || ""
+                  )
+                );
+              }
+            )
+          );
+        }
+      }
+
+      /*
+       * Recalculate sidebar progress from the
+       * currently displayed week.
+       */
+
+      const nextTasks =
+        editingTask
+          ? tasks
+              .map((task) =>
+                task.id ===
+                editingTask.id
+                  ? {
+                      ...task,
+                      name,
+                      subject:
+                        taskForm.subject.trim() ||
+                        null,
+                      type:
+                        taskForm.type.trim() ||
+                        null,
+                      date:
+                        taskForm.date,
+                    }
+                  : task
+              )
+              .filter(
+                (task) =>
+                  task.date >=
+                    formatDate(
+                      weekStart
+                    ) &&
+                  task.date <=
+                    formatDate(
+                      weekEnd
+                    )
+              )
+          : tasks;
+
+      if (!editingTask) {
+        /*
+         * We don't have to manually include the
+         * newly inserted task here if it is outside
+         * the current state. Reloading the summary
+         * below keeps the sidebar authoritative.
+         */
+        await refreshStudentSummary();
+      } else {
+        updateStudentTaskSummary(
+          selectedStudentId,
+          nextTasks
+        );
+      }
+
+      setModal(null);
+      setEditingTask(null);
+    } catch (err) {
+      console.error(
+        "Task save error:",
+        err
+      );
+
+      setActionError(
+        err instanceof Error
+          ? err.message
+          : "Failed to save task."
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function toggleTask(task: Task) {
+    setActionError(null);
+
+    const nextCompleted =
+      !task.completed;
+
+    setTasks((current) =>
+      current.map((item) =>
+        item.id === task.id
+          ? {
+              ...item,
+              completed: nextCompleted,
+            }
+          : item
+      )
+    );
+
+    updateStudentTaskSummary(
+      selectedStudentId!,
+      tasks.map((item) =>
+        item.id === task.id
+          ? {
+              ...item,
+              completed: nextCompleted,
+            }
+          : item
+      )
+    );
+
+    const {
+      error,
+    } = await supabase
+      .from("tasks")
+      .update({
+        completed: nextCompleted,
+      })
+      .eq("id", task.id)
+      .eq(
+        "student_id",
+        selectedStudentId
+      );
+
+    if (error) {
+      setTasks((current) =>
+        current.map((item) =>
+          item.id === task.id
+            ? {
+                ...item,
+                completed:
+                  task.completed,
+              }
+            : item
+        )
+      );
+
+      updateStudentTaskSummary(
+        selectedStudentId!,
+        tasks
+      );
+
+      setActionError(
+        `Failed to update task: ${error.message}`
+      );
+    }
+  }
+
+  async function deleteTask(task: Task) {
+    const confirmed = window.confirm(
+      `Delete "${task.name}"?`
+    );
+
+    if (!confirmed) return;
+
+    setOpenTaskMenu(null);
+    setActionError(null);
+
+    const previous = tasks;
+
+    const nextTasks = tasks.filter(
+      (item) => item.id !== task.id
+    );
+
+    setTasks(nextTasks);
+
+    updateStudentTaskSummary(
+      selectedStudentId!,
+      nextTasks
+    );
+
+    const {
+      error,
+    } = await supabase
+      .from("tasks")
+      .delete()
+      .eq("id", task.id)
+      .eq(
+        "student_id",
+        selectedStudentId
+      );
+
+    if (error) {
+      setTasks(previous);
+      updateStudentTaskSummary(
+        selectedStudentId!,
+        previous
+      );
+
+      setActionError(
+        `Failed to delete task: ${error.message}`
+      );
+    }
+  }
+
+  /*
+   * ================================================================
+   * REFRESH SIDEBAR SUMMARY
+   * ================================================================
+   */
+
+  async function refreshStudentSummary() {
+    if (!selectedStudentId) return;
+
+    const {
+      data,
+      error,
+    } = await supabase
+      .from("tasks")
+      .select(
+        "id, student_id, completed, date"
+      )
+      .eq(
+        "student_id",
+        selectedStudentId
+      )
+      .gte(
+        "date",
+        formatDate(weekStart)
+      )
+      .lte(
+        "date",
+        formatDate(weekEnd)
+      );
+
+    if (error) {
+      console.error(
+        "Failed to refresh student summary:",
+        error
+      );
+      return;
+    }
+
+    const weeklyTasks =
+      Array.isArray(data)
+        ? data
+        : [];
+
+    setStudents((current) =>
+      current.map((student) =>
+        student.id === selectedStudentId
+          ? {
+              ...student,
+              weeklyTasks:
+                weeklyTasks.length,
+              completedTasks:
+                weeklyTasks.filter(
+                  (task) =>
+                    task.completed
+                ).length,
+            }
+          : student
+      )
+    );
+  }
+
+  /*
+   * ================================================================
    * WEEK NAVIGATION
    * ================================================================
    */
@@ -671,7 +1348,8 @@ export function MentorDashboard() {
 
   const completedObjectives =
     objectives.filter(
-      (objective) => objective.completed
+      (objective) =>
+        objective.completed
     ).length;
 
   const objectiveCount =
@@ -743,7 +1421,13 @@ export function MentorDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0b0d10] px-4 py-4 text-white sm:px-6 lg:px-8">
+    <div
+      className="min-h-screen bg-[#0b0d10] px-4 py-4 text-white sm:px-6 lg:px-8"
+      onClick={() => {
+        setOpenTaskMenu(null);
+        setOpenObjectiveMenu(null);
+      }}
+    >
       <div className="flex min-h-[calc(100vh-2rem)] w-full overflow-hidden rounded-2xl border border-white/[0.07] bg-[#111419] shadow-2xl">
 
         {/* ============================================================
@@ -751,8 +1435,6 @@ export function MentorDashboard() {
         ============================================================= */}
 
         <aside className="flex w-[280px] shrink-0 flex-col border-r border-white/[0.07] bg-[#0d0f12]">
-
-          {/* Logo */}
 
           <div className="flex h-20 items-center border-b border-white/[0.07] px-6">
             <div className="flex items-center gap-3">
@@ -776,8 +1458,6 @@ export function MentorDashboard() {
             </div>
           </div>
 
-          {/* Mentor */}
-
           <div className="border-b border-white/[0.07] px-5 py-5">
             <div className="mb-2 flex items-center gap-2 text-[10px] font-medium uppercase tracking-wider text-white/30">
               <UserRound className="h-3.5 w-3.5" />
@@ -794,8 +1474,6 @@ export function MentorDashboard() {
               Academic Mentor
             </div>
           </div>
-
-          {/* Students */}
 
           <div className="flex-1 overflow-y-auto">
             <div className="flex items-center justify-between px-5 pb-3 pt-5">
@@ -835,11 +1513,12 @@ export function MentorDashboard() {
                     <button
                       key={student.id}
                       type="button"
-                      onClick={() =>
+                      onClick={(event) => {
+                        event.stopPropagation();
                         setSelectedStudentId(
                           student.id
-                        )
-                      }
+                        );
+                      }}
                       className={`w-full rounded-xl px-3.5 py-3 text-left transition ${
                         isSelected
                           ? "bg-white/[0.07]"
@@ -904,8 +1583,6 @@ export function MentorDashboard() {
             )}
           </div>
 
-          {/* Sidebar footer */}
-
           <div className="border-t border-white/[0.07] p-5">
             <div className="text-[10px] font-medium uppercase tracking-wider text-white/25">
               Students
@@ -926,8 +1603,6 @@ export function MentorDashboard() {
         ============================================================= */}
 
         <main className="min-w-0 flex-1">
-
-          {/* Header */}
 
           <header className="flex min-h-20 flex-wrap items-center justify-between gap-4 border-b border-white/[0.07] px-5 py-4 sm:px-7">
             <div>
@@ -964,8 +1639,6 @@ export function MentorDashboard() {
               )}
             </div>
 
-            {/* Week navigation */}
-
             <div className="flex items-center gap-2">
               <button
                 type="button"
@@ -993,8 +1666,6 @@ export function MentorDashboard() {
             </div>
           </header>
 
-          {/* No students */}
-
           {!selectedStudentId &&
             students.length === 0 && (
               <div className="flex min-h-[500px] items-center justify-center p-6">
@@ -1012,8 +1683,6 @@ export function MentorDashboard() {
                 </div>
               </div>
             )}
-
-          {/* Select student */}
 
           {!selectedStudentId &&
             students.length > 0 && (
@@ -1033,8 +1702,6 @@ export function MentorDashboard() {
               </div>
             )}
 
-          {/* Student loading */}
-
           {selectedStudentId &&
             loadingStudent && (
               <div className="flex min-h-[500px] items-center justify-center">
@@ -1044,8 +1711,6 @@ export function MentorDashboard() {
                 </div>
               </div>
             )}
-
-          {/* Student error */}
 
           {selectedStudentId &&
             !loadingStudent &&
@@ -1063,8 +1728,6 @@ export function MentorDashboard() {
               </div>
             )}
 
-          {/* Actual student planner */}
-
           {selectedStudentId &&
             !loadingStudent &&
             !studentError &&
@@ -1077,7 +1740,6 @@ export function MentorDashboard() {
 
                 <section className="rounded-2xl border border-white/[0.07] bg-[#15181d]">
                   <div className="grid gap-px bg-white/[0.05] sm:grid-cols-3">
-
                     {studentStats.map(
                       (stat) => {
                         const Icon = stat.icon;
@@ -1107,7 +1769,6 @@ export function MentorDashboard() {
                 ==================================================== */}
 
                 <section className="rounded-2xl border border-white/[0.07] bg-[#15181d]">
-
                   <div className="flex items-center justify-between border-b border-white/[0.07] px-5 py-4">
                     <div className="flex items-center gap-3">
                       <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/[0.06]">
@@ -1128,15 +1789,27 @@ export function MentorDashboard() {
 
                     <button
                       type="button"
-                      className="rounded-lg border border-white/[0.08] bg-white/[0.025] px-3 py-2 text-xs font-medium text-white/50 transition hover:bg-white/[0.06] hover:text-white"
+                      onClick={openAddObjective}
+                      className="flex items-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.025] px-3 py-2 text-xs font-medium text-white/50 transition hover:bg-white/[0.06] hover:text-white"
                     >
-                      + Add Objective
+                      <Plus className="h-3.5 w-3.5" />
+                      Add Objective
                     </button>
                   </div>
 
                   {objectives.length === 0 ? (
-                    <div className="px-5 py-8 text-center text-sm text-white/30">
-                      No objectives yet.
+                    <div className="px-5 py-8 text-center">
+                      <div className="text-sm text-white/30">
+                        No objectives yet.
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={openAddObjective}
+                        className="mt-3 text-xs text-white/45 transition hover:text-white"
+                      >
+                        Add the first objective
+                      </button>
                     </div>
                   ) : (
                     <div className="grid gap-px bg-white/[0.05] sm:grid-cols-2 lg:grid-cols-4">
@@ -1146,16 +1819,34 @@ export function MentorDashboard() {
                             key={
                               objective.id
                             }
-                            className="flex items-start gap-3 bg-[#15181d] px-5 py-4"
+                            className="group relative flex items-start gap-3 bg-[#15181d] px-5 py-4"
+                            onClick={(event) =>
+                              event.stopPropagation()
+                            }
                           >
-                            {objective.completed ? (
-                              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
-                            ) : (
-                              <Circle className="mt-0.5 h-4 w-4 shrink-0 text-white/25" />
-                            )}
+                            <button
+                              type="button"
+                              onClick={() =>
+                                toggleObjective(
+                                  objective
+                                )
+                              }
+                              className="shrink-0"
+                              title={
+                                objective.completed
+                                  ? "Mark incomplete"
+                                  : "Mark complete"
+                              }
+                            >
+                              {objective.completed ? (
+                                <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-400" />
+                              ) : (
+                                <Circle className="mt-0.5 h-4 w-4 text-white/25 transition hover:text-white/60" />
+                              )}
+                            </button>
 
                             <span
-                              className={`text-sm leading-5 ${
+                              className={`min-w-0 flex-1 pr-6 text-sm leading-5 ${
                                 objective.completed
                                   ? "text-white/35 line-through"
                                   : "text-white/70"
@@ -1163,6 +1854,55 @@ export function MentorDashboard() {
                             >
                               {objective.text}
                             </span>
+
+                            <div className="absolute right-3 top-3">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setOpenObjectiveMenu(
+                                    (current) =>
+                                      current ===
+                                      objective.id
+                                        ? null
+                                        : objective.id
+                                  )
+                                }
+                                className="flex h-7 w-7 items-center justify-center rounded-md text-white/25 opacity-0 transition hover:bg-white/[0.06] hover:text-white group-hover:opacity-100"
+                              >
+                                <MoreHorizontal className="h-4 w-4" />
+                              </button>
+
+                              {openObjectiveMenu ===
+                                objective.id && (
+                                <div className="absolute right-0 top-8 z-20 w-32 overflow-hidden rounded-lg border border-white/[0.09] bg-[#1a1d22] p-1 shadow-xl">
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      openEditObjective(
+                                        objective
+                                      )
+                                    }
+                                    className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs text-white/60 transition hover:bg-white/[0.06] hover:text-white"
+                                  >
+                                    <Pencil className="h-3.5 w-3.5" />
+                                    Edit
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      deleteObjective(
+                                        objective
+                                      )
+                                    }
+                                    className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs text-rose-300/70 transition hover:bg-rose-500/10 hover:text-rose-300"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                    Delete
+                                  </button>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         )
                       )}
@@ -1175,8 +1915,7 @@ export function MentorDashboard() {
                 ==================================================== */}
 
                 <section className="rounded-2xl border border-white/[0.07] bg-[#15181d]">
-
-                  <div className="flex items-center justify-between border-b border-white/[0.07] px-5 py-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.07] px-5 py-4">
                     <div className="flex items-center gap-3">
                       <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/[0.06]">
                         <BookOpen className="h-4 w-4 text-white/70" />
@@ -1196,23 +1935,45 @@ export function MentorDashboard() {
                       </div>
                     </div>
 
-                    <div className="hidden items-center gap-4 text-[11px] text-white/35 sm:flex">
-                      <div className="flex items-center gap-1.5">
-                        <span className="h-2 w-2 rounded-full bg-sky-400" />
-                        Anatomy
+                    <div className="flex items-center gap-2">
+                      <div className="hidden items-center gap-4 text-[11px] text-white/35 sm:flex">
+                        <div className="flex items-center gap-1.5">
+                          <span className="h-2 w-2 rounded-full bg-sky-400" />
+                          Anatomy
+                        </div>
+
+                        <div className="flex items-center gap-1.5">
+                          <span className="h-2 w-2 rounded-full bg-rose-400" />
+                          Physiology
+                        </div>
+
+                        <div className="flex items-center gap-1.5">
+                          <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                          Histology
+                        </div>
                       </div>
 
-                      <div className="flex items-center gap-1.5">
-                        <span className="h-2 w-2 rounded-full bg-rose-400" />
-                        Physiology
-                      </div>
-
-                      <div className="flex items-center gap-1.5">
-                        <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                        Histology
-                      </div>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          openAddTask()
+                        }
+                        className="flex items-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.025] px-3 py-2 text-xs font-medium text-white/50 transition hover:bg-white/[0.06] hover:text-white"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        Add Task
+                      </button>
                     </div>
                   </div>
+
+                  {actionError && (
+                    <div className="border-b border-rose-500/10 bg-rose-500/[0.06] px-5 py-3">
+                      <div className="flex items-center gap-2 text-xs text-rose-300">
+                        <AlertCircle className="h-3.5 w-3.5" />
+                        {actionError}
+                      </div>
+                    </div>
+                  )}
 
                   <div className="overflow-x-auto">
                     <div className="grid min-w-[900px] grid-cols-7 divide-x divide-white/[0.06]">
@@ -1221,9 +1982,6 @@ export function MentorDashboard() {
                           key={day.isoDate}
                           className="min-h-[420px] bg-[#121519]"
                         >
-
-                          {/* Day header */}
-
                           <div className="border-b border-white/[0.06] px-3 py-4 text-center">
                             <div className="text-[10px] font-semibold uppercase tracking-widest text-white/30">
                               {day.short}
@@ -1242,8 +2000,6 @@ export function MentorDashboard() {
                               {day.date}
                             </div>
                           </div>
-
-                          {/* Tasks */}
 
                           <div className="space-y-2 p-2.5">
                             {day.tasks.length >
@@ -1265,14 +2021,34 @@ export function MentorDashboard() {
                                       key={
                                         task.id
                                       }
-                                      className={`group rounded-xl border p-3 transition hover:bg-white/[0.04] ${colors.card}`}
+                                      onClick={(event) =>
+                                        event.stopPropagation()
+                                      }
+                                      className={`group relative rounded-xl border p-3 transition hover:bg-white/[0.04] ${colors.card}`}
                                     >
                                       <div className="flex items-start gap-2.5">
-                                        <span
-                                          className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${colors.dot}`}
-                                        />
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            toggleTask(
+                                              task
+                                            )
+                                          }
+                                          className="mt-0.5 shrink-0"
+                                          title={
+                                            task.completed
+                                              ? "Mark incomplete"
+                                              : "Mark complete"
+                                          }
+                                        >
+                                          {task.completed ? (
+                                            <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                                          ) : (
+                                            <Circle className="h-4 w-4 text-white/20 transition hover:text-white/60" />
+                                          )}
+                                        </button>
 
-                                        <div className="min-w-0 flex-1">
+                                        <div className="min-w-0 flex-1 pr-5">
                                           <div
                                             className={`text-[10px] font-medium uppercase tracking-wide ${colors.text}`}
                                           >
@@ -1292,13 +2068,63 @@ export function MentorDashboard() {
                                               task.name
                                             }
                                           </div>
+
+                                          {task.type &&
+                                            task.subject && (
+                                              <div className="mt-1 text-[10px] text-white/25">
+                                                {
+                                                  task.type
+                                                }
+                                              </div>
+                                            )}
                                         </div>
 
-                                        <div className="shrink-0">
-                                          {task.completed ? (
-                                            <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                                          ) : (
-                                            <Circle className="h-4 w-4 text-white/20" />
+                                        <div className="absolute right-2 top-2">
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              setOpenTaskMenu(
+                                                (current) =>
+                                                  current ===
+                                                  task.id
+                                                    ? null
+                                                    : task.id
+                                              )
+                                            }
+                                            className="flex h-7 w-7 items-center justify-center rounded-md text-white/20 opacity-0 transition hover:bg-white/[0.06] hover:text-white group-hover:opacity-100"
+                                          >
+                                            <MoreHorizontal className="h-4 w-4" />
+                                          </button>
+
+                                          {openTaskMenu ===
+                                            task.id && (
+                                            <div className="absolute right-0 top-8 z-20 w-32 overflow-hidden rounded-lg border border-white/[0.09] bg-[#1a1d22] p-1 shadow-xl">
+                                              <button
+                                                type="button"
+                                                onClick={() =>
+                                                  openEditTask(
+                                                    task
+                                                  )
+                                                }
+                                                className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs text-white/60 transition hover:bg-white/[0.06] hover:text-white"
+                                              >
+                                                <Pencil className="h-3.5 w-3.5" />
+                                                Edit
+                                              </button>
+
+                                              <button
+                                                type="button"
+                                                onClick={() =>
+                                                  deleteTask(
+                                                    task
+                                                  )
+                                                }
+                                                className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs text-rose-300/70 transition hover:bg-rose-500/10 hover:text-rose-300"
+                                              >
+                                                <Trash2 className="h-3.5 w-3.5" />
+                                                Delete
+                                              </button>
+                                            </div>
                                           )}
                                         </div>
                                       </div>
@@ -1307,7 +2133,7 @@ export function MentorDashboard() {
                                 }
                               )
                             ) : (
-                              <div className="flex min-h-[260px] items-center justify-center">
+                              <div className="flex min-h-[260px] flex-col items-center justify-center">
                                 <div className="text-center">
                                   <div className="text-xs font-medium text-white/30">
                                     Rest day
@@ -1316,6 +2142,19 @@ export function MentorDashboard() {
                                   <div className="mt-1 text-[10px] text-white/15">
                                     No tasks scheduled
                                   </div>
+
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      openAddTask(
+                                        day.isoDate
+                                      )
+                                    }
+                                    className="mt-3 flex items-center gap-1 text-[10px] text-white/25 transition hover:text-white/60"
+                                  >
+                                    <Plus className="h-3 w-3" />
+                                    Add task
+                                  </button>
                                 </div>
                               </div>
                             )}
@@ -1324,11 +2163,271 @@ export function MentorDashboard() {
                       ))}
                     </div>
                   </div>
+
+                  <div className="flex items-center justify-between border-t border-white/[0.07] px-5 py-3">
+                    <div className="text-[11px] text-white/30">
+                      {completedTasks} of{" "}
+                      {totalTasks} tasks complete
+                    </div>
+
+                    <div className="text-[11px] text-white/25">
+                      Mentor view
+                    </div>
+                  </div>
                 </section>
               </div>
             )}
         </main>
       </div>
+
+      {/* ================================================================
+          MODAL
+      ================================================================ */}
+
+      {modal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+          onClick={() => {
+            if (!saving) {
+              setModal(null);
+              setActionError(null);
+            }
+          }}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl border border-white/[0.09] bg-[#15181d] shadow-2xl"
+            onClick={(event) =>
+              event.stopPropagation()
+            }
+          >
+            {/* Modal header */}
+
+            <div className="flex items-center justify-between border-b border-white/[0.07] px-5 py-4">
+              <div>
+                <h2 className="text-sm font-semibold">
+                  {modal === "objective"
+                    ? editingObjective
+                      ? "Edit Objective"
+                      : "Add Objective"
+                    : editingTask
+                      ? "Edit Task"
+                      : "Add Task"}
+                </h2>
+
+                <p className="mt-1 text-xs text-white/30">
+                  {selectedStudent?.display_name ||
+                    selectedStudent?.username ||
+                    "Student"}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                disabled={saving}
+                onClick={() =>
+                  setModal(null)
+                }
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-white/30 transition hover:bg-white/[0.06] hover:text-white disabled:opacity-40"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Objective form */}
+
+            {modal === "objective" && (
+              <div className="space-y-5 p-5">
+                <div>
+                  <label className="mb-2 block text-[10px] font-medium uppercase tracking-wider text-white/30">
+                    Objective
+                  </label>
+
+                  <textarea
+                    autoFocus
+                    value={objectiveText}
+                    onChange={(event) =>
+                      setObjectiveText(
+                        event.target.value
+                      )
+                    }
+                    placeholder="e.g. Complete upper limb anatomy revision"
+                    rows={4}
+                    className="w-full resize-none rounded-xl border border-white/[0.08] bg-white/[0.025] px-3.5 py-3 text-sm text-white outline-none transition placeholder:text-white/20 focus:border-white/20 focus:bg-white/[0.04]"
+                  />
+                </div>
+
+                {actionError && (
+                  <div className="flex items-center gap-2 rounded-lg border border-rose-500/15 bg-rose-500/[0.06] px-3 py-2.5 text-xs text-rose-300">
+                    <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                    {actionError}
+                  </div>
+                )}
+
+                <div className="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    disabled={saving}
+                    onClick={() =>
+                      setModal(null)
+                    }
+                    className="rounded-lg border border-white/[0.08] px-3.5 py-2 text-xs font-medium text-white/45 transition hover:bg-white/[0.04] hover:text-white disabled:opacity-40"
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={saving}
+                    onClick={saveObjective}
+                    className="flex items-center gap-2 rounded-lg bg-white px-3.5 py-2 text-xs font-semibold text-black transition hover:bg-white/90 disabled:opacity-50"
+                  >
+                    {saving ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Save className="h-3.5 w-3.5" />
+                    )}
+
+                    {editingObjective
+                      ? "Save Changes"
+                      : "Add Objective"}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Task form */}
+
+            {modal === "task" && (
+              <div className="space-y-4 p-5">
+                <div>
+                  <label className="mb-2 block text-[10px] font-medium uppercase tracking-wider text-white/30">
+                    Task
+                  </label>
+
+                  <input
+                    autoFocus
+                    value={taskForm.name}
+                    onChange={(event) =>
+                      setTaskForm(
+                        (current) => ({
+                          ...current,
+                          name: event.target
+                            .value,
+                        })
+                      )
+                    }
+                    placeholder="e.g. Review brachial plexus"
+                    className="w-full rounded-xl border border-white/[0.08] bg-white/[0.025] px-3.5 py-3 text-sm text-white outline-none transition placeholder:text-white/20 focus:border-white/20 focus:bg-white/[0.04]"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="mb-2 block text-[10px] font-medium uppercase tracking-wider text-white/30">
+                      Subject
+                    </label>
+
+                    <input
+                      value={taskForm.subject}
+                      onChange={(event) =>
+                        setTaskForm(
+                          (current) => ({
+                            ...current,
+                            subject:
+                              event.target
+                                .value,
+                          })
+                        )
+                      }
+                      placeholder="Anatomy"
+                      className="w-full rounded-xl border border-white/[0.08] bg-white/[0.025] px-3 py-2.5 text-xs text-white outline-none transition placeholder:text-white/20 focus:border-white/20"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-[10px] font-medium uppercase tracking-wider text-white/30">
+                      Type
+                    </label>
+
+                    <input
+                      value={taskForm.type}
+                      onChange={(event) =>
+                        setTaskForm(
+                          (current) => ({
+                            ...current,
+                            type: event.target
+                              .value,
+                          })
+                        )
+                      }
+                      placeholder="Lecture / Revision"
+                      className="w-full rounded-xl border border-white/[0.08] bg-white/[0.025] px-3 py-2.5 text-xs text-white outline-none transition placeholder:text-white/20 focus:border-white/20"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-[10px] font-medium uppercase tracking-wider text-white/30">
+                    Date
+                  </label>
+
+                  <input
+                    type="date"
+                    value={taskForm.date}
+                    onChange={(event) =>
+                      setTaskForm(
+                        (current) => ({
+                          ...current,
+                          date: event.target
+                            .value,
+                        })
+                      )
+                    }
+                    className="w-full rounded-xl border border-white/[0.08] bg-white/[0.025] px-3 py-2.5 text-xs text-white outline-none transition focus:border-white/20"
+                  />
+                </div>
+
+                {actionError && (
+                  <div className="flex items-center gap-2 rounded-lg border border-rose-500/15 bg-rose-500/[0.06] px-3 py-2.5 text-xs text-rose-300">
+                    <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                    {actionError}
+                  </div>
+                )}
+
+                <div className="flex justify-end gap-2 pt-1">
+                  <button
+                    type="button"
+                    disabled={saving}
+                    onClick={() =>
+                      setModal(null)
+                    }
+                    className="rounded-lg border border-white/[0.08] px-3.5 py-2 text-xs font-medium text-white/45 transition hover:bg-white/[0.04] hover:text-white disabled:opacity-40"
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={saving}
+                    onClick={saveTask}
+                    className="flex items-center gap-2 rounded-lg bg-white px-3.5 py-2 text-xs font-semibold text-black transition hover:bg-white/90 disabled:opacity-50"
+                  >
+                    {saving ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Save className="h-3.5 w-3.5" />
+                    )}
+
+                    {editingTask
+                      ? "Save Changes"
+                      : "Add Task"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
