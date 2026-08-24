@@ -168,9 +168,13 @@ export function MentorDashboard() {
 
   const [tasks, setTasks] = useState<Task[]>([]);
 
-  const [weekStart, setWeekStart] = useState(() =>
-    getMonday(INITIAL_RENDER_DATE)
-  );
+ const [weekStart, setWeekStart] = useState(() =>
+  getMonday(INITIAL_RENDER_DATE)
+);
+
+useEffect(() => {
+  setWeekStart(getMonday(new Date()));
+}, []);
 
   const [loading, setLoading] = useState(true);
   const [loadingStudent, setLoadingStudent] =
