@@ -122,9 +122,13 @@ export function MentorshipDashboard() {
   const [objectives, setObjectives] = useState<Objective[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
 
-  const [weekStart, setWeekStart] = useState(() =>
-    getMonday(new Date())
-  );
+const [weekStart, setWeekStart] = useState<Date | null>(null);
+
+useEffect(() => {
+  setWeekStart(getMonday(new Date()));
+}, []);
+
+
   async function handleLogout() {
   await supabase.auth.signOut();
   router.replace("/login");
