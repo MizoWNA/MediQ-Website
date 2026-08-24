@@ -77,6 +77,33 @@ type TaskForm = {
   date: string;
 };
 
+/*
+ * ================================================================
+ * TASK OPTIONS
+ * ================================================================
+ *
+ * The value is what gets stored in Supabase.
+ * The label is what the mentor sees in the dropdown.
+ *
+ * Add/remove options here whenever you want.
+ * No database enum is required.
+ */
+
+const SUBJECT_OPTIONS = [
+  { value: "anatomy", label: "Anatomy" },
+  { value: "physiology", label: "Physiology" },
+  { value: "histology", label: "Histology" },
+];
+
+const TASK_TYPE_OPTIONS = [
+  { value: "lecture", label: "Lecture" },
+  { value: "revision", label: "Revision" },
+  { value: "practical", label: "Practical" },
+  { value: "tutorial", label: "Tutorial" },
+  { value: "exam", label: "Exam" },
+  { value: "assignment", label: "Assignment" },
+];
+
 const colorClasses = {
   blue: {
     card: "bg-sky-500/10 border-sky-500/20",
@@ -878,10 +905,21 @@ export function MentorDashboard() {
     setActionError(null);
     setEditingTask(task);
 
+    /*
+     * Existing rows may contain "Lecture"/"Anatomy"
+     * from before the dropdowns existed.
+     *
+     * Normalize them so they still match the
+     * lowercase dropdown values.
+     */
     setTaskForm({
       name: task.name,
-      subject: task.subject || "",
-      type: task.type || "",
+      subject: task.subject
+        ? task.subject.toLowerCase()
+        : "",
+      type: task.type
+        ? task.type.toLowerCase()
+        : "",
       date: task.date,
     });
 
@@ -921,11 +959,9 @@ export function MentorDashboard() {
           .update({
             name,
             subject:
-              taskForm.subject.trim() ||
-              null,
+              taskForm.subject || null,
             type:
-              taskForm.type.trim() ||
-              null,
+              taskForm.type || null,
             date: taskForm.date,
           })
           .eq("id", editingTask.id)
@@ -986,6 +1022,28 @@ export function MentorDashboard() {
             )
           );
         }
+
+        /*
+         * Recalculate sidebar progress after editing.
+         */
+        const nextTasks = tasks
+          .map((task) =>
+            task.id === editingTask.id
+              ? data
+              : task
+          )
+          .filter(
+            (task) =>
+              task.date >=
+                formatDate(weekStart) &&
+              task.date <=
+                formatDate(weekEnd)
+          );
+
+        updateStudentTaskSummary(
+          selectedStudentId,
+          nextTasks
+        );
       } else {
         const {
           data,
@@ -997,11 +1055,9 @@ export function MentorDashboard() {
               selectedStudentId,
             name,
             subject:
-              taskForm.subject.trim() ||
-              null,
+              taskForm.subject || null,
             type:
-              taskForm.type.trim() ||
-              null,
+              taskForm.type || null,
             date: taskForm.date,
             completed: false,
           })
@@ -1041,59 +1097,12 @@ export function MentorDashboard() {
             )
           );
         }
-      }
 
-      /*
-       * Recalculate sidebar progress from the
-       * currently displayed week.
-       */
-
-      const nextTasks =
-        editingTask
-          ? tasks
-              .map((task) =>
-                task.id ===
-                editingTask.id
-                  ? {
-                      ...task,
-                      name,
-                      subject:
-                        taskForm.subject.trim() ||
-                        null,
-                      type:
-                        taskForm.type.trim() ||
-                        null,
-                      date:
-                        taskForm.date,
-                    }
-                  : task
-              )
-              .filter(
-                (task) =>
-                  task.date >=
-                    formatDate(
-                      weekStart
-                    ) &&
-                  task.date <=
-                    formatDate(
-                      weekEnd
-                    )
-              )
-          : tasks;
-
-      if (!editingTask) {
         /*
-         * We don't have to manually include the
-         * newly inserted task here if it is outside
-         * the current state. Reloading the summary
-         * below keeps the sidebar authoritative.
+         * Refresh the sidebar because a newly created
+         * task may affect the student's weekly count.
          */
         await refreshStudentSummary();
-      } else {
-        updateStudentTaskSummary(
-          selectedStudentId,
-          nextTasks
-        );
       }
 
       setModal(null);
@@ -1120,27 +1129,20 @@ export function MentorDashboard() {
     const nextCompleted =
       !task.completed;
 
-    setTasks((current) =>
-      current.map((item) =>
-        item.id === task.id
-          ? {
-              ...item,
-              completed: nextCompleted,
-            }
-          : item
-      )
+    const nextTasks = tasks.map((item) =>
+      item.id === task.id
+        ? {
+            ...item,
+            completed: nextCompleted,
+          }
+        : item
     );
+
+    setTasks(nextTasks);
 
     updateStudentTaskSummary(
       selectedStudentId!,
-      tasks.map((item) =>
-        item.id === task.id
-          ? {
-              ...item,
-              completed: nextCompleted,
-            }
-          : item
-      )
+      nextTasks
     );
 
     const {
@@ -1157,17 +1159,7 @@ export function MentorDashboard() {
       );
 
     if (error) {
-      setTasks((current) =>
-        current.map((item) =>
-          item.id === task.id
-            ? {
-                ...item,
-                completed:
-                  task.completed,
-              }
-            : item
-        )
-      );
+      setTasks(tasks);
 
       updateStudentTaskSummary(
         selectedStudentId!,
@@ -1216,6 +1208,7 @@ export function MentorDashboard() {
 
     if (error) {
       setTasks(previous);
+
       updateStudentTaskSummary(
         selectedStudentId!,
         previous
@@ -2322,12 +2315,14 @@ export function MentorDashboard() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
+                  {/* Subject dropdown */}
+
                   <div>
                     <label className="mb-2 block text-[10px] font-medium uppercase tracking-wider text-white/30">
                       Subject
                     </label>
 
-                    <input
+                    <select
                       value={taskForm.subject}
                       onChange={(event) =>
                         setTaskForm(
@@ -2339,17 +2334,41 @@ export function MentorDashboard() {
                           })
                         )
                       }
-                      placeholder="Anatomy"
-                      className="w-full rounded-xl border border-white/[0.08] bg-white/[0.025] px-3 py-2.5 text-xs text-white outline-none transition placeholder:text-white/20 focus:border-white/20"
-                    />
+                      className="w-full appearance-none rounded-xl border border-white/[0.08] bg-[#191c21] px-3 py-2.5 text-xs text-white outline-none transition focus:border-white/20"
+                    >
+                      <option
+                        value=""
+                        className="bg-[#191c21] text-white/40"
+                      >
+                        Select subject
+                      </option>
+
+                      {SUBJECT_OPTIONS.map(
+                        (option) => (
+                          <option
+                            key={
+                              option.value
+                            }
+                            value={
+                              option.value
+                            }
+                            className="bg-[#191c21] text-white"
+                          >
+                            {option.label}
+                          </option>
+                        )
+                      )}
+                    </select>
                   </div>
+
+                  {/* Type dropdown */}
 
                   <div>
                     <label className="mb-2 block text-[10px] font-medium uppercase tracking-wider text-white/30">
                       Type
                     </label>
 
-                    <input
+                    <select
                       value={taskForm.type}
                       onChange={(event) =>
                         setTaskForm(
@@ -2360,9 +2379,31 @@ export function MentorDashboard() {
                           })
                         )
                       }
-                      placeholder="Lecture / Revision"
-                      className="w-full rounded-xl border border-white/[0.08] bg-white/[0.025] px-3 py-2.5 text-xs text-white outline-none transition placeholder:text-white/20 focus:border-white/20"
-                    />
+                      className="w-full appearance-none rounded-xl border border-white/[0.08] bg-[#191c21] px-3 py-2.5 text-xs text-white outline-none transition focus:border-white/20"
+                    >
+                      <option
+                        value=""
+                        className="bg-[#191c21] text-white/40"
+                      >
+                        Select type
+                      </option>
+
+                      {TASK_TYPE_OPTIONS.map(
+                        (option) => (
+                          <option
+                            key={
+                              option.value
+                            }
+                            value={
+                              option.value
+                            }
+                            className="bg-[#191c21] text-white"
+                          >
+                            {option.label}
+                          </option>
+                        )
+                      )}
+                    </select>
                   </div>
                 </div>
 
