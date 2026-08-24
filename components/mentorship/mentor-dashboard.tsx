@@ -23,6 +23,7 @@ import {
   Trash2,
   X,
   Save,
+  LogOut,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -145,6 +146,10 @@ export function MentorDashboard() {
   const [mobileSidebarOpen, setMobileSidebarOpen] =
     useState(false);
 
+  async function handleLogout() {
+  await supabase.auth.signOut();
+  router.replace("/login");
+}
 
   const [mentorProfile, setMentorProfile] =
     useState<Profile | null>(null);
@@ -1444,6 +1449,19 @@ export function MentorDashboard() {
       <X className="h-4 w-4" />
     </button>
   </div>
+
+{/* Logout */}
+
+<div className="mt-auto border-t border-white/[0.07] p-4">
+  <button
+    type="button"
+    onClick={handleLogout}
+    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-white/40 transition hover:bg-rose-500/[0.06] hover:text-rose-300"
+  >
+    <LogOut className="h-4 w-4" />
+    <span>Log Out</span>
+  </button>
+</div>
 
   {/* Collapsed desktop expand button */}
   {sidebarCollapsed && (

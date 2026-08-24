@@ -18,6 +18,7 @@ import {
   X,
   PanelLeftClose,
   PanelLeftOpen,
+  LogOut,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
@@ -124,7 +125,10 @@ export function MentorshipDashboard() {
   const [weekStart, setWeekStart] = useState(() =>
     getMonday(new Date())
   );
-
+  async function handleLogout() {
+  await supabase.auth.signOut();
+  router.replace("/login");
+}
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -744,6 +748,20 @@ export function MentorshipDashboard() {
           </div>
         )}
       </div>
+
+{/* Logout */}
+
+<div className="mt-auto border-t border-white/[0.07] p-4">
+  <button
+    type="button"
+    onClick={handleLogout}
+    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-white/40 transition hover:bg-rose-500/[0.06] hover:text-rose-300"
+  >
+    <LogOut className="h-4 w-4" />
+    <span>Log Out</span>
+  </button>
+</div>
+
 
       {/* Week summary */}
 
