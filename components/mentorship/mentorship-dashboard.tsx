@@ -89,7 +89,14 @@ function addDays(date: Date, amount: number) {
   return result;
 }
 
-function formatWeekRange(start: Date, end: Date) {
+function formatWeekRange(
+  start: Date | null,
+  end: Date | null
+) {
+  if (!start || !end) {
+    return "Loading week...";
+  }
+
   const startMonth = start.toLocaleDateString("en-US", {
     month: "long",
   });
@@ -123,9 +130,13 @@ export function MentorshipDashboard() {
   const [tasks, setTasks] = useState<Task[]>([]);
 
 const [weekStart, setWeekStart] = useState<Date | null>(null);
+const [today, setToday] = useState<Date | null>(null);
 
 useEffect(() => {
-  setWeekStart(getMonday(new Date()));
+  const currentDate = new Date();
+
+  setToday(currentDate);
+  setWeekStart(getMonday(currentDate));
 }, []);
 
 
@@ -147,24 +158,26 @@ useEffect(() => {
    * ================================================================
    */
 
-  const weekDays = useMemo(() => {
-    return Array.from({ length: 7 }, (_, index) => {
-      const date = addDays(weekStart, index);
+const weekDays = useMemo(() => {
+  if (!weekStart) return [];
 
-      return {
-        date,
-        isoDate: formatDate(date),
-        name: date.toLocaleDateString("en-US", {
-          weekday: "long",
-        }),
-        short: date
-          .toLocaleDateString("en-US", {
-            weekday: "short",
-          })
-          .toUpperCase(),
-      };
-    });
-  }, [weekStart]);
+  return Array.from({ length: 7 }, (_, index) => {
+    const date = addDays(weekStart, index);
+
+    return {
+      date,
+      isoDate: formatDate(date),
+      name: date.toLocaleDateString("en-US", {
+        weekday: "long",
+      }),
+      short: date
+        .toLocaleDateString("en-US", {
+          weekday: "short",
+        })
+        .toUpperCase(),
+    };
+  });
+}, [weekStart]);
 
   const weekEnd = weekDays[6]?.date ?? weekStart;
 
@@ -175,6 +188,11 @@ useEffect(() => {
    */
 
   useEffect(() => {
+
+    if (!weekStart || !weekEnd) {
+  return;
+}
+
     let cancelled = false;
 
     async function loadDashboard() {
@@ -504,24 +522,22 @@ useEffect(() => {
    * ================================================================
    */
 
-  const today = new Date();
+const currentDate = today ?? new Date();
 
-  const daysUntilExam = profile?.exam_date
+const daysUntilExam =
+  profile?.exam_date && currentDate
     ? Math.ceil(
-        (new Date(
-          profile.exam_date
-        ).getTime() -
-          today.getTime()) /
+        (new Date(profile.exam_date).getTime() -
+          currentDate.getTime()) /
           (1000 * 60 * 60 * 24)
       )
     : null;
 
-  const daysLeftInPlan = profile?.end_date
+const daysLeftInPlan =
+  profile?.end_date && currentDate
     ? Math.ceil(
-        (new Date(
-          profile.end_date
-        ).getTime() -
-          today.getTime()) /
+        (new Date(profile.end_date).getTime() -
+          currentDate.getTime()) /
           (1000 * 60 * 60 * 24)
       )
     : null;
@@ -1214,8 +1230,7 @@ useEffect(() => {
 
                           <div
                             className={`mx-auto mt-2 flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold ${
-                              day.isoDate ===
-                              formatDate(today)
+                              today && day.isoDate === formatDate(today)
                                 ? "bg-white text-black"
                                 : "text-white/65"
                             }`}
@@ -1323,8 +1338,8 @@ useEffect(() => {
                 <div className="divide-y divide-white/[0.06] md:hidden">
                   {days.map((day) => {
                     const isToday =
-                      day.isoDate ===
-                      formatDate(today);
+                      today !== null &&
+                      day.isoDate === formatDate(today);
 
                     return (
                       <div
