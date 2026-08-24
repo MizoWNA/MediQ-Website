@@ -3,6 +3,9 @@ import { supabaseAdmin } from "@/lib/supabase-admin";
 
 const MEDIQ_DOMAIN = "@med.iq";
 
+const DEFAULT_PAGE_SIZE = 8;
+const MAX_PAGE_SIZE = 50;
+
 /*
  * ================================================================
  * ADMIN AUTHENTICATION
@@ -66,6 +69,17 @@ async function authenticateAdmin(request: NextRequest) {
  * ================================================================
  * GET — LIST USERS
  * ================================================================
+ *
+ * Supports:
+ *
+ * ?page=1
+ * ?page_size=8
+ * ?search=ahmed
+ * ?role=student
+ *
+ * Only the requested page is returned.
+ *
+ * ================================================================
  */
 
 export async function GET(request: NextRequest) {
@@ -76,10 +90,76 @@ export async function GET(request: NextRequest) {
       return error;
     }
 
-    const { data: users, error: usersError } =
-      await supabaseAdmin
-        .from("profiles")
-        .select(`
+    const searchParams = request.nextUrl.searchParams;
+
+    /*
+     * ------------------------------------------------------------
+     * Pagination
+     * ------------------------------------------------------------
+     */
+
+    const requestedPage = Number(
+      searchParams.get("page") || "1"
+    );
+
+    const requestedPageSize = Number(
+      searchParams.get("page_size") ||
+        DEFAULT_PAGE_SIZE
+    );
+
+    const page = Number.isInteger(requestedPage)
+      ? Math.max(1, requestedPage)
+      : 1;
+
+    const pageSize = Number.isInteger(
+      requestedPageSize
+    )
+      ? Math.min(
+          MAX_PAGE_SIZE,
+          Math.max(1, requestedPageSize)
+        )
+      : DEFAULT_PAGE_SIZE;
+
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+
+    /*
+     * ------------------------------------------------------------
+     * Search
+     * ------------------------------------------------------------
+     */
+
+    const rawSearch =
+      searchParams.get("search")?.trim() || "";
+
+    /*
+     * Prevent PostgREST filter syntax from being
+     * accidentally injected through the search field.
+     */
+
+    const search = rawSearch
+      .replace(/[(),]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    /*
+     * ------------------------------------------------------------
+     * Role filter
+     * ------------------------------------------------------------
+     */
+
+    const role = searchParams.get("role");
+
+    /*
+     * ------------------------------------------------------------
+     * Build query
+     * ------------------------------------------------------------
+     */
+
+    let query = supabaseAdmin
+      .from("profiles")
+      .select(
+        `
           id,
           username,
           display_name,
@@ -89,12 +169,47 @@ export async function GET(request: NextRequest) {
           end_date,
           exam_date,
           mentor_id
-        `)
-        .in("role", ["student", "mentor"])
-        .order("display_name", {
-          ascending: true,
-          nullsFirst: false,
-        });
+        `,
+        {
+          count: "exact",
+        }
+      )
+      .in("role", ["student", "mentor"]);
+
+    /*
+     * Role filtering.
+     */
+
+    if (role === "student" || role === "mentor") {
+      query = query.eq("role", role);
+    }
+
+    /*
+     * Search both display name and username.
+     */
+
+    if (search) {
+      query = query.or(
+        `display_name.ilike.%${search}%,username.ilike.%${search}%`
+      );
+    }
+
+    /*
+     * Stable ordering + pagination.
+     */
+
+    query = query
+      .order("display_name", {
+        ascending: true,
+        nullsFirst: false,
+      })
+      .range(from, to);
+
+    const {
+      data: users,
+      error: usersError,
+      count,
+    } = await query;
 
     if (usersError) {
       console.error(
@@ -113,9 +228,9 @@ export async function GET(request: NextRequest) {
      * Fetch mentor names
      * ------------------------------------------------------------
      *
-     * We intentionally do this as a second query instead of
-     * relying on a foreign-key relationship being configured
-     * correctly in Supabase.
+     * We only fetch mentors belonging to users on the
+     * current page.
+     * ------------------------------------------------------------
      */
 
     const mentorIds = [
@@ -136,7 +251,9 @@ export async function GET(request: NextRequest) {
       const { data: mentorData, error: mentorError } =
         await supabaseAdmin
           .from("profiles")
-          .select("id, username, display_name")
+          .select(
+            "id, username, display_name"
+          )
           .in("id", mentorIds)
           .eq("role", "mentor");
 
@@ -151,31 +268,59 @@ export async function GET(request: NextRequest) {
     }
 
     const mentorMap = new Map(
-      mentors.map((mentor) => [mentor.id, mentor])
+      mentors.map((mentor) => [
+        mentor.id,
+        mentor,
+      ])
     );
 
-    const formattedUsers = (users ?? []).map((user) => {
-      const mentor = user.mentor_id
-        ? mentorMap.get(user.mentor_id) ?? null
-        : null;
+    /*
+     * ------------------------------------------------------------
+     * Format response
+     * ------------------------------------------------------------
+     */
 
-      return {
-        ...user,
-        mentor: mentor
-          ? {
-              id: mentor.id,
-              username: mentor.username,
-              display_name: mentor.display_name,
-            }
-          : null,
-      };
-    });
+    const formattedUsers = (users ?? []).map(
+      (user) => {
+        const mentor = user.mentor_id
+          ? mentorMap.get(user.mentor_id) ?? null
+          : null;
+
+        return {
+          ...user,
+          mentor: mentor
+            ? {
+                id: mentor.id,
+                username: mentor.username,
+                display_name:
+                  mentor.display_name,
+              }
+            : null,
+        };
+      }
+    );
+
+    /*
+     * ------------------------------------------------------------
+     * Response
+     * ------------------------------------------------------------
+     */
 
     return NextResponse.json({
       users: formattedUsers,
+      total: count ?? 0,
+      page,
+      page_size: pageSize,
+      total_pages: Math.max(
+        1,
+        Math.ceil((count ?? 0) / pageSize)
+      ),
     });
   } catch (error) {
-    console.error("Admin user listing failed:", error);
+    console.error(
+      "Admin user listing failed:",
+      error
+    );
 
     return NextResponse.json(
       {
@@ -197,19 +342,20 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    // ------------------------------------------------------------
-    // Authenticate the requesting user
-    // ------------------------------------------------------------
+    /*
+     * Authenticate the requesting user.
+     */
 
-    const { error } = await authenticateAdmin(request);
+    const { error } =
+      await authenticateAdmin(request);
 
     if (error) {
       return error;
     }
 
-    // ------------------------------------------------------------
-    // Read request body
-    // ------------------------------------------------------------
+    /*
+     * Read request body.
+     */
 
     const body = await request.json();
 
@@ -225,11 +371,16 @@ export async function POST(request: NextRequest) {
       mentor_id,
     } = body;
 
-    // ------------------------------------------------------------
-    // Basic validation
-    // ------------------------------------------------------------
+    /*
+     * Basic validation.
+     */
 
-    if (!username || !password || !display_name || !role) {
+    if (
+      !username ||
+      !password ||
+      !display_name ||
+      !role
+    ) {
       return NextResponse.json(
         {
           error:
@@ -239,16 +390,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!["student", "mentor"].includes(role)) {
+    if (
+      !["student", "mentor"].includes(role)
+    ) {
       return NextResponse.json(
         { error: "Invalid role." },
         { status: 400 }
       );
     }
 
-    const cleanUsername = username.trim().toLowerCase();
+    const cleanUsername = username
+      .trim()
+      .toLowerCase();
 
-    if (!/^[a-z0-9._-]+$/.test(cleanUsername)) {
+    if (
+      !/^[a-z0-9._-]+$/.test(
+        cleanUsername
+      )
+    ) {
       return NextResponse.json(
         {
           error:
@@ -258,22 +417,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const email = `${cleanUsername}${MEDIQ_DOMAIN}`;
+    const email =
+      `${cleanUsername}${MEDIQ_DOMAIN}`;
 
-    // ------------------------------------------------------------
-    // Create Supabase Auth user
-    // ------------------------------------------------------------
+    /*
+     * ------------------------------------------------------------
+     * Create Supabase Auth user
+     * ------------------------------------------------------------
+     */
 
     const {
       data: authData,
       error: createAuthError,
-    } = await supabaseAdmin.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-    });
+    } =
+      await supabaseAdmin.auth.admin.createUser(
+        {
+          email,
+          password,
+          email_confirm: true,
+        }
+      );
 
-    if (createAuthError || !authData.user) {
+    if (
+      createAuthError ||
+      !authData.user
+    ) {
       return NextResponse.json(
         {
           error:
@@ -284,33 +452,61 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const newUserId = authData.user.id;
+    const newUserId =
+      authData.user.id;
 
-    // ------------------------------------------------------------
-    // Create linked profile
-    // ------------------------------------------------------------
+    /*
+     * ------------------------------------------------------------
+     * Create linked profile
+     * ------------------------------------------------------------
+     */
 
-    const { error: createProfileError } =
-      await supabaseAdmin
-        .from("profiles")
-        .insert({
-          id: newUserId,
-          username: cleanUsername,
-          display_name,
-          role,
-          year: year ?? null,
-          start_date: start_date || null,
-          end_date: end_date || null,
-          exam_date: exam_date || null,
-          mentor_id: mentor_id || null,
-        });
+    const {
+      error: createProfileError,
+    } = await supabaseAdmin
+      .from("profiles")
+      .insert({
+        id: newUserId,
+        username: cleanUsername,
+        display_name,
+        role,
 
-    // ------------------------------------------------------------
-    // Roll back Auth user if profile creation failed
-    // ------------------------------------------------------------
+        year:
+          role === "student"
+            ? year ?? null
+            : null,
+
+        start_date:
+          role === "student"
+            ? start_date || null
+            : null,
+
+        end_date:
+          role === "student"
+            ? end_date || null
+            : null,
+
+        exam_date:
+          role === "student"
+            ? exam_date || null
+            : null,
+
+        mentor_id:
+          role === "student"
+            ? mentor_id || null
+            : null,
+      });
+
+    /*
+     * ------------------------------------------------------------
+     * Roll back Auth user if profile creation failed
+     * ------------------------------------------------------------
+     */
 
     if (createProfileError) {
-      await supabaseAdmin.auth.admin.deleteUser(newUserId);
+      await supabaseAdmin.auth.admin.deleteUser(
+        newUserId
+      );
 
       return NextResponse.json(
         {
@@ -320,9 +516,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ------------------------------------------------------------
-    // Success
-    // ------------------------------------------------------------
+    /*
+     * ------------------------------------------------------------
+     * Success
+     * ------------------------------------------------------------
+     */
 
     return NextResponse.json(
       {
@@ -336,7 +534,10 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
-    console.error("Admin user creation failed:", error);
+    console.error(
+      "Admin user creation failed:",
+      error
+    );
 
     return NextResponse.json(
       {
