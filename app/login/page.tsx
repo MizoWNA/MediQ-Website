@@ -57,6 +57,11 @@ export default function LoginPage() {
         .eq("id", session.user.id)
         .maybeSingle();
 
+      if (profile?.role === "admin") {
+        router.replace("/admin/");
+        return;
+      }
+
       if (profile?.role === "mentor") {
         router.replace("/mentor");
         return;
@@ -157,6 +162,12 @@ export default function LoginPage() {
        * ROLE-BASED REDIRECT
        * ------------------------------------------------------------
        */
+
+      if (profile.role === "admin") {
+        router.replace("/admin");
+        router.refresh();
+        return;
+      }
 
       if (profile.role === "student") {
         router.replace("/dashboard");
