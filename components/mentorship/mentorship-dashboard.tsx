@@ -751,16 +751,29 @@ export function MentorshipDashboard() {
 
 {/* Logout */}
 
-<div className="mt-auto border-t border-white/[0.07] p-4">
+<div className="border-t border-white/[0.07] p-3">
   <button
     type="button"
     onClick={handleLogout}
-    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-white/40 transition hover:bg-rose-500/[0.06] hover:text-rose-300"
+    className={`group flex w-full items-center rounded-xl text-white/40 transition-all duration-200 hover:bg-rose-500/[0.06] hover:text-rose-300 ${
+      sidebarCollapsed
+        ? "justify-center px-0 py-2.5"
+        : "gap-3 px-3 py-2.5"
+    }`}
+    aria-label="Log Out"
+    title={sidebarCollapsed ? "Log Out" : undefined}
   >
-    <LogOut className="h-4 w-4" />
-    <span>Log Out</span>
+    <LogOut className="h-4 w-4 shrink-0 transition-transform duration-200 group-hover:-translate-x-0.5" />
+
+    {!sidebarCollapsed && (
+      <span className="text-sm">
+        Log Out
+      </span>
+    )}
   </button>
 </div>
+
+
 
 
       {/* Week summary */}
