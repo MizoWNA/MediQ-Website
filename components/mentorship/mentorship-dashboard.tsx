@@ -17,6 +17,10 @@ import {
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
+import {
+  getSubjectOption,
+  DEFAULT_SUBJECT_COLOR,
+} from "@/lib/task-options";
 
 type Profile = {
   id: string;
@@ -54,28 +58,7 @@ type CalendarDay = {
   tasks: Task[];
 };
 
-const colorClasses = {
-  blue: {
-    card: "bg-sky-500/10 border-sky-500/20",
-    dot: "bg-sky-400",
-    text: "text-sky-300",
-  },
-  red: {
-    card: "bg-rose-500/10 border-rose-500/20",
-    dot: "bg-rose-400",
-    text: "text-rose-300",
-  },
-  green: {
-    card: "bg-emerald-500/10 border-emerald-500/20",
-    dot: "bg-emerald-400",
-    text: "text-emerald-300",
-  },
-  default: {
-    card: "bg-white/[0.025] border-white/[0.08]",
-    dot: "bg-white/40",
-    text: "text-white/50",
-  },
-};
+
 
 function formatDate(date: Date) {
   const year = date.getFullYear();
@@ -103,17 +86,6 @@ function addDays(date: Date, amount: number) {
   return result;
 }
 
-function getSubjectColor(subject: string | null) {
-  if (!subject) return "default";
-
-  const normalized = subject.toLowerCase();
-
-  if (normalized.includes("anatom")) return "blue";
-  if (normalized.includes("physio")) return "red";
-  if (normalized.includes("histo")) return "green";
-
-  return "default";
-}
 
 function formatWeekRange(start: Date, end: Date) {
   const startMonth = start.toLocaleDateString("en-US", {
@@ -412,6 +384,32 @@ export function MentorshipDashboard() {
       ),
     }));
   }, [weekDays, tasks]);
+
+const weekSubjects = useMemo(() => {
+  const subjects = new Set<string>();
+
+  tasks.forEach((task) => {
+    if (task.subject) {
+      const option = getSubjectOption(task.subject);
+
+      if (option) {
+        subjects.add(option.value);
+      }
+    }
+  });
+
+  return Array.from(subjects)
+    .map((value) =>
+      getSubjectOption(value)
+    )
+    .filter(
+      (
+        option
+      ): option is NonNullable<
+        ReturnType<typeof getSubjectOption>
+      > => option !== null
+    );
+}, [tasks]);
 
   /*
    * ================================================================
@@ -924,22 +922,21 @@ export function MentorshipDashboard() {
                     </div>
                   </div>
 
+                                  {weekSubjects.length > 0 && (
                   <div className="hidden items-center gap-4 text-[11px] text-white/35 sm:flex">
-                    <div className="flex items-center gap-1.5">
-                      <span className="h-2 w-2 rounded-full bg-sky-400" />
-                      Anatomy
-                    </div>
-
-                    <div className="flex items-center gap-1.5">
-                      <span className="h-2 w-2 rounded-full bg-rose-400" />
-                      Physiology
-                    </div>
-
-                    <div className="flex items-center gap-1.5">
-                      <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                      Histology
-                    </div>
+                    {weekSubjects.map((subject) => (
+                      <div
+                        key={subject.value}
+                        className="flex items-center gap-1.5"
+                      >
+                        <span
+                          className={`h-2 w-2 rounded-full ${subject.color.dot}`}
+                        />
+                        {subject.label}
+                      </div>
+                    ))}
                   </div>
+                )}
                 </div>
 
                 {/* Calendar */}
@@ -978,15 +975,12 @@ export function MentorshipDashboard() {
                             0 ? (
                             day.tasks.map(
                               (task) => {
-                                const color =
-                                  getSubjectColor(
-                                    task.subject
-                                  );
+                                const subject =
+                                  getSubjectOption(task.subject);
 
                                 const colors =
-                                  colorClasses[
-                                  color
-                                  ];
+                                  subject?.color ??
+                                  DEFAULT_SUBJECT_COLOR;
 
                                 return (
                                   <div

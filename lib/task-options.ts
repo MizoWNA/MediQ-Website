@@ -65,7 +65,9 @@ export function getSubjectOption(
 ) {
   if (!subject) return null;
 
-  const normalized = subject.toLowerCase();
+  const normalized = subject
+    .trim()
+    .toLowerCase();
 
   return (
     SUBJECT_OPTIONS.find(
