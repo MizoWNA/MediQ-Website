@@ -89,7 +89,7 @@ export function Navigation() {
           {/* Desktop CTA */}
           <div className="hidden md:flex items-center gap-4">
             <a
-              href="#security"
+              href="https://forms.gle/18KshEMPAuw6mUAc6"
               className={`group text-foreground/70 hover:text-foreground transition-all duration-500 ${
                 isScrolled ? "text-xs" : "text-sm"
               }`}
@@ -115,7 +115,7 @@ export function Navigation() {
                 )
               }
             >
-              Apply for Mentorship
+              LogIntoMentoship
             </Button>
           </div>
 
