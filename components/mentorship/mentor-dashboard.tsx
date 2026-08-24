@@ -85,6 +85,8 @@ type TaskForm = {
   date: string;
 };
 
+const INITIAL_RENDER_DATE = new Date(2026, 0, 5);
+
 function formatDate(date: Date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -167,7 +169,7 @@ export function MentorDashboard() {
   const [tasks, setTasks] = useState<Task[]>([]);
 
   const [weekStart, setWeekStart] = useState(() =>
-    getMonday(new Date())
+    getMonday(INITIAL_RENDER_DATE)
   );
 
   const [loading, setLoading] = useState(true);
@@ -196,7 +198,7 @@ export function MentorDashboard() {
     name: "",
     subject: "",
     type: "",
-    date: formatDate(new Date()),
+    date: formatDate(INITIAL_RENDER_DATE),
   });
 
   const [saving, setSaving] = useState(false);
