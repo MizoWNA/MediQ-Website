@@ -36,6 +36,14 @@ export const SUBJECT_OPTIONS = [
       dot: "bg-emerald-400",
       text: "text-emerald-300",
     },
+  {
+    value: "pharmacology",
+    label: "Pharmacology",
+    color: {
+      card: "bg-lime-500/10 border-lime-500/20",
+      dot: "bg-lime-400",
+      text: "text-lime-300",
+    },
   },
 ] as const;
 
