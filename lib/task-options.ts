@@ -36,6 +36,7 @@ export const SUBJECT_OPTIONS = [
       dot: "bg-emerald-400",
       text: "text-emerald-300",
     },
+  },
   {
     value: "pharmacology",
     label: "Pharmacology",
