@@ -17,10 +17,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
-import {
-  getSubjectOption,
-  DEFAULT_SUBJECT_COLOR,
-} from "@/lib/task-options";
+
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { DashboardCalendar } from "@/components/dashboard/DashboardCalendar";
@@ -87,6 +84,24 @@ type Profile = {
   mentor_id: string | null;
 };
 
+type Subject = {
+  id: string;
+  name: string;
+  display_name: string;
+  category: string;
+  color: string;
+  active: boolean;
+  display_order: number;
+};
+
+type TaskType = {
+  id: string;
+  name: string;
+  points: number;
+  active: boolean;
+  display_order: number;
+};
+
 type Objective = {
   id: string;
   text: string;
@@ -96,8 +111,8 @@ type Objective = {
 type Task = {
   id: string;
   name: string;
-  subject: string | null;
-  type: string | null;
+  subject_id: string;
+  task_type_id: string;
   student_id: string;
   completed: boolean;
   date: string;
@@ -185,6 +200,8 @@ export function MentorshipDashboard() {
 
   const [objectives, setObjectives] = useState<Objective[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [taskTypes, setTaskTypes] = useState<TaskType[]>([]);
 
 const [weekStart, setWeekStart] = useState<Date | null>(null);
 const [today, setToday] = useState<Date | null>(null);
@@ -373,6 +390,62 @@ const weekDays = useMemo(() => {
         );
 
         /*
+        * SUBJECTS
+        */
+
+        const {
+          data: subjectData,
+          error: subjectError,
+        } = await supabase
+          .from("subjects")
+          .select(
+            "id, name, display_name, category, color, active, display_order"
+          )
+          .eq("active", true)
+          .order("display_order");
+
+        if (subjectError) {
+          throw new Error(
+            `Subjects query failed: ${subjectError.message}`
+          );
+        }
+
+        if (cancelled) return;
+
+        setSubjects(
+          Array.isArray(subjectData) ? subjectData : []
+        );
+
+        /*
+        * TASK TYPES
+        */
+
+        const {
+          data: taskTypeData,
+          error: taskTypeError,
+        } = await supabase
+          .from("task_types")
+          .select(
+            "id, name, points, active, display_order"
+          )
+          .eq("active", true)
+          .order("display_order");
+
+        if (taskTypeError) {
+          throw new Error(
+            `Task types query failed: ${taskTypeError.message}`
+          );
+        }
+
+        if (cancelled) return;
+
+        setTaskTypes(
+          Array.isArray(taskTypeData)
+            ? taskTypeData
+            : []
+        );
+
+        /*
          * TASKS
          */
 
@@ -382,7 +455,7 @@ const weekDays = useMemo(() => {
         } = await supabase
           .from("tasks")
           .select(
-            "id, name, subject, type, student_id, completed, date"
+            "id, name, subject_id, task_type_id, student_id, completed, date"
           )
           .eq("student_id", studentId)
           .gte("date", formatDate(weekStart))
@@ -450,28 +523,14 @@ const weekDays = useMemo(() => {
    */
 
   const weekSubjects = useMemo(() => {
-    const subjects = new Set<string>();
+    const subjectIds = new Set(
+      tasks.map((task) => task.subject_id)
+    );
 
-    tasks.forEach((task) => {
-      if (task.subject) {
-        const option = getSubjectOption(task.subject);
-
-        if (option) {
-          subjects.add(option.value);
-        }
-      }
-    });
-
-    return Array.from(subjects)
-      .map((value) => getSubjectOption(value))
-      .filter(
-        (
-          option
-        ): option is NonNullable<
-          ReturnType<typeof getSubjectOption>
-        > => option !== null
-      );
-  }, [tasks]);
+    return subjects.filter((subject) =>
+      subjectIds.has(subject.id)
+    );
+  }, [tasks, subjects]);
 
   /*
    * ================================================================
@@ -1142,21 +1201,20 @@ const daysLeftInPlan =
 
                   {weekSubjects.length > 0 && (
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] text-white/35">
-                      {weekSubjects.map(
-                        (subject) => (
-                          <div
-                            key={
-                              subject.value
-                            }
-                            className="flex items-center gap-1.5"
-                          >
-                            <span
-                              className={`h-2 w-2 rounded-full ${subject.color.dot}`}
-                            />
-                            {subject.label}
-                          </div>
-                        )
-                      )}
+                      {weekSubjects.map((subject) => (
+                        <div
+                          key={subject.id}
+                          className="flex items-center gap-1.5"
+                        >
+                          <span
+                            className="h-2 w-2 rounded-full"
+                            style={{
+                              backgroundColor: subject.color,
+                            }}
+                          />
+                          {subject.display_name}
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
