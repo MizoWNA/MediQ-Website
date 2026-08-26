@@ -2,9 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
-  CalendarDays,
-  ChevronLeft,
-  ChevronRight,
   CheckCircle2,
   Circle,
   GraduationCap,
@@ -14,8 +11,6 @@ import {
   UserRound,
   CalendarClock,
   Timer,
-  Menu,
-  X,
   PanelLeftClose,
   PanelLeftOpen,
   LogOut,
@@ -26,6 +21,8 @@ import {
   getSubjectOption,
   DEFAULT_SUBJECT_COLOR,
 } from "@/lib/task-options";
+import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
+import { DashboardShell } from "@/components/dashboard/DashboardShell";
 
 type Profile = {
   id: string;
@@ -71,11 +68,11 @@ function formatDate(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
-function getMonday(date: Date) {
+function getSunday(date: Date) {
   const result = new Date(date);
   const day = result.getDay();
 
-  const diff = day === 0 ? -6 : 1 - day;
+  const diff = day === 0 ? 0 : -day;
 
   result.setDate(result.getDate() + diff);
   result.setHours(0, 0, 0, 0);
@@ -145,7 +142,7 @@ useEffect(() => {
   const currentDate = new Date();
 
   setToday(currentDate);
-  setWeekStart(getMonday(currentDate));
+  setWeekStart(getSunday(currentDate));
 }, []);
 
 
@@ -536,7 +533,7 @@ const weekDays = useMemo(() => {
   }
 
   function goToToday() {
-    setWeekStart(getMonday(new Date()));
+    setWeekStart(getSunday(new Date()));
   }
 
   /*
@@ -936,152 +933,20 @@ const daysLeftInPlan =
    */
 
   return (
-    <div className="min-h-screen bg-[#0b0d10] px-0 py-0 text-white sm:px-4 sm:py-4">
-      <div className="relative flex min-h-screen w-full overflow-hidden rounded-none border border-white/[0.07] bg-[#111419] shadow-2xl sm:min-h-[calc(100vh-2rem)] sm:rounded-2xl">
-
-        {/* ============================================================
-            MOBILE OVERLAY
-        ============================================================= */}
-
-        {sidebarOpen && (
-          <button
-            type="button"
-            aria-label="Close sidebar"
-            onClick={() =>
-              setSidebarOpen(false)
-            }
-            className="fixed inset-0 z-40 bg-black/60 backdrop-blur-[2px] lg:hidden"
-          />
-        )}
-
-        {/* ============================================================
-            DESKTOP SIDEBAR
-        ============================================================= */}
-
-        <aside
-          className={`hidden shrink-0 border-r border-white/[0.07] bg-[#0d0f12] transition-[width] duration-300 lg:flex lg:flex-col ${
-            sidebarCollapsed
-              ? "w-[76px]"
-              : "w-[280px]"
-          }`}
-        >
-          {sidebarContent}
-        </aside>
-
-        {/* ============================================================
-            MOBILE SIDEBAR
-        ============================================================= */}
-
-        <aside
-          className={`fixed inset-y-0 left-0 z-50 flex w-[280px] flex-col border-r border-white/[0.07] bg-[#0d0f12] shadow-2xl transition-transform duration-300 lg:hidden ${
-            sidebarOpen
-              ? "translate-x-0"
-              : "-translate-x-full"
-          }`}
-        >
-          {/* Mobile close button */}
-
-          <div className="absolute right-4 top-6">
-            <button
-              type="button"
-              onClick={() =>
-                setSidebarOpen(false)
-              }
-              className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/[0.07] bg-white/[0.03] text-white/40 transition hover:bg-white/[0.07] hover:text-white"
-              aria-label="Close sidebar"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-
-          {sidebarContent}
-        </aside>
-
-        {/* ============================================================
-            MAIN CONTENT
-        ============================================================= */}
-
-        <main className="min-w-0 flex-1">
-
-          {/* Header */}
-
-          <header className="border-b border-white/[0.07] px-4 py-4 sm:px-6 lg:px-7">
-            <div className="flex items-center justify-between gap-3">
-
-              {/* Left */}
-
-              <div className="flex min-w-0 items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() =>
-                    setSidebarOpen(true)
-                  }
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.025] text-white/50 transition hover:bg-white/[0.06] hover:text-white lg:hidden"
-                  aria-label="Open sidebar"
-                >
-                  <Menu className="h-4 w-4" />
-                </button>
-
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 text-xs text-white/35">
-                    <CalendarDays className="h-3.5 w-3.5 shrink-0" />
-                    <span>
-                      Weekly Planner
-                    </span>
-                  </div>
-
-                  <h1 className="mt-1 truncate text-lg font-semibold tracking-tight sm:text-2xl">
-                    {formatWeekRange(
-                      weekStart,
-                      weekEnd
-                    )}
-                  </h1>
-                </div>
-              </div>
-
-              {/* Week navigation */}
-
-              <div className="flex shrink-0 items-center gap-2">
-                <button
-                  type="button"
-                  onClick={previousWeek}
-                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.025] text-white/50 transition hover:bg-white/[0.06] hover:text-white"
-                  aria-label="Previous week"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={goToToday}
-                  className="hidden h-9 rounded-lg border border-white/[0.08] bg-white/[0.025] px-3 text-xs font-medium text-white/60 transition hover:bg-white/[0.06] hover:text-white sm:block"
-                >
-                  Today
-                </button>
-
-                <button
-                  type="button"
-                  onClick={nextWeek}
-                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.025] text-white/50 transition hover:bg-white/[0.06] hover:text-white"
-                  aria-label="Next week"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-
-            {/* Mobile Today button */}
-
-            <div className="mt-3 sm:hidden">
-              <button
-                type="button"
-                onClick={goToToday}
-                className="h-8 rounded-lg border border-white/[0.08] bg-white/[0.025] px-3 text-xs font-medium text-white/50 transition hover:bg-white/[0.06] hover:text-white"
-              >
-                Today
-              </button>
-            </div>
-          </header>
+    <DashboardShell
+      sidebarOpen={sidebarOpen}
+      onSidebarOpenChange={setSidebarOpen}
+      sidebarCollapsed={sidebarCollapsed}
+      onSidebarCollapsedChange={setSidebarCollapsed}
+      sidebarContent={sidebarContent}
+    >
+      <DashboardHeader
+        onSidebarOpen={() => setSidebarOpen(true)}
+        weekRangeText={formatWeekRange(weekStart, weekEnd)}
+        onPreviousWeek={previousWeek}
+        onNextWeek={nextWeek}
+        onGoToToday={goToToday}
+      />
 
           {/* Loading */}
 
@@ -1494,8 +1359,6 @@ const daysLeftInPlan =
               </section>
             </div>
           )}
-        </main>
-      </div>
-    </div>
+    </DashboardShell>
   );
 }
