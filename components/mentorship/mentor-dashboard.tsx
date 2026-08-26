@@ -150,9 +150,9 @@ export function MentorDashboard() {
     useState(false);
 
   async function handleLogout() {
-  await supabase.auth.signOut();
-  router.replace("/login");
-}
+    await supabase.auth.signOut();
+    router.replace("/login");
+  }
 
   const [mentorProfile, setMentorProfile] =
     useState<Profile | null>(null);
@@ -169,13 +169,13 @@ export function MentorDashboard() {
 
   const [tasks, setTasks] = useState<Task[]>([]);
 
- const [weekStart, setWeekStart] = useState(() =>
-  getSunday(INITIAL_RENDER_DATE)
-);
+  const [weekStart, setWeekStart] = useState(() =>
+    getSunday(INITIAL_RENDER_DATE)
+  );
 
-useEffect(() => {
-  setWeekStart(getSunday(new Date()));
-}, []);
+  useEffect(() => {
+    setWeekStart(getSunday(new Date()));
+  }, []);
 
   const [loading, setLoading] = useState(true);
   const [loadingStudent, setLoadingStudent] =
@@ -439,10 +439,10 @@ useEffect(() => {
         setSelectedStudentId(
           (current) =>
             current &&
-            summaries.some(
-              (student) =>
-                student.id === current
-            )
+              summaries.some(
+                (student) =>
+                  student.id === current
+              )
               ? current
               : summaries[0]?.id ?? null
         );
@@ -632,10 +632,10 @@ useEffect(() => {
       current.map((student) =>
         student.id === taskStudentId
           ? {
-              ...student,
-              weeklyTasks,
-              completedTasks,
-            }
+            ...student,
+            weeklyTasks,
+            completedTasks,
+          }
           : student
       )
     );
@@ -764,9 +764,9 @@ useEffect(() => {
       current.map((item) =>
         item.id === objective.id
           ? {
-              ...item,
-              completed: nextCompleted,
-            }
+            ...item,
+            completed: nextCompleted,
+          }
           : item
       )
     );
@@ -789,10 +789,10 @@ useEffect(() => {
         current.map((item) =>
           item.id === objective.id
             ? {
-                ...item,
-                completed:
-                  objective.completed,
-              }
+              ...item,
+              completed:
+                objective.completed,
+            }
             : item
         )
       );
@@ -934,9 +934,9 @@ useEffect(() => {
 
         if (
           data.date >=
-            formatDate(weekStart) &&
+          formatDate(weekStart) &&
           data.date <=
-            formatDate(weekEnd)
+          formatDate(weekEnd)
         ) {
           setTasks((current) =>
             current
@@ -980,9 +980,9 @@ useEffect(() => {
           .filter(
             (task) =>
               task.date >=
-                formatDate(weekStart) &&
+              formatDate(weekStart) &&
               task.date <=
-                formatDate(weekEnd)
+              formatDate(weekEnd)
           );
 
         updateStudentTaskSummary(
@@ -1017,9 +1017,9 @@ useEffect(() => {
 
         if (
           data.date >=
-            formatDate(weekStart) &&
+          formatDate(weekStart) &&
           data.date <=
-            formatDate(weekEnd)
+          formatDate(weekEnd)
         ) {
           setTasks((current) =>
             [...current, data].sort(
@@ -1073,9 +1073,9 @@ useEffect(() => {
     const nextTasks = tasks.map((item) =>
       item.id === task.id
         ? {
-            ...item,
-            completed: nextCompleted,
-          }
+          ...item,
+          completed: nextCompleted,
+        }
         : item
     );
 
@@ -1202,15 +1202,15 @@ useEffect(() => {
       current.map((student) =>
         student.id === selectedStudentId
           ? {
-              ...student,
-              weeklyTasks:
-                weeklyTasks.length,
-              completedTasks:
-                weeklyTasks.filter(
-                  (task) =>
-                    task.completed
-                ).length,
-            }
+            ...student,
+            weeklyTasks:
+              weeklyTasks.length,
+            completedTasks:
+              weeklyTasks.filter(
+                (task) =>
+                  task.completed
+              ).length,
+          }
           : student
       )
     );
@@ -1237,23 +1237,23 @@ useEffect(() => {
   const daysUntilExam =
     selectedStudent?.exam_date
       ? Math.ceil(
-          (new Date(
-            selectedStudent.exam_date
-          ).getTime() -
-            today.getTime()) /
-            (1000 * 60 * 60 * 24)
-        )
+        (new Date(
+          selectedStudent.exam_date
+        ).getTime() -
+          today.getTime()) /
+        (1000 * 60 * 60 * 24)
+      )
       : null;
 
   const daysLeftInPlan =
     selectedStudent?.end_date
       ? Math.ceil(
-          (new Date(
-            selectedStudent.end_date
-          ).getTime() -
-            today.getTime()) /
-            (1000 * 60 * 60 * 24)
-        )
+        (new Date(
+          selectedStudent.end_date
+        ).getTime() -
+          today.getTime()) /
+        (1000 * 60 * 60 * 24)
+      )
       : null;
 
   const completedTasks = tasks.filter(
@@ -1341,7 +1341,7 @@ useEffect(() => {
       <div className="relative flex min-h-[calc(100vh-2rem)] w-full overflow-hidden rounded-2xl border border-white/[0.07] bg-[#111419] shadow-2xl">
 
         <aside
-  className={`
+          className={`
     absolute inset-y-0 left-0 z-40
     flex flex-col
     border-r border-white/[0.07]
@@ -1351,455 +1351,435 @@ useEffect(() => {
 
     lg:relative lg:z-auto lg:shadow-none
 
-    ${
-      mobileSidebarOpen
-        ? "translate-x-0"
-        : "-translate-x-full"
-    }
+    ${mobileSidebarOpen
+              ? "translate-x-0"
+              : "-translate-x-full"
+            }
 
     lg:translate-x-0
 
-    ${
-      sidebarCollapsed
-        ? "lg:w-[76px]"
-        : "lg:w-[280px]"
-    }
+    ${sidebarCollapsed
+              ? "lg:w-[76px]"
+              : "lg:w-[280px]"
+            }
 
     w-[280px]
     shrink-0
   `}
->
-  {/* Sidebar header */}
-  <div
-    className={`
+        >
+          {/* Sidebar header */}
+          <div
+            className={`
       flex h-20 shrink-0 items-center
       border-b border-white/[0.07]
-      ${
-        sidebarCollapsed
-          ? "lg:justify-center lg:px-3"
-          : "justify-between px-6"
-      }
+      ${sidebarCollapsed
+                ? "lg:justify-center lg:px-3"
+                : "justify-between px-6"
+              }
     `}
-  >
-    <div
-      className={`
+          >
+            <div
+              className={`
         flex items-center gap-3
-        ${
-          sidebarCollapsed
-            ? "lg:justify-center"
-            : ""
-        }
+        ${sidebarCollapsed
+                  ? "lg:justify-center"
+                  : ""
+                }
       `}
-    >
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center">
-        <img
-          src="/mediq.svg"
-          alt="MediQ"
-          className="h-9 w-9 object-contain"
-        />
-      </div>
+            >
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center">
+                <img
+                  src="/mediq.svg"
+                  alt="MediQ"
+                  className="h-9 w-9 object-contain"
+                />
+              </div>
 
-      <div
-        className={`
+              <div
+                className={`
           min-w-0 transition-all duration-200
-          ${
-            sidebarCollapsed
-              ? "lg:hidden"
-              : ""
-          }
+          ${sidebarCollapsed
+                    ? "lg:hidden"
+                    : ""
+                  }
         `}
-      >
-        <div className="text-sm font-semibold tracking-tight">
-          MediQ
-        </div>
+              >
+                <div className="text-sm font-semibold tracking-tight">
+                  MediQ
+                </div>
 
-        <div className="text-[11px] text-white/40">
-          Mentorship
-        </div>
-      </div>
-    </div>
+                <div className="text-[11px] text-white/40">
+                  Mentorship
+                </div>
+              </div>
+            </div>
 
-    {/* Desktop collapse button */}
-    <button
-      type="button"
-      onClick={() =>
-        setSidebarCollapsed(
-          (current) => !current
-        )
-      }
-      className={`
+            {/* Desktop collapse button */}
+            <button
+              type="button"
+              onClick={() =>
+                setSidebarCollapsed(
+                  (current) => !current
+                )
+              }
+              className={`
         hidden h-8 w-8 items-center justify-center
         rounded-lg text-white/30
         transition hover:bg-white/[0.06]
         hover:text-white
         lg:flex
-        ${
-          sidebarCollapsed
-            ? "lg:hidden"
-            : ""
-        }
+        ${sidebarCollapsed
+                  ? "lg:hidden"
+                  : ""
+                }
       `}
-      title="Collapse sidebar"
-    >
-      <ChevronLeft className="h-4 w-4" />
-    </button>
+              title="Collapse sidebar"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
 
-    {/* Mobile close button */}
-    <button
-      type="button"
-      onClick={() =>
-        setMobileSidebarOpen(false)
-      }
-      className="flex h-8 w-8 items-center justify-center rounded-lg text-white/30 transition hover:bg-white/[0.06] hover:text-white lg:hidden"
-      title="Close sidebar"
-    >
-      <X className="h-4 w-4" />
-    </button>
-  </div>
+            {/* Mobile close button */}
+            <button
+              type="button"
+              onClick={() =>
+                setMobileSidebarOpen(false)
+              }
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-white/30 transition hover:bg-white/[0.06] hover:text-white lg:hidden"
+              title="Close sidebar"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
 
-{/* Logout */}
+          {/* Logout */}
 
-<div className="border-t border-white/[0.07] p-3">
-  <button
-    type="button"
-    onClick={handleLogout}
-    className={`group flex w-full items-center rounded-xl text-white/40 transition-all duration-200 hover:bg-rose-500/[0.06] hover:text-rose-300 ${
-      sidebarCollapsed
-        ? "justify-center px-0 py-2.5"
-        : "gap-3 px-3 py-2.5"
-    }`}
-    aria-label="Log Out"
-    title={sidebarCollapsed ? "Log Out" : undefined}
-  >
-    <LogOut className="h-4 w-4 shrink-0 transition-transform duration-200 group-hover:-translate-x-0.5" />
+          <div className="border-t border-white/[0.07] p-3">
+            <button
+              type="button"
+              onClick={handleLogout}
+              className={`group flex w-full items-center rounded-xl text-white/40 transition-all duration-200 hover:bg-rose-500/[0.06] hover:text-rose-300 ${sidebarCollapsed
+                  ? "justify-center px-0 py-2.5"
+                  : "gap-3 px-3 py-2.5"
+                }`}
+              aria-label="Log Out"
+              title={sidebarCollapsed ? "Log Out" : undefined}
+            >
+              <LogOut className="h-4 w-4 shrink-0 transition-transform duration-200 group-hover:-translate-x-0.5" />
 
-    {!sidebarCollapsed && (
-      <span className="text-sm">
-        Log Out
-      </span>
-    )}
-  </button>
-</div>
+              {!sidebarCollapsed && (
+                <span className="text-sm">
+                  Log Out
+                </span>
+              )}
+            </button>
+          </div>
 
-  {/* Collapsed desktop expand button */}
-  {sidebarCollapsed && (
-    <div className="hidden border-b border-white/[0.07] p-3 lg:block">
-      <button
-        type="button"
-        onClick={() =>
-          setSidebarCollapsed(false)
-        }
-        className="flex h-9 w-full items-center justify-center rounded-lg text-white/35 transition hover:bg-white/[0.06] hover:text-white"
-        title="Expand sidebar"
-      >
-        <ChevronRight className="h-4 w-4" />
-      </button>
-    </div>
-  )}
+          {/* Collapsed desktop expand button */}
+          {sidebarCollapsed && (
+            <div className="hidden border-b border-white/[0.07] p-3 lg:block">
+              <button
+                type="button"
+                onClick={() =>
+                  setSidebarCollapsed(false)
+                }
+                className="flex h-9 w-full items-center justify-center rounded-lg text-white/35 transition hover:bg-white/[0.06] hover:text-white"
+                title="Expand sidebar"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          )}
 
-  {/* Mentor information */}
-  <div
-    className={`
+          {/* Mentor information */}
+          <div
+            className={`
       border-b border-white/[0.07]
       px-5 py-5
-      ${
-        sidebarCollapsed
-          ? "lg:hidden"
-          : ""
-      }
+      ${sidebarCollapsed
+                ? "lg:hidden"
+                : ""
+              }
     `}
-  >
-    <div className="mb-2 flex items-center gap-2 text-[10px] font-medium uppercase tracking-wider text-white/30">
-      <UserRound className="h-3.5 w-3.5" />
-      Mentor
-    </div>
+          >
+            <div className="mb-2 flex items-center gap-2 text-[10px] font-medium uppercase tracking-wider text-white/30">
+              <UserRound className="h-3.5 w-3.5" />
+              Mentor
+            </div>
 
-    <div className="truncate text-lg font-semibold tracking-tight">
-      {mentorProfile?.display_name ||
-        mentorProfile?.username ||
-        "Mentor"}
-    </div>
+            <div className="truncate text-lg font-semibold tracking-tight">
+              {mentorProfile?.display_name ||
+                mentorProfile?.username ||
+                "Mentor"}
+            </div>
 
-    <div className="mt-1 text-xs text-white/35">
-      Academic Mentor
-    </div>
-  </div>
+            <div className="mt-1 text-xs text-white/35">
+              Academic Mentor
+            </div>
+          </div>
 
-  {/* Students */}
-  <div className="min-h-0 flex-1 overflow-y-auto">
-    <div
-      className={`
+          {/* Students */}
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <div
+              className={`
         flex items-center justify-between
         px-5 pb-3 pt-5
-        ${
-          sidebarCollapsed
-            ? "lg:justify-center lg:px-3"
-            : ""
-        }
+        ${sidebarCollapsed
+                  ? "lg:justify-center lg:px-3"
+                  : ""
+                }
       `}
-    >
-      <div className="flex items-center gap-2 text-[10px] font-medium uppercase tracking-wider text-white/30">
-        <Users className="h-3.5 w-3.5 shrink-0" />
-
-        <span
-          className={
-            sidebarCollapsed
-              ? "lg:hidden"
-              : ""
-          }
-        >
-          My Students
-        </span>
-      </div>
-
-      <span
-        className={`
-          text-[10px] text-white/25
-          ${
-            sidebarCollapsed
-              ? "lg:hidden"
-              : ""
-          }
-        `}
-      >
-        {students.length}
-      </span>
-    </div>
-
-    {students.length === 0 ? (
-      <div
-        className={`
-          px-5 py-8 text-center
-          ${
-            sidebarCollapsed
-              ? "lg:hidden"
-              : ""
-          }
-        `}
-      >
-        <Users className="mx-auto h-5 w-5 text-white/15" />
-
-        <div className="mt-3 text-xs text-white/30">
-          No students assigned yet.
-        </div>
-      </div>
-    ) : (
-      <div
-        className={`
-          space-y-1 pb-4
-          ${
-            sidebarCollapsed
-              ? "px-2"
-              : "px-2.5"
-          }
-        `}
-      >
-        {students.map((student) => {
-          const isSelected =
-            student.id === selectedStudentId;
-
-          const progress =
-            student.weeklyTasks > 0
-              ? (student.completedTasks /
-                  student.weeklyTasks) *
-                100
-              : 0;
-
-          return (
-            <button
-              key={student.id}
-              type="button"
-              onClick={(event) => {
-                event.stopPropagation();
-
-                setSelectedStudentId(
-                  student.id
-                );
-
-                // Close drawer after selecting
-                // a student on mobile.
-                setMobileSidebarOpen(false);
-              }}
-              className={`
-                w-full rounded-xl
-                text-left transition
-                ${
-                  sidebarCollapsed
-                    ? "lg:px-0 lg:py-3"
-                    : "px-3.5 py-3"
-                }
-                ${
-                  isSelected
-                    ? "bg-white/[0.07]"
-                    : "hover:bg-white/[0.035]"
-                }
-              `}
             >
-              {/* Collapsed desktop version */}
-              <div
-                className={`
-                  hidden
-                  ${
-                    sidebarCollapsed
-                      ? "lg:flex"
-                      : ""
-                  }
-                  items-center justify-center
-                `}
-              >
-                <div
-                  className={`
-                    h-2.5 w-2.5 rounded-full
-                    ${
-                      progress === 100 &&
-                      student.weeklyTasks > 0
-                        ? "bg-emerald-400"
-                        : isSelected
-                          ? "bg-white/70"
-                          : "bg-white/20"
-                    }
-                  `}
-                />
-              </div>
+              <div className="flex items-center gap-2 text-[10px] font-medium uppercase tracking-wider text-white/30">
+                <Users className="h-3.5 w-3.5 shrink-0" />
 
-              {/* Expanded version */}
-              <div
-                className={`
-                  ${
+                <span
+                  className={
                     sidebarCollapsed
                       ? "lg:hidden"
                       : ""
                   }
-                `}
+                >
+                  My Students
+                </span>
+              </div>
+
+              <span
+                className={`
+          text-[10px] text-white/25
+          ${sidebarCollapsed
+                    ? "lg:hidden"
+                    : ""
+                  }
+        `}
               >
-                <div className="flex items-start gap-3">
-                  <div
-                    className={`
-                      mt-1.5 h-2 w-2 shrink-0 rounded-full
-                      ${
-                        progress === 100 &&
-                        student.weeklyTasks > 0
-                          ? "bg-emerald-400"
-                          : isSelected
-                            ? "bg-white/70"
-                            : "bg-white/20"
-                      }
-                    `}
-                  />
+                {students.length}
+              </span>
+            </div>
 
-                  <div className="min-w-0 flex-1">
-                    <div
-                      className={`truncate text-sm font-medium ${
-                        isSelected
-                          ? "text-white"
-                          : "text-white/65"
-                      }`}
-                    >
-                      {student.display_name ||
-                        student.username ||
-                        "Unnamed Student"}
-                    </div>
+            {students.length === 0 ? (
+              <div
+                className={`
+          px-5 py-8 text-center
+          ${sidebarCollapsed
+                    ? "lg:hidden"
+                    : ""
+                  }
+        `}
+              >
+                <Users className="mx-auto h-5 w-5 text-white/15" />
 
-                    <div className="mt-1 flex items-center justify-between gap-2">
-                      <span className="text-[10px] text-white/30">
-                        {student.completedTasks} /{" "}
-                        {student.weeklyTasks} tasks
-                      </span>
-
-                      <span className="text-[10px] text-white/25">
-                        {Math.round(progress)}%
-                      </span>
-                    </div>
-
-                    <div className="mt-2 h-1 overflow-hidden rounded-full bg-white/[0.07]">
-                      <div
-                        className="h-full rounded-full bg-white/60 transition-all"
-                        style={{
-                          width: `${progress}%`,
-                        }}
-                      />
-                    </div>
-                  </div>
+                <div className="mt-3 text-xs text-white/30">
+                  No students assigned yet.
                 </div>
               </div>
-            </button>
-          );
-        })}
-      </div>
-    )}
-  </div>
+            ) : (
+              <div
+                className={`
+          space-y-1 pb-4
+          ${sidebarCollapsed
+                    ? "px-2"
+                    : "px-2.5"
+                  }
+        `}
+              >
+                {students.map((student) => {
+                  const isSelected =
+                    student.id === selectedStudentId;
 
-  {/* Bottom student count */}
-  <div
-    className={`
+                  const progress =
+                    student.weeklyTasks > 0
+                      ? (student.completedTasks /
+                        student.weeklyTasks) *
+                      100
+                      : 0;
+
+                  return (
+                    <button
+                      key={student.id}
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+
+                        setSelectedStudentId(
+                          student.id
+                        );
+
+                        // Close drawer after selecting
+                        // a student on mobile.
+                        setMobileSidebarOpen(false);
+                      }}
+                      className={`
+                w-full rounded-xl
+                text-left transition
+                ${sidebarCollapsed
+                          ? "lg:px-0 lg:py-3"
+                          : "px-3.5 py-3"
+                        }
+                ${isSelected
+                          ? "bg-white/[0.07]"
+                          : "hover:bg-white/[0.035]"
+                        }
+              `}
+                    >
+                      {/* Collapsed desktop version */}
+                      <div
+                        className={`
+                  hidden
+                  ${sidebarCollapsed
+                            ? "lg:flex"
+                            : ""
+                          }
+                  items-center justify-center
+                `}
+                      >
+                        <div
+                          className={`
+                    h-2.5 w-2.5 rounded-full
+                    ${progress === 100 &&
+                              student.weeklyTasks > 0
+                              ? "bg-emerald-400"
+                              : isSelected
+                                ? "bg-white/70"
+                                : "bg-white/20"
+                            }
+                  `}
+                        />
+                      </div>
+
+                      {/* Expanded version */}
+                      <div
+                        className={`
+                  ${sidebarCollapsed
+                            ? "lg:hidden"
+                            : ""
+                          }
+                `}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div
+                            className={`
+                      mt-1.5 h-2 w-2 shrink-0 rounded-full
+                      ${progress === 100 &&
+                                student.weeklyTasks > 0
+                                ? "bg-emerald-400"
+                                : isSelected
+                                  ? "bg-white/70"
+                                  : "bg-white/20"
+                              }
+                    `}
+                          />
+
+                          <div className="min-w-0 flex-1">
+                            <div
+                              className={`truncate text-sm font-medium ${isSelected
+                                  ? "text-white"
+                                  : "text-white/65"
+                                }`}
+                            >
+                              {student.display_name ||
+                                student.username ||
+                                "Unnamed Student"}
+                            </div>
+
+                            <div className="mt-1 flex items-center justify-between gap-2">
+                              <span className="text-[10px] text-white/30">
+                                {student.completedTasks} /{" "}
+                                {student.weeklyTasks} tasks
+                              </span>
+
+                              <span className="text-[10px] text-white/25">
+                                {Math.round(progress)}%
+                              </span>
+                            </div>
+
+                            <div className="mt-2 h-1 overflow-hidden rounded-full bg-white/[0.07]">
+                              <div
+                                className="h-full rounded-full bg-white/60 transition-all"
+                                style={{
+                                  width: `${progress}%`,
+                                }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Bottom student count */}
+          <div
+            className={`
       shrink-0 border-t border-white/[0.07] p-5
-      ${
-        sidebarCollapsed
-          ? "lg:hidden"
-          : ""
-      }
+      ${sidebarCollapsed
+                ? "lg:hidden"
+                : ""
+              }
     `}
-  >
-    <div className="text-[10px] font-medium uppercase tracking-wider text-white/25">
-      Students
-    </div>
+          >
+            <div className="text-[10px] font-medium uppercase tracking-wider text-white/25">
+              Students
+            </div>
 
-    <div className="mt-1 text-2xl font-semibold tracking-tight">
-      {students.length}
-    </div>
+            <div className="mt-1 text-2xl font-semibold tracking-tight">
+              {students.length}
+            </div>
 
-    <div className="mt-1 text-xs text-white/30">
-      assigned to you
-    </div>
-  </div>
-</aside>
+            <div className="mt-1 text-xs text-white/30">
+              assigned to you
+            </div>
+          </div>
+        </aside>
 
-{mobileSidebarOpen && (
-  <button
-    type="button"
-    aria-label="Close sidebar"
-    onClick={() =>
-      setMobileSidebarOpen(false)
-    }
-    className="absolute inset-0 z-30 bg-black/60 backdrop-blur-[2px] lg:hidden"
-  />
-)}
+        {mobileSidebarOpen && (
+          <button
+            type="button"
+            aria-label="Close sidebar"
+            onClick={() =>
+              setMobileSidebarOpen(false)
+            }
+            className="absolute inset-0 z-30 bg-black/60 backdrop-blur-[2px] lg:hidden"
+          />
+        )}
 
         <main className="min-w-0 flex-1">
           <header className="flex min-h-20 flex-wrap items-center justify-between gap-3 border-b border-white/[0.07] px-4 py-3 sm:px-7 sm:py-4">
-  <div className="flex min-w-0 items-center gap-3">
-    <button
-      type="button"
-      onClick={() =>
-        setMobileSidebarOpen(true)
-      }
-      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.025] text-white/50 transition hover:bg-white/[0.06] hover:text-white lg:hidden"
-      aria-label="Open student sidebar"
-    >
-      <Menu className="h-4 w-4" />
-    </button>
+            <div className="flex min-w-0 items-center gap-3">
+              <button
+                type="button"
+                onClick={() =>
+                  setMobileSidebarOpen(true)
+                }
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.025] text-white/50 transition hover:bg-white/[0.06] hover:text-white lg:hidden"
+                aria-label="Open student sidebar"
+              >
+                <Menu className="h-4 w-4" />
+              </button>
 
-    <div className="min-w-0">
-              <div className="flex items-center gap-2 text-xs text-white/35">
-                <CalendarDays className="h-3.5 w-3.5" />
-                Student Planner
-              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 text-xs text-white/35">
+                  <CalendarDays className="h-3.5 w-3.5" />
+                  Student Planner
+                </div>
 
-              <h1 className="mt-1 text-xl font-semibold tracking-tight sm:text-2xl">
-                {selectedStudent
-                  ? selectedStudent.display_name ||
+                <h1 className="mt-1 text-xl font-semibold tracking-tight sm:text-2xl">
+                  {selectedStudent
+                    ? selectedStudent.display_name ||
                     selectedStudent.username ||
                     "Student"
-                  : "Select a student"}
-              </h1>
+                    : "Select a student"}
+                </h1>
 
-              {selectedStudent && (
-                <p className="mt-1 text-xs text-white/30">
-                  {selectedStudent.year
-                    ? `Year ${selectedStudent.year}`
-                    : "Medical Student"}
-                  {selectedStudent.exam_date
-                    ? ` · Exam ${new Date(
+                {selectedStudent && (
+                  <p className="mt-1 text-xs text-white/30">
+                    {selectedStudent.year
+                      ? `Year ${selectedStudent.year}`
+                      : "Medical Student"}
+                    {selectedStudent.exam_date
+                      ? ` · Exam ${new Date(
                         selectedStudent.exam_date
                       ).toLocaleDateString(
                         "en-US",
@@ -1808,10 +1788,10 @@ useEffect(() => {
                           day: "numeric",
                         }
                       )}`
-                    : ""}
-                </p>
-              )}
-            </div>
+                      : ""}
+                  </p>
+                )}
+              </div>
             </div>
 
             <div className="flex items-center gap-2">
@@ -2012,11 +1992,10 @@ useEffect(() => {
                             </button>
 
                             <span
-                              className={`min-w-0 flex-1 pr-6 text-sm leading-5 ${
-                                objective.completed
+                              className={`min-w-0 flex-1 pr-6 text-sm leading-5 ${objective.completed
                                   ? "text-white/35 line-through"
                                   : "text-white/70"
-                              }`}
+                                }`}
                             >
                               {objective.text}
                             </span>
@@ -2028,7 +2007,7 @@ useEffect(() => {
                                   setOpenObjectiveMenu(
                                     (current) =>
                                       current ===
-                                      objective.id
+                                        objective.id
                                         ? null
                                         : objective.id
                                   )
@@ -2040,34 +2019,34 @@ useEffect(() => {
 
                               {openObjectiveMenu ===
                                 objective.id && (
-                                <div className="absolute right-0 top-8 z-20 w-32 overflow-hidden rounded-lg border border-white/[0.09] bg-[#1a1d22] p-1 shadow-xl">
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      openEditObjective(
-                                        objective
-                                      )
-                                    }
-                                    className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs text-white/60 transition hover:bg-white/[0.06] hover:text-white"
-                                  >
-                                    <Pencil className="h-3.5 w-3.5" />
-                                    Edit
-                                  </button>
+                                  <div className="absolute right-0 top-8 z-20 w-32 overflow-hidden rounded-lg border border-white/[0.09] bg-[#1a1d22] p-1 shadow-xl">
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        openEditObjective(
+                                          objective
+                                        )
+                                      }
+                                      className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs text-white/60 transition hover:bg-white/[0.06] hover:text-white"
+                                    >
+                                      <Pencil className="h-3.5 w-3.5" />
+                                      Edit
+                                    </button>
 
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      deleteObjective(
-                                        objective
-                                      )
-                                    }
-                                    className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs text-rose-300/70 transition hover:bg-rose-500/10 hover:text-rose-300"
-                                  >
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                    Delete
-                                  </button>
-                                </div>
-                              )}
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        deleteObjective(
+                                          objective
+                                        )
+                                      }
+                                      className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs text-rose-300/70 transition hover:bg-rose-500/10 hover:text-rose-300"
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                      Delete
+                                    </button>
+                                  </div>
+                                )}
                             </div>
                           </div>
                         )
@@ -2143,7 +2122,7 @@ useEffect(() => {
                     </div>
                   )}
 
-<DashboardCalendar
+                  <DashboardCalendar
                     days={days}
                     today={new Date()}
                     onToggleTask={toggleTask}
