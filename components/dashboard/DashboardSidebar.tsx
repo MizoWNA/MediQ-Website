@@ -6,7 +6,6 @@ import { X } from "lucide-react";
 interface DashboardSidebarProps {
   children: ReactNode;
   sidebarCollapsed?: boolean;
-  onSidebarCollapsedChange?: (collapsed: boolean) => void;
   mobile?: boolean;
   sidebarOpen?: boolean;
   onSidebarOpenChange?: (open: boolean) => void;
@@ -17,7 +16,6 @@ export function DashboardSidebar({
   sidebarCollapsed = false,
   mobile = false,
   sidebarOpen = false,
-  onSidebarOpenChange,
 }: DashboardSidebarProps) {
   if (mobile) {
     return (

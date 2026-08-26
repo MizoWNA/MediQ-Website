@@ -7,7 +7,6 @@ interface DashboardShellProps {
   sidebarOpen: boolean;
   onSidebarOpenChange: (open: boolean) => void;
   sidebarCollapsed: boolean;
-  onSidebarCollapsedChange: (collapsed: boolean) => void;
   sidebarContent: ReactNode;
   children: ReactNode;
 }
@@ -16,15 +15,13 @@ export function DashboardShell({
   sidebarOpen,
   onSidebarOpenChange,
   sidebarCollapsed,
-  onSidebarCollapsedChange,
   sidebarContent,
   children,
 }: DashboardShellProps) {
-  void onSidebarCollapsedChange;
-
   return (
     <div className="min-h-screen bg-[#0b0d10] px-0 py-0 text-white sm:px-4 sm:py-4">
       <div className="relative flex min-h-screen w-full overflow-hidden rounded-none border border-white/[0.07] bg-[#111419] shadow-2xl sm:min-h-[calc(100vh-2rem)] sm:rounded-2xl">
+
         {sidebarOpen && (
           <button
             type="button"
@@ -36,7 +33,6 @@ export function DashboardShell({
 
         <DashboardSidebar
           sidebarCollapsed={sidebarCollapsed}
-          onSidebarCollapsedChange={onSidebarCollapsedChange}
         >
           {sidebarContent}
         </DashboardSidebar>
@@ -49,7 +45,10 @@ export function DashboardShell({
           {sidebarContent}
         </DashboardSidebar>
 
-        <main className="min-w-0 flex-1">{children}</main>
+        <main className="min-w-0 flex-1">
+          {children}
+        </main>
+
       </div>
     </div>
   );
