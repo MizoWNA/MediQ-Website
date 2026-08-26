@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { DashboardCalendar } from "@/components/dashboard/DashboardCalendar";
 import {
   SUBJECT_OPTIONS,
   TASK_TYPE_OPTIONS,
@@ -95,11 +96,11 @@ function formatDate(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
-function getMonday(date: Date) {
+function getSunday(date: Date) {
   const result = new Date(date);
   const day = result.getDay();
 
-  const diff = day === 0 ? -6 : 1 - day;
+  const diff = day === 0 ? 0 : -day;
 
   result.setDate(result.getDate() + diff);
   result.setHours(0, 0, 0, 0);
@@ -169,11 +170,11 @@ export function MentorDashboard() {
   const [tasks, setTasks] = useState<Task[]>([]);
 
  const [weekStart, setWeekStart] = useState(() =>
-  getMonday(INITIAL_RENDER_DATE)
+  getSunday(INITIAL_RENDER_DATE)
 );
 
 useEffect(() => {
-  setWeekStart(getMonday(new Date()));
+  setWeekStart(getSunday(new Date()));
 }, []);
 
   const [loading, setLoading] = useState(true);
@@ -1228,7 +1229,7 @@ useEffect(() => {
   }
 
   function goToToday() {
-    setWeekStart(getMonday(new Date()));
+    setWeekStart(getSunday(new Date()));
   }
 
   const today = new Date();
@@ -2142,389 +2143,26 @@ useEffect(() => {
                     </div>
                   )}
 
-{/* Mobile weekly schedule */}
-<div className="lg:hidden">
-  <div className="divide-y divide-white/[0.06]">
-    {days.map((day) => (
-      <div
-        key={day.isoDate}
-        className="bg-[#121519]"
-      >
-        <div className="flex items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-3">
-            <div
-              className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold ${
-                day.isoDate ===
-                formatDate(today)
-                  ? "bg-white text-black"
-                  : "bg-white/[0.05] text-white/65"
-              }`}
-            >
-              {day.date}
-            </div>
-
-            <div>
-              <div className="text-xs font-semibold text-white/70">
-                {day.name}
-              </div>
-
-              <div className="mt-0.5 text-[10px] uppercase tracking-widest text-white/25">
-                {day.short}
-              </div>
-            </div>
-          </div>
-
-          <div className="text-[10px] text-white/25">
-            {day.tasks.length === 0
-              ? "Rest day"
-              : `${day.tasks.length} ${
-                  day.tasks.length === 1
-                    ? "task"
-                    : "tasks"
-                }`}
-          </div>
-        </div>
-
-        <div className="px-3 pb-3">
-          {day.tasks.length > 0 ? (
-            <div className="space-y-2">
-              {day.tasks.map((task) => {
-                const subject =
-                  getSubjectOption(
-                    task.subject
-                  );
-
-                const colors =
-                  subject?.color ??
-                  DEFAULT_SUBJECT_COLOR;
-
-                return (
-                  <div
-                    key={task.id}
-                    onClick={(event) =>
-                      event.stopPropagation()
-                    }
-                    className={`group relative rounded-xl border p-3 ${colors.card}`}
-                  >
-                    <div className="flex items-start gap-2.5">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          toggleTask(task)
-                        }
-                        className="mt-0.5 shrink-0"
-                        title={
-                          task.completed
-                            ? "Mark incomplete"
-                            : "Mark complete"
-                        }
-                      >
-                        {task.completed ? (
-                          <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                        ) : (
-                          <Circle className="h-4 w-4 text-white/20 transition hover:text-white/60" />
-                        )}
-                      </button>
-
-                      <div className="min-w-0 flex-1 pr-7">
-                        <div
-                          className={`text-[10px] font-medium uppercase tracking-wide ${colors.text}`}
-                        >
-                          {subject?.label ??
-                            task.subject ??
-                            task.type ??
-                            "Task"}
-                        </div>
-
-                        <div
-                          className={`mt-1 text-sm font-medium leading-5 ${
-                            task.completed
-                              ? "text-white/30 line-through"
-                              : "text-white/75"
-                          }`}
-                        >
-                          {task.name}
-                        </div>
-
-                        {task.type &&
-                          task.subject && (
-                            <div className="mt-1 text-[10px] text-white/25">
-                              {TASK_TYPE_OPTIONS.find(
-                                (option) =>
-                                  option.value ===
-                                  task.type?.toLowerCase()
-                              )?.label ??
-                                task.type}
-                            </div>
-                          )}
-                      </div>
-
+<DashboardCalendar
+                    days={days}
+                    today={new Date()}
+                    onToggleTask={toggleTask}
+                    breakpoint="lg"
+                    onAddTask={openAddTask}
+                    renderTaskActions={(task) => (
                       <div className="absolute right-2 top-2">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setOpenTaskMenu(
-                              (current) =>
-                                current ===
-                                task.id
-                                  ? null
-                                  : task.id
-                            )
-                          }
-                          className="flex h-7 w-7 items-center justify-center rounded-md text-white/30 transition hover:bg-white/[0.06] hover:text-white"
-                        >
+                        <button type="button" onClick={() => setOpenTaskMenu((current) => current === task.id ? null : task.id)} className="flex h-7 w-7 items-center justify-center rounded-md text-white/20 opacity-0 transition hover:bg-white/[0.06] hover:text-white group-hover:opacity-100">
                           <MoreHorizontal className="h-4 w-4" />
                         </button>
-
-                        {openTaskMenu ===
-                          task.id && (
+                        {openTaskMenu === task.id && (
                           <div className="absolute right-0 top-8 z-20 w-32 overflow-hidden rounded-lg border border-white/[0.09] bg-[#1a1d22] p-1 shadow-xl">
-                            <button
-                              type="button"
-                              onClick={() =>
-                                openEditTask(
-                                  task
-                                )
-                              }
-                              className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs text-white/60 transition hover:bg-white/[0.06] hover:text-white"
-                            >
-                              <Pencil className="h-3.5 w-3.5" />
-                              Edit
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() =>
-                                deleteTask(
-                                  task
-                                )
-                              }
-                              className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs text-rose-300/70 transition hover:bg-rose-500/10 hover:text-rose-300"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                              Delete
-                            </button>
+                            <button type="button" onClick={() => openEditTask(task)} className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs text-white/60 transition hover:bg-white/[0.06] hover:text-white"><Pencil className="h-3.5 w-3.5" />Edit</button>
+                            <button type="button" onClick={() => deleteTask(task)} className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs text-rose-300/70 transition hover:bg-rose-500/10 hover:text-rose-300"><Trash2 className="h-3.5 w-3.5" />Delete</button>
                           </div>
                         )}
                       </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="flex items-center justify-between rounded-xl border border-dashed border-white/[0.06] px-3 py-3">
-              <div>
-                <div className="text-xs font-medium text-white/25">
-                  Rest day
-                </div>
-
-                <div className="mt-0.5 text-[10px] text-white/15">
-                  No tasks scheduled
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() =>
-                  openAddTask(
-                    day.isoDate
-                  )
-                }
-                className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-[10px] text-white/30 transition hover:bg-white/[0.05] hover:text-white/70"
-              >
-                <Plus className="h-3 w-3" />
-                Add
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-    ))}
-  </div>
-</div>
-
-{/* Desktop weekly schedule */}
-<div className="hidden overflow-x-auto lg:block">
-  <div className="grid min-w-[900px] grid-cols-7 divide-x divide-white/[0.06]">
-    {days.map((day) => (
-      <div
-        key={day.isoDate}
-        className="min-h-[420px] bg-[#121519]"
-      >
-        <div className="border-b border-white/[0.06] px-3 py-4 text-center">
-          <div className="text-[10px] font-semibold uppercase tracking-widest text-white/30">
-            {day.short}
-          </div>
-
-          <div
-            className={`mx-auto mt-2 flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold ${
-              day.isoDate ===
-              formatDate(today)
-                ? "bg-white text-black"
-                : "text-white/65"
-            }`}
-          >
-            {day.date}
-          </div>
-        </div>
-
-        <div className="space-y-2 p-2.5">
-          {day.tasks.length > 0 ? (
-            day.tasks.map((task) => {
-              const subject =
-                getSubjectOption(
-                  task.subject
-                );
-
-              const colors =
-                subject?.color ??
-                DEFAULT_SUBJECT_COLOR;
-
-              return (
-                <div
-                  key={task.id}
-                  onClick={(event) =>
-                    event.stopPropagation()
-                  }
-                  className={`group relative rounded-xl border p-3 transition hover:bg-white/[0.04] ${colors.card}`}
-                >
-                  <div className="flex items-start gap-2.5">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        toggleTask(task)
-                      }
-                      className="mt-0.5 shrink-0"
-                      title={
-                        task.completed
-                          ? "Mark incomplete"
-                          : "Mark complete"
-                      }
-                    >
-                      {task.completed ? (
-                        <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                      ) : (
-                        <Circle className="h-4 w-4 text-white/20 transition hover:text-white/60" />
-                      )}
-                    </button>
-
-                    <div className="min-w-0 flex-1 pr-5">
-                      <div
-                        className={`text-[10px] font-medium uppercase tracking-wide ${colors.text}`}
-                      >
-                        {subject?.label ??
-                          task.subject ??
-                          task.type ??
-                          "Task"}
-                      </div>
-
-                      <div
-                        className={`mt-1 text-xs font-medium leading-4 ${
-                          task.completed
-                            ? "text-white/30 line-through"
-                            : "text-white/75"
-                        }`}
-                      >
-                        {task.name}
-                      </div>
-
-                      {task.type &&
-                        task.subject && (
-                          <div className="mt-1 text-[10px] text-white/25">
-                            {TASK_TYPE_OPTIONS.find(
-                              (option) =>
-                                option.value ===
-                                task.type?.toLowerCase()
-                            )?.label ??
-                              task.type}
-                          </div>
-                        )}
-                    </div>
-
-                    <div className="absolute right-2 top-2">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setOpenTaskMenu(
-                            (current) =>
-                              current ===
-                              task.id
-                                ? null
-                                : task.id
-                          )
-                        }
-                        className="flex h-7 w-7 items-center justify-center rounded-md text-white/20 opacity-0 transition hover:bg-white/[0.06] hover:text-white group-hover:opacity-100"
-                      >
-                        <MoreHorizontal className="h-4 w-4" />
-                      </button>
-
-                      {openTaskMenu ===
-                        task.id && (
-                        <div className="absolute right-0 top-8 z-20 w-32 overflow-hidden rounded-lg border border-white/[0.09] bg-[#1a1d22] p-1 shadow-xl">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              openEditTask(
-                                task
-                              )
-                            }
-                            className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs text-white/60 transition hover:bg-white/[0.06] hover:text-white"
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                            Edit
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() =>
-                              deleteTask(
-                                task
-                              )
-                            }
-                            className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs text-rose-300/70 transition hover:bg-rose-500/10 hover:text-rose-300"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                            Delete
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })
-          ) : (
-            <div className="flex min-h-[260px] flex-col items-center justify-center">
-              <div className="text-center">
-                <div className="text-xs font-medium text-white/30">
-                  Rest day
-                </div>
-
-                <div className="mt-1 text-[10px] text-white/15">
-                  No tasks scheduled
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    openAddTask(
-                      day.isoDate
-                    )
-                  }
-                  className="mt-3 flex items-center gap-1 text-[10px] text-white/25 transition hover:text-white/60"
-                >
-                  <Plus className="h-3 w-3" />
-                  Add task
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    ))}
-  </div>
-</div>
+                    )}
+                  />
 
                   <div className="flex items-center justify-between border-t border-white/[0.07] px-5 py-3">
                     <div className="text-[11px] text-white/30">
