@@ -2,9 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
-  CalendarDays,
-  ChevronLeft,
-  ChevronRight,
   CheckCircle2,
   Circle,
   GraduationCap,
@@ -14,18 +11,79 @@ import {
   UserRound,
   CalendarClock,
   Timer,
-  Menu,
-  X,
   PanelLeftClose,
   PanelLeftOpen,
   LogOut,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
-import {
-  getSubjectOption,
-  DEFAULT_SUBJECT_COLOR,
-} from "@/lib/task-options";
+
+import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
+import { DashboardShell } from "@/components/dashboard/DashboardShell";
+import { DashboardCalendar } from "@/components/dashboard/DashboardCalendar";
+import { DashboardLeaderboard } from "@/components/dashboard/DashboardLeaderboard";
+import type { LeaderboardEntry } from "@/components/dashboard/DashboardLeaderboard";
+
+/*
+ * ================================================================
+ * TEMP LEADERBOARD DATA
+ * ================================================================
+ *
+ * This will eventually come from weekly_leaderboards +
+ * weekly_leaderboard_entries.
+ *
+ * Keep this here for now while we build the database logic.
+ */
+
+const mockLeaderboard: LeaderboardEntry[] = [
+  {
+    id: "1",
+    name: "Ahmed Mohamed",
+    score: 94,
+    completedTasks: 23,
+    totalTasks: 24,
+    completionPercentage: 96,
+  },
+  {
+    id: "2",
+    name: "Sara Ahmed",
+    score: 91,
+    completedTasks: 20,
+    totalTasks: 22,
+    completionPercentage: 91,
+  },
+  {
+    id: "3",
+    name: "You",
+    score: 87,
+    completedTasks: 18,
+    totalTasks: 21,
+    completionPercentage: 86,
+    isCurrentUser: true,
+  },
+  {
+    id: "4",
+    name: "Omar Hassan",
+    score: 84,
+    completedTasks: 19,
+    totalTasks: 24,
+    completionPercentage: 79,
+  },
+  {
+    id: "5",
+    name: "Youssef Ali",
+    score: 81,
+    completedTasks: 16,
+    totalTasks: 21,
+    completionPercentage: 76,
+  },
+];
+
+/*
+ * ================================================================
+ * TYPES
+ * ================================================================
+ */
 
 type Profile = {
   id: string;
@@ -39,6 +97,24 @@ type Profile = {
   mentor_id: string | null;
 };
 
+type Subject = {
+  id: string;
+  name: string;
+  display_name: string;
+  category: string;
+  color: string;
+  active: boolean;
+  display_order: number;
+};
+
+type TaskType = {
+  id: string;
+  name: string;
+  points: number;
+  active: boolean;
+  display_order: number;
+};
+
 type Objective = {
   id: string;
   text: string;
@@ -48,8 +124,8 @@ type Objective = {
 type Task = {
   id: string;
   name: string;
-  subject: string | null;
-  type: string | null;
+  subject_id: string;
+  task_type_id: string;
   student_id: string;
   completed: boolean;
   date: string;
@@ -63,6 +139,12 @@ type CalendarDay = {
   tasks: Task[];
 };
 
+/*
+ * ================================================================
+ * DATE HELPERS
+ * ================================================================
+ */
+
 function formatDate(date: Date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -71,11 +153,11 @@ function formatDate(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
-function getMonday(date: Date) {
+function getSunday(date: Date) {
   const result = new Date(date);
   const day = result.getDay();
 
-  const diff = day === 0 ? -6 : 1 - day;
+  const diff = day === 0 ? 0 : -day;
 
   result.setDate(result.getDate() + diff);
   result.setHours(0, 0, 0, 0);
@@ -88,6 +170,7 @@ function addDays(date: Date, amount: number) {
   result.setDate(result.getDate() + amount);
   return result;
 }
+
 function formatWeekRange(
   start: Date | null,
   end: Date | null
@@ -131,35 +214,74 @@ function formatDays(value: number) {
   return `${value} ${value === 1 ? "day" : "days"}`;
 }
 
+/*
+ * ================================================================
+ * DASHBOARD
+ * ================================================================
+ */
+
 export function MentorshipDashboard() {
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [mentorName, setMentorName] = useState<string | null>(null);
+  const router = useRouter();
 
-  const [objectives, setObjectives] = useState<Objective[]>([]);
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const [profile, setProfile] =
+    useState<Profile | null>(null);
 
-const [weekStart, setWeekStart] = useState<Date | null>(null);
-const [today, setToday] = useState<Date | null>(null);
+  const [mentorName, setMentorName] =
+    useState<string | null>(null);
 
-useEffect(() => {
-  const currentDate = new Date();
+  const [objectives, setObjectives] =
+    useState<Objective[]>([]);
 
-  setToday(currentDate);
-  setWeekStart(getMonday(currentDate));
-}, []);
+  const [tasks, setTasks] =
+    useState<Task[]>([]);
 
+  const [subjects, setSubjects] =
+    useState<Subject[]>([]);
+
+  const [taskTypes, setTaskTypes] =
+    useState<TaskType[]>([]);
+
+  const [weekStart, setWeekStart] =
+    useState<Date | null>(null);
+
+  const [today, setToday] =
+    useState<Date | null>(null);
+
+  const [loading, setLoading] =
+    useState(true);
+
+  const [error, setError] =
+    useState<string | null>(null);
+
+  const [sidebarOpen, setSidebarOpen] =
+    useState(false);
+
+  const [sidebarCollapsed, setSidebarCollapsed] =
+    useState(false);
+
+  /*
+   * ================================================================
+   * INITIAL DATE
+   * ================================================================
+   */
+
+  useEffect(() => {
+    const currentDate = new Date();
+
+    setToday(currentDate);
+    setWeekStart(getSunday(currentDate));
+  }, []);
+
+  /*
+   * ================================================================
+   * LOGOUT
+   * ================================================================
+   */
 
   async function handleLogout() {
-  await supabase.auth.signOut();
-  router.replace("/login");
-}
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-
-  const router = useRouter();
+    await supabase.auth.signOut();
+    router.replace("/login");
+  }
 
   /*
    * ================================================================
@@ -167,42 +289,43 @@ useEffect(() => {
    * ================================================================
    */
 
-const weekDays = useMemo(() => {
-  if (!weekStart) return [];
+  const weekDays = useMemo(() => {
+    if (!weekStart) return [];
 
-  const weekdayNames = [
-    "Sunday",
-    "Monday",
-    "Tuesday",
-    "Wednesday",
-    "Thursday",
-    "Friday",
-    "Saturday",
-  ];
+    const weekdayNames = [
+      "Sunday",
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+    ];
 
-  const weekdayShortNames = [
-    "SUN",
-    "MON",
-    "TUE",
-    "WED",
-    "THU",
-    "FRI",
-    "SAT",
-  ];
+    const weekdayShortNames = [
+      "SUN",
+      "MON",
+      "TUE",
+      "WED",
+      "THU",
+      "FRI",
+      "SAT",
+    ];
 
-  return Array.from({ length: 7 }, (_, index) => {
-    const date = addDays(weekStart, index);
+    return Array.from({ length: 7 }, (_, index) => {
+      const date = addDays(weekStart, index);
 
-    return {
-      date,
-      isoDate: formatDate(date),
-      name: weekdayNames[date.getDay()],
-      short: weekdayShortNames[date.getDay()],
-    };
-  });
-}, [weekStart]);
+      return {
+        date,
+        isoDate: formatDate(date),
+        name: weekdayNames[date.getDay()],
+        short: weekdayShortNames[date.getDay()],
+      };
+    });
+  }, [weekStart]);
 
-  const weekEnd = weekDays[6]?.date ?? weekStart;
+  const weekEnd =
+    weekDays[6]?.date ?? weekStart;
 
   /*
    * ================================================================
@@ -211,10 +334,9 @@ const weekDays = useMemo(() => {
    */
 
   useEffect(() => {
-
     if (!weekStart || !weekEnd) {
-  return;
-}
+      return;
+    }
 
     let cancelled = false;
 
@@ -223,6 +345,10 @@ const weekDays = useMemo(() => {
       setError(null);
 
       try {
+        /*
+         * AUTH
+         */
+
         const {
           data: { user },
           error: authError,
@@ -321,7 +447,67 @@ const weekDays = useMemo(() => {
         if (cancelled) return;
 
         setObjectives(
-          Array.isArray(objectiveData) ? objectiveData : []
+          Array.isArray(objectiveData)
+            ? objectiveData
+            : []
+        );
+
+        /*
+         * SUBJECTS
+         */
+
+        const {
+          data: subjectData,
+          error: subjectError,
+        } = await supabase
+          .from("subjects")
+          .select(
+            "id, name, display_name, category, color, active, display_order"
+          )
+          .eq("active", true)
+          .order("display_order");
+
+        if (subjectError) {
+          throw new Error(
+            `Subjects query failed: ${subjectError.message}`
+          );
+        }
+
+        if (cancelled) return;
+
+        setSubjects(
+          Array.isArray(subjectData)
+            ? subjectData
+            : []
+        );
+
+        /*
+         * TASK TYPES
+         */
+
+        const {
+          data: taskTypeData,
+          error: taskTypeError,
+        } = await supabase
+          .from("task_types")
+          .select(
+            "id, name, points, active, display_order"
+          )
+          .eq("active", true)
+          .order("display_order");
+
+        if (taskTypeError) {
+          throw new Error(
+            `Task types query failed: ${taskTypeError.message}`
+          );
+        }
+
+        if (cancelled) return;
+
+        setTaskTypes(
+          Array.isArray(taskTypeData)
+            ? taskTypeData
+            : []
         );
 
         /*
@@ -334,11 +520,17 @@ const weekDays = useMemo(() => {
         } = await supabase
           .from("tasks")
           .select(
-            "id, name, subject, type, student_id, completed, date"
+            "id, name, subject_id, task_type_id, student_id, completed, date"
           )
           .eq("student_id", studentId)
-          .gte("date", formatDate(weekStart))
-          .lte("date", formatDate(weekEnd))
+          .gte(
+            "date",
+            formatDate(weekStart)
+          )
+          .lte(
+            "date",
+            formatDate(weekEnd)
+          )
           .order("date")
           .order("created_at");
 
@@ -351,12 +543,17 @@ const weekDays = useMemo(() => {
         if (cancelled) return;
 
         setTasks(
-          Array.isArray(taskData) ? taskData : []
+          Array.isArray(taskData)
+            ? taskData
+            : []
         );
       } catch (err) {
         if (cancelled) return;
 
-        console.error("Dashboard loading error:", err);
+        console.error(
+          "Dashboard loading error:",
+          err
+        );
 
         setError(
           err instanceof Error
@@ -383,17 +580,19 @@ const weekDays = useMemo(() => {
    * ================================================================
    */
 
-  const days: CalendarDay[] = useMemo(() => {
-    return weekDays.map((day) => ({
-      name: day.name,
-      short: day.short,
-      date: String(day.date.getDate()),
-      isoDate: day.isoDate,
-      tasks: tasks.filter(
-        (task) => task.date === day.isoDate
-      ),
-    }));
-  }, [weekDays, tasks]);
+  const days: CalendarDay[] =
+    useMemo(() => {
+      return weekDays.map((day) => ({
+        name: day.name,
+        short: day.short,
+        date: String(day.date.getDate()),
+        isoDate: day.isoDate,
+        tasks: tasks.filter(
+          (task) =>
+            task.date === day.isoDate
+        ),
+      }));
+    }, [weekDays, tasks]);
 
   /*
    * ================================================================
@@ -402,28 +601,17 @@ const weekDays = useMemo(() => {
    */
 
   const weekSubjects = useMemo(() => {
-    const subjects = new Set<string>();
+    const subjectIds = new Set(
+      tasks.map(
+        (task) => task.subject_id
+      )
+    );
 
-    tasks.forEach((task) => {
-      if (task.subject) {
-        const option = getSubjectOption(task.subject);
-
-        if (option) {
-          subjects.add(option.value);
-        }
-      }
-    });
-
-    return Array.from(subjects)
-      .map((value) => getSubjectOption(value))
-      .filter(
-        (
-          option
-        ): option is NonNullable<
-          ReturnType<typeof getSubjectOption>
-        > => option !== null
-      );
-  }, [tasks]);
+    return subjects.filter(
+      (subject) =>
+        subjectIds.has(subject.id)
+    );
+  }, [tasks, subjects]);
 
   /*
    * ================================================================
@@ -431,8 +619,11 @@ const weekDays = useMemo(() => {
    * ================================================================
    */
 
-  async function toggleObjective(objective: Objective) {
-    const newCompleted = !objective.completed;
+  async function toggleObjective(
+    objective: Objective
+  ) {
+    const newCompleted =
+      !objective.completed;
 
     setObjectives((current) =>
       current.map((item) =>
@@ -463,7 +654,8 @@ const weekDays = useMemo(() => {
           item.id === objective.id
             ? {
                 ...item,
-                completed: objective.completed,
+                completed:
+                  objective.completed,
               }
             : item
         )
@@ -478,7 +670,8 @@ const weekDays = useMemo(() => {
    */
 
   async function toggleTask(task: Task) {
-    const newCompleted = !task.completed;
+    const newCompleted =
+      !task.completed;
 
     setTasks((current) =>
       current.map((item) =>
@@ -509,7 +702,8 @@ const weekDays = useMemo(() => {
           item.id === task.id
             ? {
                 ...item,
-                completed: task.completed,
+                completed:
+                  task.completed,
               }
             : item
         )
@@ -525,18 +719,24 @@ const weekDays = useMemo(() => {
 
   function previousWeek() {
     setWeekStart((current) =>
-      addDays(current, -7)
+      current
+        ? addDays(current, -7)
+        : current
     );
   }
 
   function nextWeek() {
     setWeekStart((current) =>
-      addDays(current, 7)
+      current
+        ? addDays(current, 7)
+        : current
     );
   }
 
   function goToToday() {
-    setWeekStart(getMonday(new Date()));
+    setWeekStart(
+      getSunday(new Date())
+    );
   }
 
   /*
@@ -545,33 +745,46 @@ const weekDays = useMemo(() => {
    * ================================================================
    */
 
-const daysUntilExam =
-  profile?.exam_date && today
-    ? Math.ceil(
-        (new Date(profile.exam_date).getTime() -
-          today.getTime()) /
-          (1000 * 60 * 60 * 24)
-      )
-    : null;
+  const daysUntilExam =
+    profile?.exam_date && today
+      ? Math.ceil(
+          (new Date(
+            profile.exam_date
+          ).getTime() -
+            today.getTime()) /
+            (1000 *
+              60 *
+              60 *
+              24)
+        )
+      : null;
 
-const daysLeftInPlan =
-  profile?.end_date && today
-    ? Math.ceil(
-        (new Date(profile.end_date).getTime() -
-          today.getTime()) /
-          (1000 * 60 * 60 * 24)
-      )
-    : null;
+  const daysLeftInPlan =
+    profile?.end_date && today
+      ? Math.ceil(
+          (new Date(
+            profile.end_date
+          ).getTime() -
+            today.getTime()) /
+            (1000 *
+              60 *
+              60 *
+              24)
+        )
+      : null;
 
-  const completedTasks = tasks.filter(
-    (task) => task.completed
-  ).length;
+  const completedTasks =
+    tasks.filter(
+      (task) => task.completed
+    ).length;
 
-  const totalTasks = tasks.length;
+  const totalTasks =
+    tasks.length;
 
   const completedObjectives =
     objectives.filter(
-      (objective) => objective.completed
+      (objective) =>
+        objective.completed
     ).length;
 
   const objectiveCount =
@@ -583,7 +796,9 @@ const daysLeftInPlan =
       value:
         daysUntilExam === null
           ? "Not set"
-          : formatDays(daysUntilExam),
+          : formatDays(
+              daysUntilExam
+            ),
       icon: CalendarClock,
     },
     {
@@ -591,7 +806,9 @@ const daysLeftInPlan =
       value:
         daysLeftInPlan === null
           ? "Not set"
-          : formatDays(daysLeftInPlan),
+          : formatDays(
+              daysLeftInPlan
+            ),
       icon: Timer,
     },
     {
@@ -605,7 +822,7 @@ const daysLeftInPlan =
 
   /*
    * ================================================================
-   * SIDEBAR CONTENT
+   * SIDEBAR
    * ================================================================
    */
 
@@ -678,7 +895,8 @@ const daysLeftInPlan =
         ) : (
           <div className="flex justify-center">
             <div className="flex h-10 w-10 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.04] text-sm font-semibold text-white/70">
-              {(profile?.display_name ||
+              {(
+                profile?.display_name ||
                 profile?.username ||
                 "S"
               )
@@ -744,14 +962,16 @@ const daysLeftInPlan =
           <div className="space-y-0">
             {studentStats.map(
               (stat, index) => {
-                const Icon = stat.icon;
+                const Icon =
+                  stat.icon;
 
                 return (
                   <div
                     key={stat.label}
                     className={`py-4 ${
                       index !==
-                      studentStats.length - 1
+                      studentStats.length -
+                        1
                         ? "border-b border-white/[0.06]"
                         : ""
                     }`}
@@ -773,7 +993,8 @@ const daysLeftInPlan =
           <div className="space-y-4">
             {studentStats.map(
               (stat) => {
-                const Icon = stat.icon;
+                const Icon =
+                  stat.icon;
 
                 return (
                   <div
@@ -790,32 +1011,33 @@ const daysLeftInPlan =
         )}
       </div>
 
-{/* Logout */}
+      {/* Logout */}
 
-<div className="border-t border-white/[0.07] p-3">
-  <button
-    type="button"
-    onClick={handleLogout}
-    className={`group flex w-full items-center rounded-xl text-white/40 transition-all duration-200 hover:bg-rose-500/[0.06] hover:text-rose-300 ${
-      sidebarCollapsed
-        ? "justify-center px-0 py-2.5"
-        : "gap-3 px-3 py-2.5"
-    }`}
-    aria-label="Log Out"
-    title={sidebarCollapsed ? "Log Out" : undefined}
-  >
-    <LogOut className="h-4 w-4 shrink-0 transition-transform duration-200 group-hover:-translate-x-0.5" />
+      <div className="border-t border-white/[0.07] p-3">
+        <button
+          type="button"
+          onClick={handleLogout}
+          className={`group flex w-full items-center rounded-xl text-white/40 transition-all duration-200 hover:bg-rose-500/[0.06] hover:text-rose-300 ${
+            sidebarCollapsed
+              ? "justify-center px-0 py-2.5"
+              : "gap-3 px-3 py-2.5"
+          }`}
+          aria-label="Log Out"
+          title={
+            sidebarCollapsed
+              ? "Log Out"
+              : undefined
+          }
+        >
+          <LogOut className="h-4 w-4 shrink-0 transition-transform duration-200 group-hover:-translate-x-0.5" />
 
-    {!sidebarCollapsed && (
-      <span className="text-sm">
-        Log Out
-      </span>
-    )}
-  </button>
-</div>
-
-
-
+          {!sidebarCollapsed && (
+            <span className="text-sm">
+              Log Out
+            </span>
+          )}
+        </button>
+      </div>
 
       {/* Week summary */}
 
@@ -859,7 +1081,8 @@ const daysLeftInPlan =
 
             <div className="mt-2 flex justify-between text-[11px] text-white/30">
               <span>
-                {completedTasks} completed
+                {completedTasks}{" "}
+                completed
               </span>
 
               <span>
@@ -936,566 +1159,222 @@ const daysLeftInPlan =
    */
 
   return (
-    <div className="min-h-screen bg-[#0b0d10] px-0 py-0 text-white sm:px-4 sm:py-4">
-      <div className="relative flex min-h-screen w-full overflow-hidden rounded-none border border-white/[0.07] bg-[#111419] shadow-2xl sm:min-h-[calc(100vh-2rem)] sm:rounded-2xl">
-
-        {/* ============================================================
-            MOBILE OVERLAY
-        ============================================================= */}
-
-        {sidebarOpen && (
-          <button
-            type="button"
-            aria-label="Close sidebar"
-            onClick={() =>
-              setSidebarOpen(false)
-            }
-            className="fixed inset-0 z-40 bg-black/60 backdrop-blur-[2px] lg:hidden"
-          />
+    <DashboardShell
+      sidebarOpen={sidebarOpen}
+      onSidebarOpenChange={
+        setSidebarOpen
+      }
+      sidebarCollapsed={
+        sidebarCollapsed
+      }
+      onSidebarCollapsedChange={
+        setSidebarCollapsed
+      }
+      sidebarContent={
+        sidebarContent
+      }
+    >
+      <DashboardHeader
+        onSidebarOpen={() =>
+          setSidebarOpen(true)
+        }
+        weekRangeText={formatWeekRange(
+          weekStart,
+          weekEnd
         )}
+        onPreviousWeek={
+          previousWeek
+        }
+        onNextWeek={nextWeek}
+        onGoToToday={
+          goToToday
+        }
+      />
 
-        {/* ============================================================
-            DESKTOP SIDEBAR
-        ============================================================= */}
+      {/* Loading */}
 
-        <aside
-          className={`hidden shrink-0 border-r border-white/[0.07] bg-[#0d0f12] transition-[width] duration-300 lg:flex lg:flex-col ${
-            sidebarCollapsed
-              ? "w-[76px]"
-              : "w-[280px]"
-          }`}
-        >
-          {sidebarContent}
-        </aside>
-
-        {/* ============================================================
-            MOBILE SIDEBAR
-        ============================================================= */}
-
-        <aside
-          className={`fixed inset-y-0 left-0 z-50 flex w-[280px] flex-col border-r border-white/[0.07] bg-[#0d0f12] shadow-2xl transition-transform duration-300 lg:hidden ${
-            sidebarOpen
-              ? "translate-x-0"
-              : "-translate-x-full"
-          }`}
-        >
-          {/* Mobile close button */}
-
-          <div className="absolute right-4 top-6">
-            <button
-              type="button"
-              onClick={() =>
-                setSidebarOpen(false)
-              }
-              className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/[0.07] bg-white/[0.03] text-white/40 transition hover:bg-white/[0.07] hover:text-white"
-              aria-label="Close sidebar"
-            >
-              <X className="h-4 w-4" />
-            </button>
+      {loading && (
+        <div className="flex min-h-[400px] items-center justify-center">
+          <div className="text-sm text-white/40">
+            Loading your planner...
           </div>
+        </div>
+      )}
 
-          {sidebarContent}
-        </aside>
+      {/* Error */}
 
-        {/* ============================================================
-            MAIN CONTENT
-        ============================================================= */}
+      {!loading && error && (
+        <div className="p-4 sm:p-6">
+          <div className="rounded-2xl border border-rose-500/20 bg-rose-500/10 p-5">
+            <div className="text-sm font-medium text-rose-300">
+              Could not load your planner
+            </div>
 
-        <main className="min-w-0 flex-1">
+            <div className="mt-2 text-xs text-white/50">
+              {error}
+            </div>
+          </div>
+        </div>
+      )}
 
-          {/* Header */}
+      {/* Actual dashboard */}
 
-          <header className="border-b border-white/[0.07] px-4 py-4 sm:px-6 lg:px-7">
-            <div className="flex items-center justify-between gap-3">
+      {!loading && !error && (
+        <div className="space-y-5 p-4 sm:p-6">
 
-              {/* Left */}
+          {/* ======================================================
+              OBJECTIVES + LEADERBOARD
+          ====================================================== */}
 
-              <div className="flex min-w-0 items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() =>
-                    setSidebarOpen(true)
-                  }
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.025] text-white/50 transition hover:bg-white/[0.06] hover:text-white lg:hidden"
-                  aria-label="Open sidebar"
-                >
-                  <Menu className="h-4 w-4" />
-                </button>
+          <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
 
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 text-xs text-white/35">
-                    <CalendarDays className="h-3.5 w-3.5 shrink-0" />
-                    <span>
-                      Weekly Planner
-                    </span>
+            {/* OBJECTIVES */}
+
+            <section className="rounded-2xl border border-white/[0.07] bg-[#15181d]">
+
+              <div className="flex items-center justify-between border-b border-white/[0.07] px-4 py-4 sm:px-5">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/[0.06]">
+                    <Target className="h-4 w-4 text-white/70" />
                   </div>
 
-                  <h1 className="mt-1 truncate text-lg font-semibold tracking-tight sm:text-2xl">
-                    {formatWeekRange(
-                      weekStart,
-                      weekEnd
-                    )}
-                  </h1>
-                </div>
-              </div>
+                  <div>
+                    <h2 className="text-sm font-semibold">
+                      Objectives
+                    </h2>
 
-              {/* Week navigation */}
-
-              <div className="flex shrink-0 items-center gap-2">
-                <button
-                  type="button"
-                  onClick={previousWeek}
-                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.025] text-white/50 transition hover:bg-white/[0.06] hover:text-white"
-                  aria-label="Previous week"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={goToToday}
-                  className="hidden h-9 rounded-lg border border-white/[0.08] bg-white/[0.025] px-3 text-xs font-medium text-white/60 transition hover:bg-white/[0.06] hover:text-white sm:block"
-                >
-                  Today
-                </button>
-
-                <button
-                  type="button"
-                  onClick={nextWeek}
-                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.025] text-white/50 transition hover:bg-white/[0.06] hover:text-white"
-                  aria-label="Next week"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-
-            {/* Mobile Today button */}
-
-            <div className="mt-3 sm:hidden">
-              <button
-                type="button"
-                onClick={goToToday}
-                className="h-8 rounded-lg border border-white/[0.08] bg-white/[0.025] px-3 text-xs font-medium text-white/50 transition hover:bg-white/[0.06] hover:text-white"
-              >
-                Today
-              </button>
-            </div>
-          </header>
-
-          {/* Loading */}
-
-          {loading && (
-            <div className="flex min-h-[400px] items-center justify-center">
-              <div className="text-sm text-white/40">
-                Loading your planner...
-              </div>
-            </div>
-          )}
-
-          {/* Error */}
-
-          {!loading && error && (
-            <div className="p-4 sm:p-6">
-              <div className="rounded-2xl border border-rose-500/20 bg-rose-500/10 p-5">
-                <div className="text-sm font-medium text-rose-300">
-                  Could not load your planner
-                </div>
-
-                <div className="mt-2 text-xs text-white/50">
-                  {error}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Actual dashboard */}
-
-          {!loading && !error && (
-            <div className="space-y-5 p-4 sm:p-6">
-
-              {/* ======================================================
-                  OBJECTIVES
-              ====================================================== */}
-
-              <section className="rounded-2xl border border-white/[0.07] bg-[#15181d]">
-
-                <div className="flex items-center justify-between border-b border-white/[0.07] px-4 py-4 sm:px-5">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/[0.06]">
-                      <Target className="h-4 w-4 text-white/70" />
-                    </div>
-
-                    <div>
-                      <h2 className="text-sm font-semibold">
-                        Objectives
-                      </h2>
-
-                      <p className="mt-0.5 text-xs text-white/35">
-                        Your ongoing goals
-                      </p>
-                    </div>
+                    <p className="mt-0.5 text-xs text-white/35">
+                      Your ongoing goals
+                    </p>
                   </div>
-
-                  <span className="text-[11px] text-white/30 sm:text-xs">
-                    {completedObjectives} of{" "}
-                    {objectiveCount} complete
-                  </span>
                 </div>
 
-                {objectives.length === 0 ? (
-                  <div className="px-5 py-8 text-center text-sm text-white/30">
-                    No objectives yet.
-                  </div>
-                ) : (
-                  <div className="grid gap-px bg-white/[0.05] sm:grid-cols-2 lg:grid-cols-4">
-                    {objectives.map(
-                      (objective) => (
-                        <button
-                          key={objective.id}
-                          type="button"
-                          onClick={() =>
-                            toggleObjective(
-                              objective
-                            )
-                          }
-                          className="flex items-start gap-3 bg-[#15181d] px-4 py-4 text-left transition hover:bg-white/[0.025] sm:px-5"
+                <span className="text-[11px] text-white/30 sm:text-xs">
+                  {completedObjectives}{" "}
+                  of{" "}
+                  {objectiveCount}{" "}
+                  complete
+                </span>
+              </div>
+
+              {objectives.length === 0 ? (
+                <div className="px-5 py-8 text-center text-sm text-white/30">
+                  No objectives yet.
+                </div>
+              ) : (
+                <div className="grid gap-px bg-white/[0.05] sm:grid-cols-2 lg:grid-cols-4">
+                  {objectives.map(
+                    (objective) => (
+                      <button
+                        key={
+                          objective.id
+                        }
+                        type="button"
+                        onClick={() =>
+                          toggleObjective(
+                            objective
+                          )
+                        }
+                        className="flex items-start gap-3 bg-[#15181d] px-4 py-4 text-left transition hover:bg-white/[0.025] sm:px-5"
+                      >
+                        {objective.completed ? (
+                          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
+                        ) : (
+                          <Circle className="mt-0.5 h-4 w-4 shrink-0 text-white/25" />
+                        )}
+
+                        <span
+                          className={`text-sm leading-5 ${
+                            objective.completed
+                              ? "text-white/35 line-through"
+                              : "text-white/70"
+                          }`}
                         >
-                          {objective.completed ? (
-                            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
-                          ) : (
-                            <Circle className="mt-0.5 h-4 w-4 shrink-0 text-white/25" />
-                          )}
-
-                          <span
-                            className={`text-sm leading-5 ${
-                              objective.completed
-                                ? "text-white/35 line-through"
-                                : "text-white/70"
-                            }`}
-                          >
-                            {objective.text}
-                          </span>
-                        </button>
-                      )
-                    )}
-                  </div>
-                )}
-              </section>
-
-              {/* ======================================================
-                  WEEKLY CALENDAR
-              ====================================================== */}
-
-              <section className="rounded-2xl border border-white/[0.07] bg-[#15181d]">
-
-                {/* Calendar heading */}
-
-                <div className="flex flex-col gap-3 border-b border-white/[0.07] px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/[0.06]">
-                      <BookOpen className="h-4 w-4 text-white/70" />
-                    </div>
-
-                    <div>
-                      <h2 className="text-sm font-semibold">
-                        Weekly Schedule
-                      </h2>
-
-                      <p className="mt-0.5 text-xs text-white/35">
-                        Your tasks for the entire week
-                      </p>
-                    </div>
-                  </div>
-
-                  {weekSubjects.length > 0 && (
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] text-white/35">
-                      {weekSubjects.map(
-                        (subject) => (
-                          <div
-                            key={
-                              subject.value
-                            }
-                            className="flex items-center gap-1.5"
-                          >
-                            <span
-                              className={`h-2 w-2 rounded-full ${subject.color.dot}`}
-                            />
-                            {subject.label}
-                          </div>
-                        )
-                      )}
-                    </div>
+                          {
+                            objective.text
+                          }
+                        </span>
+                      </button>
+                    )
                   )}
                 </div>
+              )}
+            </section>
 
-                {/* ==================================================
-                    DESKTOP CALENDAR
-                ================================================== */}
+            {/* LEADERBOARD */}
 
-                <div className="hidden overflow-x-auto md:block">
-                  <div className="grid grid-cols-7 divide-x divide-white/[0.06]">
+            <DashboardLeaderboard
+              entries={
+                mockLeaderboard
+              }
+            />
+          </div>
 
-                    {days.map((day) => (
-                      <div
-                        key={day.isoDate}
-                        className="min-h-[420px] bg-[#121519]"
-                      >
+          {/* ======================================================
+              WEEKLY CALENDAR
+          ====================================================== */}
 
-                        {/* Day header */}
+          <section className="rounded-2xl border border-white/[0.07] bg-[#15181d]">
 
-                        <div className="border-b border-white/[0.06] px-3 py-4 text-center">
-                          <div className="text-[10px] font-semibold uppercase tracking-widest text-white/30">
-                            {day.short}
-                          </div>
+            {/* Calendar heading */}
 
-                          <div
-                            className={`mx-auto mt-2 flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold ${
-                              today && day.isoDate === formatDate(today)
-                                ? "bg-white text-black"
-                                : "text-white/65"
-                            }`}
-                          >
-                            {day.date}
-                          </div>
-                        </div>
-
-                        {/* Tasks */}
-
-                        <div className="space-y-2 p-2.5">
-                          {day.tasks.length >
-                          0 ? (
-                            day.tasks.map(
-                              (task) => {
-                                const subject =
-                                  getSubjectOption(
-                                    task.subject
-                                  );
-
-                                const colors =
-                                  subject?.color ??
-                                  DEFAULT_SUBJECT_COLOR;
-
-                                return (
-                                  <div
-                                    key={
-                                      task.id
-                                    }
-                                    className={`group rounded-xl border p-3 transition hover:bg-white/[0.04] ${colors.card}`}
-                                  >
-                                    <div className="flex items-start gap-2.5">
-
-                                      <span
-                                        className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${colors.dot}`}
-                                      />
-
-                                      <div className="min-w-0 flex-1">
-                                        <div
-                                          className={`text-[10px] font-medium uppercase tracking-wide ${colors.text}`}
-                                        >
-                                          {task.subject ||
-                                            task.type ||
-                                            "Task"}
-                                        </div>
-
-                                        <div
-                                          className={`mt-1 text-xs font-medium leading-4 ${
-                                            task.completed
-                                              ? "text-white/30 line-through"
-                                              : "text-white/75"
-                                          }`}
-                                        >
-                                          {
-                                            task.name
-                                          }
-                                        </div>
-                                      </div>
-
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          toggleTask(
-                                            task
-                                          )
-                                        }
-                                        className="shrink-0"
-                                        aria-label={`Complete ${task.name}`}
-                                      >
-                                        {task.completed ? (
-                                          <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                                        ) : (
-                                          <Circle className="h-4 w-4 text-white/20 transition hover:text-white/60" />
-                                        )}
-                                      </button>
-
-                                    </div>
-                                  </div>
-                                );
-                              }
-                            )
-                          ) : (
-                            <div className="flex min-h-[260px] items-center justify-center">
-                              <div className="text-center">
-                                <div className="text-xs font-medium text-white/30">
-                                  Rest day
-                                </div>
-
-                                <div className="mt-1 text-[10px] text-white/15">
-                                  No tasks scheduled
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+            <div className="flex flex-col gap-3 border-b border-white/[0.07] px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+              <div className="flex items-center gap-3">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/[0.06]">
+                  <BookOpen className="h-4 w-4 text-white/70" />
                 </div>
 
-                {/* ==================================================
-                    MOBILE CALENDAR
-                ================================================== */}
+                <div>
+                  <h2 className="text-sm font-semibold">
+                    Weekly Schedule
+                  </h2>
 
-                <div className="divide-y divide-white/[0.06] md:hidden">
-                  {days.map((day) => {
-                    const isToday =
-                      today !== null &&
-                      day.isoDate === formatDate(today);
-
-                    return (
-                      <div
-                        key={day.isoDate}
-                        className="bg-[#121519]"
-                      >
-                        {/* Mobile day header */}
-
-                        <div className="flex items-center justify-between px-4 py-3">
-                          <div className="flex items-center gap-3">
-                            <div
-                              className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold ${
-                                isToday
-                                  ? "bg-white text-black"
-                                  : "bg-white/[0.04] text-white/65"
-                              }`}
-                            >
-                              {day.date}
-                            </div>
-
-                            <div>
-                              <div className="text-xs font-semibold uppercase tracking-wider text-white/60">
-                                {day.name}
-                              </div>
-
-                              {isToday && (
-                                <div className="mt-0.5 text-[10px] font-medium uppercase tracking-wider text-white/30">
-                                  Today
-                                </div>
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="text-[11px] text-white/25">
-                            {day.tasks.length}{" "}
-                            {day.tasks.length ===
-                            1
-                              ? "task"
-                              : "tasks"}
-                          </div>
-                        </div>
-
-                        {/* Mobile tasks */}
-
-                        <div className="space-y-2 px-3 pb-3">
-                          {day.tasks.length >
-                          0 ? (
-                            day.tasks.map(
-                              (task) => {
-                                const subject =
-                                  getSubjectOption(
-                                    task.subject
-                                  );
-
-                                const colors =
-                                  subject?.color ??
-                                  DEFAULT_SUBJECT_COLOR;
-
-                                return (
-                                  <div
-                                    key={
-                                      task.id
-                                    }
-                                    className={`rounded-xl border p-3.5 ${colors.card}`}
-                                  >
-                                    <div className="flex items-start gap-3">
-
-                                      <span
-                                        className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${colors.dot}`}
-                                      />
-
-                                      <div className="min-w-0 flex-1">
-                                        <div
-                                          className={`text-[10px] font-medium uppercase tracking-wide ${colors.text}`}
-                                        >
-                                          {task.subject ||
-                                            task.type ||
-                                            "Task"}
-                                        </div>
-
-                                        <div
-                                          className={`mt-1 text-sm font-medium leading-5 ${
-                                            task.completed
-                                              ? "text-white/30 line-through"
-                                              : "text-white/75"
-                                          }`}
-                                        >
-                                          {
-                                            task.name
-                                          }
-                                        </div>
-                                      </div>
-
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          toggleTask(
-                                            task
-                                          )
-                                        }
-                                        className="shrink-0"
-                                        aria-label={`Complete ${task.name}`}
-                                      >
-                                        {task.completed ? (
-                                          <CheckCircle2 className="h-5 w-5 text-emerald-400" />
-                                        ) : (
-                                          <Circle className="h-5 w-5 text-white/20 transition hover:text-white/60" />
-                                        )}
-                                      </button>
-                                    </div>
-                                  </div>
-                                );
-                              }
-                            )
-                          ) : (
-                            <div className="rounded-xl border border-white/[0.04] bg-white/[0.01] px-4 py-5 text-center">
-                              <div className="text-xs font-medium text-white/25">
-                                Rest day
-                              </div>
-
-                              <div className="mt-1 text-[10px] text-white/15">
-                                No tasks scheduled
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
+                  <p className="mt-0.5 text-xs text-white/35">
+                    Your tasks for the entire week
+                  </p>
                 </div>
-              </section>
+              </div>
+
+              {weekSubjects.length >
+                0 && (
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] text-white/35">
+                  {weekSubjects.map(
+                    (subject) => (
+                      <div
+                        key={
+                          subject.id
+                        }
+                        className="flex items-center gap-1.5"
+                      >
+                        <span
+                          className="h-2 w-2 rounded-full"
+                          style={{
+                            backgroundColor:
+                              subject.color,
+                          }}
+                        />
+
+                        {
+                          subject.display_name
+                        }
+                      </div>
+                    )
+                  )}
+                </div>
+              )}
             </div>
-          )}
-        </main>
-      </div>
-    </div>
+
+            <DashboardCalendar
+              days={days}
+              today={today}
+              onToggleTask={
+                toggleTask
+              }
+              breakpoint="md"
+            />
+          </section>
+        </div>
+      )}
+    </DashboardShell>
   );
 }
