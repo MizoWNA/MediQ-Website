@@ -288,14 +288,6 @@ const weekDays = useMemo(() => {
             .eq("id", profileData.mentor_id)
             .maybeSingle();
 
-          if (mentorError) {
-            console.error("Mentor query failed:", mentorError);
-          }
-
-          console.log("Mentor ID:", profileData.mentor_id);
-          console.log("Mentor data:", mentorData);
-          console.log("Mentor error:", mentorError);
-
           if (!mentorError && mentorData) {
             setMentorName(
               mentorData.display_name ||
