@@ -24,6 +24,56 @@ import {
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { DashboardCalendar } from "@/components/dashboard/DashboardCalendar";
+import { DashboardLeaderboard } from "@/components/dashboard/DashboardLeaderboard";
+import type { LeaderboardEntry } from "@/components/dashboard/DashboardLeaderboard";
+
+// Temp Data
+
+const mockLeaderboard: LeaderboardEntry[] = [
+  {
+    id: "1",
+    name: "Ahmed Mohamed",
+    score: 94,
+    completedTasks: 23,
+    totalTasks: 24,
+    completionPercentage: 96,
+  },
+  {
+    id: "2",
+    name: "Sara Ahmed",
+    score: 91,
+    completedTasks: 20,
+    totalTasks: 22,
+    completionPercentage: 91,
+  },
+  {
+    id: "3",
+    name: "You",
+    score: 87,
+    completedTasks: 18,
+    totalTasks: 21,
+    completionPercentage: 86,
+    isCurrentUser: true,
+  },
+  {
+    id: "4",
+    name: "Omar Hassan",
+    score: 84,
+    completedTasks: 19,
+    totalTasks: 24,
+    completionPercentage: 79,
+  },
+  {
+    id: "5",
+    name: "Youssef Ali",
+    score: 81,
+    completedTasks: 16,
+    totalTasks: 21,
+    completionPercentage: 76,
+  },
+];
+
+// temp
 
 type Profile = {
   id: string;
@@ -981,10 +1031,14 @@ const daysLeftInPlan =
             <div className="space-y-5 p-4 sm:p-6">
 
               {/* ======================================================
-                  OBJECTIVES
+                  OBJECTIVES + LEADERBOARD
               ====================================================== */}
 
-              <section className="rounded-2xl border border-white/[0.07] bg-[#15181d]">
+              <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
+
+                {/* OBJECTIVES */}
+
+                <section className="rounded-2xl border border-white/[0.07] bg-[#15181d]">
 
                 <div className="flex items-center justify-between border-b border-white/[0.07] px-4 py-4 sm:px-5">
                   <div className="flex items-center gap-3">
@@ -1048,6 +1102,18 @@ const daysLeftInPlan =
                   </div>
                 )}
               </section>
+
+      {/* LEADERBOARD */}
+
+      <DashboardLeaderboard
+        entries={mockLeaderboard}
+      />
+
+    </div>
+
+    {/* ======================================================
+        WEEKLY CALENDAR
+    ====================================================== */}
 
               {/* ======================================================
                   WEEKLY CALENDAR
