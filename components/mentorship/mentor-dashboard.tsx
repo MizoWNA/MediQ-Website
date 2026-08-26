@@ -6,10 +6,7 @@ import {
   Menu,
   ChevronLeft,
   ChevronRight,
-  CheckCircle2,
-  Circle,
   GraduationCap,
-  Target,
   BookOpen,
   UserRound,
   CalendarClock,
@@ -27,6 +24,7 @@ import {
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { DashboardCalendar } from "@/components/dashboard/DashboardCalendar";
+import { DashboardObjectives } from "@/components/dashboard/DashboardObjectives";
 import { MentorSidebar } from "@/components/dashboard/MentorSidebar";
 import {
   SUBJECT_OPTIONS,
@@ -1532,146 +1530,21 @@ export function MentorDashboard() {
                   </div>
                 </section>
 
-                <section className="rounded-2xl border border-white/[0.07] bg-[#15181d]">
-                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.07] px-4 py-4 sm:px-5">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/[0.06]">
-                        <Target className="h-4 w-4 text-white/70" />
-                      </div>
-
-                      <div>
-                        <h2 className="text-sm font-semibold">
-                          Objectives
-                        </h2>
-
-                        <p className="mt-0.5 text-xs text-white/35">
-                          {completedObjectives} of{" "}
-                          {objectiveCount} complete
-                        </p>
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={openAddObjective}
-                      className="flex items-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.025] px-3 py-2 text-xs font-medium text-white/50 transition hover:bg-white/[0.06] hover:text-white"
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                      Add Objective
-                    </button>
-                  </div>
-
-                  {objectives.length === 0 ? (
-                    <div className="px-5 py-8 text-center">
-                      <div className="text-sm text-white/30">
-                        No objectives yet.
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={openAddObjective}
-                        className="mt-3 text-xs text-white/45 transition hover:text-white"
-                      >
-                        Add the first objective
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="grid gap-px bg-white/[0.05] sm:grid-cols-2 lg:grid-cols-4">
-                      {objectives.map(
-                        (objective) => (
-                          <div
-                            key={
-                              objective.id
-                            }
-                            className="group relative flex items-start gap-3 bg-[#15181d] px-5 py-4"
-                            onClick={(event) =>
-                              event.stopPropagation()
-                            }
-                          >
-                            <button
-                              type="button"
-                              onClick={() =>
-                                toggleObjective(
-                                  objective
-                                )
-                              }
-                              className="shrink-0"
-                              title={
-                                objective.completed
-                                  ? "Mark incomplete"
-                                  : "Mark complete"
-                              }
-                            >
-                              {objective.completed ? (
-                                <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-400" />
-                              ) : (
-                                <Circle className="mt-0.5 h-4 w-4 text-white/25 transition hover:text-white/60" />
-                              )}
-                            </button>
-
-                            <span
-                              className={`min-w-0 flex-1 pr-6 text-sm leading-5 ${objective.completed
-                                  ? "text-white/35 line-through"
-                                  : "text-white/70"
-                                }`}
-                            >
-                              {objective.text}
-                            </span>
-
-                            <div className="absolute right-3 top-3">
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setOpenObjectiveMenu(
-                                    (current) =>
-                                      current ===
-                                        objective.id
-                                        ? null
-                                        : objective.id
-                                  )
-                                }
-                                className="flex h-7 w-7 items-center justify-center rounded-md text-white/25 opacity-0 transition hover:bg-white/[0.06] hover:text-white group-hover:opacity-100"
-                              >
-                                <MoreHorizontal className="h-4 w-4" />
-                              </button>
-
-                              {openObjectiveMenu ===
-                                objective.id && (
-                                  <div className="absolute right-0 top-8 z-20 w-32 overflow-hidden rounded-lg border border-white/[0.09] bg-[#1a1d22] p-1 shadow-xl">
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        openEditObjective(
-                                          objective
-                                        )
-                                      }
-                                      className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs text-white/60 transition hover:bg-white/[0.06] hover:text-white"
-                                    >
-                                      <Pencil className="h-3.5 w-3.5" />
-                                      Edit
-                                    </button>
-
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        deleteObjective(
-                                          objective
-                                        )
-                                      }
-                                      className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs text-rose-300/70 transition hover:bg-rose-500/10 hover:text-rose-300"
-                                    >
-                                      <Trash2 className="h-3.5 w-3.5" />
-                                      Delete
-                                    </button>
-                                  </div>
-                                )}
-                            </div>
-                          </div>
-                        )
-                      )}
-                    </div>
-                  )}
-                </section>
+                <DashboardObjectives
+                  objectives={objectives}
+                  completedCount={completedObjectives}
+                  subtitle={`${completedObjectives} of ${objectiveCount} complete`}
+                  onToggle={toggleObjective}
+                  onAdd={openAddObjective}
+                  onEdit={openEditObjective}
+                  onDelete={deleteObjective}
+                  openMenuId={openObjectiveMenu}
+                  onToggleMenu={(id) =>
+                    setOpenObjectiveMenu((current) =>
+                      current === id ? null : id
+                    )
+                  }
+                />
 
                 <section className="rounded-2xl border border-white/[0.07] bg-[#15181d]">
                   <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.07] px-5 py-4">
