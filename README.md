@@ -130,9 +130,6 @@ The public-facing website includes sections such as:
 
 ---
 
-> **Tip:** Screenshots are intentionally kept separate from the application itself so the README can showcase the project without exposing internal platform data.
-
----
 
 # 🧩 Architecture
 
