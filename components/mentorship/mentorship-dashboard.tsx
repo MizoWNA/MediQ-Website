@@ -24,7 +24,16 @@ import { DashboardCalendar } from "@/components/dashboard/DashboardCalendar";
 import { DashboardLeaderboard } from "@/components/dashboard/DashboardLeaderboard";
 import type { LeaderboardEntry } from "@/components/dashboard/DashboardLeaderboard";
 
-// Temp Data
+/*
+ * ================================================================
+ * TEMP LEADERBOARD DATA
+ * ================================================================
+ *
+ * This will eventually come from weekly_leaderboards +
+ * weekly_leaderboard_entries.
+ *
+ * Keep this here for now while we build the database logic.
+ */
 
 const mockLeaderboard: LeaderboardEntry[] = [
   {
@@ -70,7 +79,11 @@ const mockLeaderboard: LeaderboardEntry[] = [
   },
 ];
 
-// temp
+/*
+ * ================================================================
+ * TYPES
+ * ================================================================
+ */
 
 type Profile = {
   id: string;
@@ -126,6 +139,12 @@ type CalendarDay = {
   tasks: Task[];
 };
 
+/*
+ * ================================================================
+ * DATE HELPERS
+ * ================================================================
+ */
+
 function formatDate(date: Date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -151,6 +170,7 @@ function addDays(date: Date, amount: number) {
   result.setDate(result.getDate() + amount);
   return result;
 }
+
 function formatWeekRange(
   start: Date | null,
   end: Date | null
@@ -194,37 +214,74 @@ function formatDays(value: number) {
   return `${value} ${value === 1 ? "day" : "days"}`;
 }
 
+/*
+ * ================================================================
+ * DASHBOARD
+ * ================================================================
+ */
+
 export function MentorshipDashboard() {
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [mentorName, setMentorName] = useState<string | null>(null);
+  const router = useRouter();
 
-  const [objectives, setObjectives] = useState<Objective[]>([]);
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [taskTypes, setTaskTypes] = useState<TaskType[]>([]);
+  const [profile, setProfile] =
+    useState<Profile | null>(null);
 
-const [weekStart, setWeekStart] = useState<Date | null>(null);
-const [today, setToday] = useState<Date | null>(null);
+  const [mentorName, setMentorName] =
+    useState<string | null>(null);
 
-useEffect(() => {
-  const currentDate = new Date();
+  const [objectives, setObjectives] =
+    useState<Objective[]>([]);
 
-  setToday(currentDate);
-  setWeekStart(getSunday(currentDate));
-}, []);
+  const [tasks, setTasks] =
+    useState<Task[]>([]);
 
+  const [subjects, setSubjects] =
+    useState<Subject[]>([]);
+
+  const [taskTypes, setTaskTypes] =
+    useState<TaskType[]>([]);
+
+  const [weekStart, setWeekStart] =
+    useState<Date | null>(null);
+
+  const [today, setToday] =
+    useState<Date | null>(null);
+
+  const [loading, setLoading] =
+    useState(true);
+
+  const [error, setError] =
+    useState<string | null>(null);
+
+  const [sidebarOpen, setSidebarOpen] =
+    useState(false);
+
+  const [sidebarCollapsed, setSidebarCollapsed] =
+    useState(false);
+
+  /*
+   * ================================================================
+   * INITIAL DATE
+   * ================================================================
+   */
+
+  useEffect(() => {
+    const currentDate = new Date();
+
+    setToday(currentDate);
+    setWeekStart(getSunday(currentDate));
+  }, []);
+
+  /*
+   * ================================================================
+   * LOGOUT
+   * ================================================================
+   */
 
   async function handleLogout() {
-  await supabase.auth.signOut();
-  router.replace("/login");
-}
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-
-  const router = useRouter();
+    await supabase.auth.signOut();
+    router.replace("/login");
+  }
 
   /*
    * ================================================================
@@ -232,42 +289,43 @@ useEffect(() => {
    * ================================================================
    */
 
-const weekDays = useMemo(() => {
-  if (!weekStart) return [];
+  const weekDays = useMemo(() => {
+    if (!weekStart) return [];
 
-  const weekdayNames = [
-    "Sunday",
-    "Monday",
-    "Tuesday",
-    "Wednesday",
-    "Thursday",
-    "Friday",
-    "Saturday",
-  ];
+    const weekdayNames = [
+      "Sunday",
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+    ];
 
-  const weekdayShortNames = [
-    "SUN",
-    "MON",
-    "TUE",
-    "WED",
-    "THU",
-    "FRI",
-    "SAT",
-  ];
+    const weekdayShortNames = [
+      "SUN",
+      "MON",
+      "TUE",
+      "WED",
+      "THU",
+      "FRI",
+      "SAT",
+    ];
 
-  return Array.from({ length: 7 }, (_, index) => {
-    const date = addDays(weekStart, index);
+    return Array.from({ length: 7 }, (_, index) => {
+      const date = addDays(weekStart, index);
 
-    return {
-      date,
-      isoDate: formatDate(date),
-      name: weekdayNames[date.getDay()],
-      short: weekdayShortNames[date.getDay()],
-    };
-  });
-}, [weekStart]);
+      return {
+        date,
+        isoDate: formatDate(date),
+        name: weekdayNames[date.getDay()],
+        short: weekdayShortNames[date.getDay()],
+      };
+    });
+  }, [weekStart]);
 
-  const weekEnd = weekDays[6]?.date ?? weekStart;
+  const weekEnd =
+    weekDays[6]?.date ?? weekStart;
 
   /*
    * ================================================================
@@ -276,10 +334,9 @@ const weekDays = useMemo(() => {
    */
 
   useEffect(() => {
-
     if (!weekStart || !weekEnd) {
-  return;
-}
+      return;
+    }
 
     let cancelled = false;
 
@@ -288,6 +345,10 @@ const weekDays = useMemo(() => {
       setError(null);
 
       try {
+        /*
+         * AUTH
+         */
+
         const {
           data: { user },
           error: authError,
@@ -386,12 +447,14 @@ const weekDays = useMemo(() => {
         if (cancelled) return;
 
         setObjectives(
-          Array.isArray(objectiveData) ? objectiveData : []
+          Array.isArray(objectiveData)
+            ? objectiveData
+            : []
         );
 
         /*
-        * SUBJECTS
-        */
+         * SUBJECTS
+         */
 
         const {
           data: subjectData,
@@ -413,12 +476,14 @@ const weekDays = useMemo(() => {
         if (cancelled) return;
 
         setSubjects(
-          Array.isArray(subjectData) ? subjectData : []
+          Array.isArray(subjectData)
+            ? subjectData
+            : []
         );
 
         /*
-        * TASK TYPES
-        */
+         * TASK TYPES
+         */
 
         const {
           data: taskTypeData,
@@ -458,8 +523,14 @@ const weekDays = useMemo(() => {
             "id, name, subject_id, task_type_id, student_id, completed, date"
           )
           .eq("student_id", studentId)
-          .gte("date", formatDate(weekStart))
-          .lte("date", formatDate(weekEnd))
+          .gte(
+            "date",
+            formatDate(weekStart)
+          )
+          .lte(
+            "date",
+            formatDate(weekEnd)
+          )
           .order("date")
           .order("created_at");
 
@@ -472,12 +543,17 @@ const weekDays = useMemo(() => {
         if (cancelled) return;
 
         setTasks(
-          Array.isArray(taskData) ? taskData : []
+          Array.isArray(taskData)
+            ? taskData
+            : []
         );
       } catch (err) {
         if (cancelled) return;
 
-        console.error("Dashboard loading error:", err);
+        console.error(
+          "Dashboard loading error:",
+          err
+        );
 
         setError(
           err instanceof Error
@@ -504,17 +580,19 @@ const weekDays = useMemo(() => {
    * ================================================================
    */
 
-  const days: CalendarDay[] = useMemo(() => {
-    return weekDays.map((day) => ({
-      name: day.name,
-      short: day.short,
-      date: String(day.date.getDate()),
-      isoDate: day.isoDate,
-      tasks: tasks.filter(
-        (task) => task.date === day.isoDate
-      ),
-    }));
-  }, [weekDays, tasks]);
+  const days: CalendarDay[] =
+    useMemo(() => {
+      return weekDays.map((day) => ({
+        name: day.name,
+        short: day.short,
+        date: String(day.date.getDate()),
+        isoDate: day.isoDate,
+        tasks: tasks.filter(
+          (task) =>
+            task.date === day.isoDate
+        ),
+      }));
+    }, [weekDays, tasks]);
 
   /*
    * ================================================================
@@ -524,11 +602,14 @@ const weekDays = useMemo(() => {
 
   const weekSubjects = useMemo(() => {
     const subjectIds = new Set(
-      tasks.map((task) => task.subject_id)
+      tasks.map(
+        (task) => task.subject_id
+      )
     );
 
-    return subjects.filter((subject) =>
-      subjectIds.has(subject.id)
+    return subjects.filter(
+      (subject) =>
+        subjectIds.has(subject.id)
     );
   }, [tasks, subjects]);
 
@@ -538,8 +619,11 @@ const weekDays = useMemo(() => {
    * ================================================================
    */
 
-  async function toggleObjective(objective: Objective) {
-    const newCompleted = !objective.completed;
+  async function toggleObjective(
+    objective: Objective
+  ) {
+    const newCompleted =
+      !objective.completed;
 
     setObjectives((current) =>
       current.map((item) =>
@@ -570,7 +654,8 @@ const weekDays = useMemo(() => {
           item.id === objective.id
             ? {
                 ...item,
-                completed: objective.completed,
+                completed:
+                  objective.completed,
               }
             : item
         )
@@ -585,7 +670,8 @@ const weekDays = useMemo(() => {
    */
 
   async function toggleTask(task: Task) {
-    const newCompleted = !task.completed;
+    const newCompleted =
+      !task.completed;
 
     setTasks((current) =>
       current.map((item) =>
@@ -616,7 +702,8 @@ const weekDays = useMemo(() => {
           item.id === task.id
             ? {
                 ...item,
-                completed: task.completed,
+                completed:
+                  task.completed,
               }
             : item
         )
@@ -632,18 +719,24 @@ const weekDays = useMemo(() => {
 
   function previousWeek() {
     setWeekStart((current) =>
-      addDays(current, -7)
+      current
+        ? addDays(current, -7)
+        : current
     );
   }
 
   function nextWeek() {
     setWeekStart((current) =>
-      addDays(current, 7)
+      current
+        ? addDays(current, 7)
+        : current
     );
   }
 
   function goToToday() {
-    setWeekStart(getSunday(new Date()));
+    setWeekStart(
+      getSunday(new Date())
+    );
   }
 
   /*
@@ -652,33 +745,46 @@ const weekDays = useMemo(() => {
    * ================================================================
    */
 
-const daysUntilExam =
-  profile?.exam_date && today
-    ? Math.ceil(
-        (new Date(profile.exam_date).getTime() -
-          today.getTime()) /
-          (1000 * 60 * 60 * 24)
-      )
-    : null;
+  const daysUntilExam =
+    profile?.exam_date && today
+      ? Math.ceil(
+          (new Date(
+            profile.exam_date
+          ).getTime() -
+            today.getTime()) /
+            (1000 *
+              60 *
+              60 *
+              24)
+        )
+      : null;
 
-const daysLeftInPlan =
-  profile?.end_date && today
-    ? Math.ceil(
-        (new Date(profile.end_date).getTime() -
-          today.getTime()) /
-          (1000 * 60 * 60 * 24)
-      )
-    : null;
+  const daysLeftInPlan =
+    profile?.end_date && today
+      ? Math.ceil(
+          (new Date(
+            profile.end_date
+          ).getTime() -
+            today.getTime()) /
+            (1000 *
+              60 *
+              60 *
+              24)
+        )
+      : null;
 
-  const completedTasks = tasks.filter(
-    (task) => task.completed
-  ).length;
+  const completedTasks =
+    tasks.filter(
+      (task) => task.completed
+    ).length;
 
-  const totalTasks = tasks.length;
+  const totalTasks =
+    tasks.length;
 
   const completedObjectives =
     objectives.filter(
-      (objective) => objective.completed
+      (objective) =>
+        objective.completed
     ).length;
 
   const objectiveCount =
@@ -690,7 +796,9 @@ const daysLeftInPlan =
       value:
         daysUntilExam === null
           ? "Not set"
-          : formatDays(daysUntilExam),
+          : formatDays(
+              daysUntilExam
+            ),
       icon: CalendarClock,
     },
     {
@@ -698,7 +806,9 @@ const daysLeftInPlan =
       value:
         daysLeftInPlan === null
           ? "Not set"
-          : formatDays(daysLeftInPlan),
+          : formatDays(
+              daysLeftInPlan
+            ),
       icon: Timer,
     },
     {
@@ -712,7 +822,7 @@ const daysLeftInPlan =
 
   /*
    * ================================================================
-   * SIDEBAR CONTENT
+   * SIDEBAR
    * ================================================================
    */
 
@@ -785,7 +895,8 @@ const daysLeftInPlan =
         ) : (
           <div className="flex justify-center">
             <div className="flex h-10 w-10 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.04] text-sm font-semibold text-white/70">
-              {(profile?.display_name ||
+              {(
+                profile?.display_name ||
                 profile?.username ||
                 "S"
               )
@@ -851,14 +962,16 @@ const daysLeftInPlan =
           <div className="space-y-0">
             {studentStats.map(
               (stat, index) => {
-                const Icon = stat.icon;
+                const Icon =
+                  stat.icon;
 
                 return (
                   <div
                     key={stat.label}
                     className={`py-4 ${
                       index !==
-                      studentStats.length - 1
+                      studentStats.length -
+                        1
                         ? "border-b border-white/[0.06]"
                         : ""
                     }`}
@@ -880,7 +993,8 @@ const daysLeftInPlan =
           <div className="space-y-4">
             {studentStats.map(
               (stat) => {
-                const Icon = stat.icon;
+                const Icon =
+                  stat.icon;
 
                 return (
                   <div
@@ -897,32 +1011,33 @@ const daysLeftInPlan =
         )}
       </div>
 
-{/* Logout */}
+      {/* Logout */}
 
-<div className="border-t border-white/[0.07] p-3">
-  <button
-    type="button"
-    onClick={handleLogout}
-    className={`group flex w-full items-center rounded-xl text-white/40 transition-all duration-200 hover:bg-rose-500/[0.06] hover:text-rose-300 ${
-      sidebarCollapsed
-        ? "justify-center px-0 py-2.5"
-        : "gap-3 px-3 py-2.5"
-    }`}
-    aria-label="Log Out"
-    title={sidebarCollapsed ? "Log Out" : undefined}
-  >
-    <LogOut className="h-4 w-4 shrink-0 transition-transform duration-200 group-hover:-translate-x-0.5" />
+      <div className="border-t border-white/[0.07] p-3">
+        <button
+          type="button"
+          onClick={handleLogout}
+          className={`group flex w-full items-center rounded-xl text-white/40 transition-all duration-200 hover:bg-rose-500/[0.06] hover:text-rose-300 ${
+            sidebarCollapsed
+              ? "justify-center px-0 py-2.5"
+              : "gap-3 px-3 py-2.5"
+          }`}
+          aria-label="Log Out"
+          title={
+            sidebarCollapsed
+              ? "Log Out"
+              : undefined
+          }
+        >
+          <LogOut className="h-4 w-4 shrink-0 transition-transform duration-200 group-hover:-translate-x-0.5" />
 
-    {!sidebarCollapsed && (
-      <span className="text-sm">
-        Log Out
-      </span>
-    )}
-  </button>
-</div>
-
-
-
+          {!sidebarCollapsed && (
+            <span className="text-sm">
+              Log Out
+            </span>
+          )}
+        </button>
+      </div>
 
       {/* Week summary */}
 
@@ -966,7 +1081,8 @@ const daysLeftInPlan =
 
             <div className="mt-2 flex justify-between text-[11px] text-white/30">
               <span>
-                {completedTasks} completed
+                {completedTasks}{" "}
+                completed
               </span>
 
               <span>
@@ -1045,184 +1161,220 @@ const daysLeftInPlan =
   return (
     <DashboardShell
       sidebarOpen={sidebarOpen}
-      onSidebarOpenChange={setSidebarOpen}
-      sidebarCollapsed={sidebarCollapsed}
-      onSidebarCollapsedChange={setSidebarCollapsed}
-      sidebarContent={sidebarContent}
+      onSidebarOpenChange={
+        setSidebarOpen
+      }
+      sidebarCollapsed={
+        sidebarCollapsed
+      }
+      onSidebarCollapsedChange={
+        setSidebarCollapsed
+      }
+      sidebarContent={
+        sidebarContent
+      }
     >
       <DashboardHeader
-        onSidebarOpen={() => setSidebarOpen(true)}
-        weekRangeText={formatWeekRange(weekStart, weekEnd)}
-        onPreviousWeek={previousWeek}
+        onSidebarOpen={() =>
+          setSidebarOpen(true)
+        }
+        weekRangeText={formatWeekRange(
+          weekStart,
+          weekEnd
+        )}
+        onPreviousWeek={
+          previousWeek
+        }
         onNextWeek={nextWeek}
-        onGoToToday={goToToday}
+        onGoToToday={
+          goToToday
+        }
       />
 
-          {/* Loading */}
+      {/* Loading */}
 
-          {loading && (
-            <div className="flex min-h-[400px] items-center justify-center">
-              <div className="text-sm text-white/40">
-                Loading your planner...
-              </div>
+      {loading && (
+        <div className="flex min-h-[400px] items-center justify-center">
+          <div className="text-sm text-white/40">
+            Loading your planner...
+          </div>
+        </div>
+      )}
+
+      {/* Error */}
+
+      {!loading && error && (
+        <div className="p-4 sm:p-6">
+          <div className="rounded-2xl border border-rose-500/20 bg-rose-500/10 p-5">
+            <div className="text-sm font-medium text-rose-300">
+              Could not load your planner
             </div>
-          )}
 
-          {/* Error */}
-
-          {!loading && error && (
-            <div className="p-4 sm:p-6">
-              <div className="rounded-2xl border border-rose-500/20 bg-rose-500/10 p-5">
-                <div className="text-sm font-medium text-rose-300">
-                  Could not load your planner
-                </div>
-
-                <div className="mt-2 text-xs text-white/50">
-                  {error}
-                </div>
-              </div>
+            <div className="mt-2 text-xs text-white/50">
+              {error}
             </div>
-          )}
+          </div>
+        </div>
+      )}
 
-          {/* Actual dashboard */}
+      {/* Actual dashboard */}
 
-          {!loading && !error && (
-            <div className="space-y-5 p-4 sm:p-6">
+      {!loading && !error && (
+        <div className="space-y-5 p-4 sm:p-6">
 
-              {/* ======================================================
-                  OBJECTIVES + LEADERBOARD
-              ====================================================== */}
+          {/* ======================================================
+              OBJECTIVES + LEADERBOARD
+          ====================================================== */}
 
-              <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
 
-                {/* OBJECTIVES */}
+            {/* OBJECTIVES */}
 
-                <section className="rounded-2xl border border-white/[0.07] bg-[#15181d]">
+            <section className="rounded-2xl border border-white/[0.07] bg-[#15181d]">
 
-                <div className="flex items-center justify-between border-b border-white/[0.07] px-4 py-4 sm:px-5">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/[0.06]">
-                      <Target className="h-4 w-4 text-white/70" />
-                    </div>
-
-                    <div>
-                      <h2 className="text-sm font-semibold">
-                        Objectives
-                      </h2>
-
-                      <p className="mt-0.5 text-xs text-white/35">
-                        Your ongoing goals
-                      </p>
-                    </div>
+              <div className="flex items-center justify-between border-b border-white/[0.07] px-4 py-4 sm:px-5">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/[0.06]">
+                    <Target className="h-4 w-4 text-white/70" />
                   </div>
 
-                  <span className="text-[11px] text-white/30 sm:text-xs">
-                    {completedObjectives} of{" "}
-                    {objectiveCount} complete
-                  </span>
+                  <div>
+                    <h2 className="text-sm font-semibold">
+                      Objectives
+                    </h2>
+
+                    <p className="mt-0.5 text-xs text-white/35">
+                      Your ongoing goals
+                    </p>
+                  </div>
                 </div>
 
-                {objectives.length === 0 ? (
-                  <div className="px-5 py-8 text-center text-sm text-white/30">
-                    No objectives yet.
-                  </div>
-                ) : (
-                  <div className="grid gap-px bg-white/[0.05] sm:grid-cols-2 lg:grid-cols-4">
-                    {objectives.map(
-                      (objective) => (
-                        <button
-                          key={objective.id}
-                          type="button"
-                          onClick={() =>
-                            toggleObjective(
-                              objective
-                            )
+                <span className="text-[11px] text-white/30 sm:text-xs">
+                  {completedObjectives}{" "}
+                  of{" "}
+                  {objectiveCount}{" "}
+                  complete
+                </span>
+              </div>
+
+              {objectives.length === 0 ? (
+                <div className="px-5 py-8 text-center text-sm text-white/30">
+                  No objectives yet.
+                </div>
+              ) : (
+                <div className="grid gap-px bg-white/[0.05] sm:grid-cols-2 lg:grid-cols-4">
+                  {objectives.map(
+                    (objective) => (
+                      <button
+                        key={
+                          objective.id
+                        }
+                        type="button"
+                        onClick={() =>
+                          toggleObjective(
+                            objective
+                          )
+                        }
+                        className="flex items-start gap-3 bg-[#15181d] px-4 py-4 text-left transition hover:bg-white/[0.025] sm:px-5"
+                      >
+                        {objective.completed ? (
+                          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
+                        ) : (
+                          <Circle className="mt-0.5 h-4 w-4 shrink-0 text-white/25" />
+                        )}
+
+                        <span
+                          className={`text-sm leading-5 ${
+                            objective.completed
+                              ? "text-white/35 line-through"
+                              : "text-white/70"
+                          }`}
+                        >
+                          {
+                            objective.text
                           }
-                          className="flex items-start gap-3 bg-[#15181d] px-4 py-4 text-left transition hover:bg-white/[0.025] sm:px-5"
-                        >
-                          {objective.completed ? (
-                            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
-                          ) : (
-                            <Circle className="mt-0.5 h-4 w-4 shrink-0 text-white/25" />
-                          )}
-
-                          <span
-                            className={`text-sm leading-5 ${
-                              objective.completed
-                                ? "text-white/35 line-through"
-                                : "text-white/70"
-                            }`}
-                          >
-                            {objective.text}
-                          </span>
-                        </button>
-                      )
-                    )}
-                  </div>
-                )}
-              </section>
-
-      {/* LEADERBOARD */}
-
-      <DashboardLeaderboard
-        entries={mockLeaderboard}
-      />
-
-    </div>
-
-    {/* ======================================================
-        WEEKLY CALENDAR
-    ====================================================== */}
-
-              {/* ======================================================
-                  WEEKLY CALENDAR
-              ====================================================== */}
-
-              <section className="rounded-2xl border border-white/[0.07] bg-[#15181d]">
-
-                {/* Calendar heading */}
-
-                <div className="flex flex-col gap-3 border-b border-white/[0.07] px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/[0.06]">
-                      <BookOpen className="h-4 w-4 text-white/70" />
-                    </div>
-
-                    <div>
-                      <h2 className="text-sm font-semibold">
-                        Weekly Schedule
-                      </h2>
-
-                      <p className="mt-0.5 text-xs text-white/35">
-                        Your tasks for the entire week
-                      </p>
-                    </div>
-                  </div>
-
-                  {weekSubjects.length > 0 && (
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] text-white/35">
-                      {weekSubjects.map((subject) => (
-                        <div
-                          key={subject.id}
-                          className="flex items-center gap-1.5"
-                        >
-                          <span
-                            className="h-2 w-2 rounded-full"
-                            style={{
-                              backgroundColor: subject.color,
-                            }}
-                          />
-                          {subject.display_name}
-                        </div>
-                      ))}
-                    </div>
+                        </span>
+                      </button>
+                    )
                   )}
                 </div>
+              )}
+            </section>
 
-                <DashboardCalendar days={days} today={today} onToggleTask={toggleTask} breakpoint="md" />
-              </section>
+            {/* LEADERBOARD */}
+
+            <DashboardLeaderboard
+              entries={
+                mockLeaderboard
+              }
+            />
+          </div>
+
+          {/* ======================================================
+              WEEKLY CALENDAR
+          ====================================================== */}
+
+          <section className="rounded-2xl border border-white/[0.07] bg-[#15181d]">
+
+            {/* Calendar heading */}
+
+            <div className="flex flex-col gap-3 border-b border-white/[0.07] px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+              <div className="flex items-center gap-3">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/[0.06]">
+                  <BookOpen className="h-4 w-4 text-white/70" />
+                </div>
+
+                <div>
+                  <h2 className="text-sm font-semibold">
+                    Weekly Schedule
+                  </h2>
+
+                  <p className="mt-0.5 text-xs text-white/35">
+                    Your tasks for the entire week
+                  </p>
+                </div>
+              </div>
+
+              {weekSubjects.length >
+                0 && (
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] text-white/35">
+                  {weekSubjects.map(
+                    (subject) => (
+                      <div
+                        key={
+                          subject.id
+                        }
+                        className="flex items-center gap-1.5"
+                      >
+                        <span
+                          className="h-2 w-2 rounded-full"
+                          style={{
+                            backgroundColor:
+                              subject.color,
+                          }}
+                        />
+
+                        {
+                          subject.display_name
+                        }
+                      </div>
+                    )
+                  )}
+                </div>
+              )}
             </div>
-          )}
+
+            <DashboardCalendar
+              days={days}
+              today={today}
+              onToggleTask={
+                toggleTask
+              }
+              breakpoint="md"
+            />
+          </section>
+        </div>
+      )}
     </DashboardShell>
   );
 }
