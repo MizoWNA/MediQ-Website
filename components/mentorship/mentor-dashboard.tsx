@@ -26,12 +26,6 @@ import { supabase } from "@/lib/supabase";
 import { DashboardCalendar } from "@/components/dashboard/DashboardCalendar";
 import { DashboardObjectives } from "@/components/dashboard/DashboardObjectives";
 import { MentorSidebar } from "@/components/dashboard/MentorSidebar";
-import {
-  SUBJECT_OPTIONS,
-  TASK_TYPE_OPTIONS,
-  DEFAULT_SUBJECT_COLOR,
-  getSubjectOption,
-} from "@/lib/task-options";
 
 type Profile = {
   id: string;
@@ -51,15 +45,46 @@ type Objective = {
   completed: boolean;
 };
 
+type Subject = {
+  id: string;
+  name: string;
+  display_name: string;
+  category: string;
+  color: string;
+  active: boolean;
+  display_order: number;
+};
+
+type TaskType = {
+  id: string;
+  name: string;
+  points: number;
+  active: boolean;
+  display_order: number;
+};
+
 type Task = {
   id: string;
   name: string;
-  subject: string | null;
-  type: string | null;
+  subject_id: string;
+  task_type_id: string;
   student_id: string;
   completed: boolean;
   date: string;
-  created_at?: string;
+  created_at: string;
+
+  subject: {
+    id: string;
+    name: string;
+    display_name: string;
+    color: string;
+  } | null;
+
+  task_type: {
+    id: string;
+    name: string;
+    points: number;
+  } | null;
 };
 
 type StudentSummary = Profile & {
@@ -79,8 +104,8 @@ type ModalType = "objective" | "task" | null;
 
 type TaskForm = {
   name: string;
-  subject: string;
-  type: string;
+  subject_id: string;
+  task_type_id: string;
   date: string;
 };
 
@@ -155,7 +180,9 @@ export function MentorDashboard() {
   const [mentorProfile, setMentorProfile] =
     useState<Profile | null>(null);
 
-  const [students, setStudents] = useState<StudentSummary[]>([]);
+  const [students, setStudents] =
+    useState<StudentSummary[]>([]);
+
   const [selectedStudentId, setSelectedStudentId] =
     useState<string | null>(null);
 
@@ -165,7 +192,22 @@ export function MentorDashboard() {
   const [objectives, setObjectives] =
     useState<Objective[]>([]);
 
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const [tasks, setTasks] =
+    useState<Task[]>([]);
+
+  /*
+   * ================================================================
+   * SUBJECTS + TASK TYPES
+   * ================================================================
+   *
+   * These now come from the database rather than task-options.ts.
+   */
+
+  const [subjects, setSubjects] =
+    useState<Subject[]>([]);
+
+  const [taskTypes, setTaskTypes] =
+    useState<TaskType[]>([]);
 
   const [weekStart, setWeekStart] = useState(() =>
     getSunday(INITIAL_RENDER_DATE)
@@ -175,7 +217,9 @@ export function MentorDashboard() {
     setWeekStart(getSunday(new Date()));
   }, []);
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] =
+    useState(true);
+
   const [loadingStudent, setLoadingStudent] =
     useState(false);
 
@@ -197,14 +241,16 @@ export function MentorDashboard() {
   const [objectiveText, setObjectiveText] =
     useState("");
 
-  const [taskForm, setTaskForm] = useState<TaskForm>({
-    name: "",
-    subject: "",
-    type: "",
-    date: formatDate(INITIAL_RENDER_DATE),
-  });
+  const [taskForm, setTaskForm] =
+    useState<TaskForm>({
+      name: "",
+      subject_id: "",
+      task_type_id: "",
+      date: formatDate(INITIAL_RENDER_DATE),
+    });
 
-  const [saving, setSaving] = useState(false);
+  const [saving, setSaving] =
+    useState(false);
 
   const [actionError, setActionError] =
     useState<string | null>(null);
@@ -214,6 +260,12 @@ export function MentorDashboard() {
 
   const [openObjectiveMenu, setOpenObjectiveMenu] =
     useState<string | null>(null);
+
+  /*
+   * ================================================================
+   * WEEK DAYS
+   * ================================================================
+   */
 
   const weekDays = useMemo(() => {
     return Array.from({ length: 7 }, (_, index) => {
@@ -239,50 +291,46 @@ export function MentorDashboard() {
 
   /*
    * ================================================================
-   * SUBJECTS USED THIS WEEK
+   * WEEK SUBJECTS
    * ================================================================
    *
-   * Only subjects that actually appear in the current week's tasks
-   * are shown in the legend.
+   * Only subjects actually used by the selected student's
+   * tasks this week are shown in the calendar legend.
    *
-   * Unknown/custom subjects are also included using the default color.
+   * Subject metadata now comes directly from the database.
    */
 
-  const weekSubjects = useMemo(() => {
-    const seen = new Set<string>();
+const weekSubjects = useMemo(() => {
+  const seen = new Set<string>();
 
-    return tasks.reduce<
-      Array<{
-        value: string;
-        label: string;
-        color: typeof DEFAULT_SUBJECT_COLOR;
-      }>
-    >((result, task) => {
-      if (!task.subject) return result;
-
-      const normalized = task.subject.toLowerCase();
-
-      if (seen.has(normalized)) return result;
-
-      seen.add(normalized);
-
-      const option = getSubjectOption(task.subject);
-
-      result.push({
-        value: normalized,
-        label:
-          option?.label ??
-          task.subject,
-        color:
-          option?.color ??
-          DEFAULT_SUBJECT_COLOR,
-      });
-
+  return tasks.reduce<
+    Array<{
+      value: string;
+      label: string;
+      color: string;
+    }>
+  >((result, task) => {
+    if (!task.subject) {
       return result;
-    }, []);
-  }, [tasks]);
+    }
 
-  useEffect(() => {
+    if (seen.has(task.subject.id)) {
+      return result;
+    }
+
+    seen.add(task.subject.id);
+
+    result.push({
+      value: task.subject.id,
+      label: task.subject.display_name,
+      color: task.subject.color,
+    });
+
+    return result;
+  }, []);
+}, [tasks]);
+
+    useEffect(() => {
     let cancelled = false;
 
     async function loadMentorDashboard() {
@@ -305,6 +353,12 @@ export function MentorDashboard() {
           router.replace("/login");
           return;
         }
+
+        /*
+         * ================================================================
+         * LOAD MENTOR PROFILE
+         * ================================================================
+         */
 
         const {
           data: mentorData,
@@ -338,6 +392,59 @@ export function MentorDashboard() {
 
         setMentorProfile(mentorData);
 
+        const [
+  { data: subjectData, error: subjectError },
+  { data: taskTypeData, error: taskTypeError },
+] = await Promise.all([
+  supabase
+    .from("subjects")
+    .select(
+      "id, name, display_name, category, color, active, display_order"
+    )
+    .eq("active", true)
+    .order("display_order"),
+
+  supabase
+    .from("task_types")
+    .select(
+      "id, name, points, active, display_order"
+    )
+    .eq("active", true)
+    .order("display_order"),
+]);
+
+if (subjectError) {
+  throw new Error(
+    `Subjects query failed: ${subjectError.message}`
+  );
+}
+
+if (taskTypeError) {
+  throw new Error(
+    `Task types query failed: ${taskTypeError.message}`
+  );
+}
+
+if (cancelled) return;
+
+setSubjects(
+  Array.isArray(subjectData)
+    ? subjectData
+    : []
+);
+
+setTaskTypes(
+  Array.isArray(taskTypeData)
+    ? taskTypeData
+    : []
+);
+
+        /*
+         * ================================================================
+         * LOAD ASSIGNED STUDENTS
+         * ================================================================
+         */
+
         const {
           data: studentData,
           error: studentsError,
@@ -358,10 +465,21 @@ export function MentorDashboard() {
 
         if (cancelled) return;
 
-        const assignedStudents =
-          Array.isArray(studentData)
-            ? studentData
-            : [];
+        const assignedStudents = Array.isArray(studentData)
+          ? studentData.filter(
+              (student) =>
+                typeof student.id === "string" &&
+                student.id.trim() !== "" &&
+                student.id !== "null" &&
+                student.id !== "undefined"
+            )
+          : [];
+
+        /*
+         * ================================================================
+         * BUILD STUDENT SUMMARIES
+         * ================================================================
+         */
 
         let summaries: StudentSummary[] =
           assignedStudents.map((student) => ({
@@ -370,15 +488,28 @@ export function MentorDashboard() {
             completedTasks: 0,
           }));
 
+        /*
+         * ================================================================
+         * LOAD WEEKLY TASK COUNTS
+         * ================================================================
+         *
+         * IMPORTANT:
+         * This query is ONLY for calculating the summary cards.
+         *
+         * Do NOT use selectedStudentId here.
+         * selectedStudentId can be null when this effect first runs.
+         *
+         * We query all assigned students using their actual UUIDs.
+         */
+
         if (assignedStudents.length > 0) {
-          const studentIds =
-            assignedStudents.map(
-              (student) => student.id
-            );
+          const studentIds = assignedStudents.map(
+            (student) => student.id
+          );
 
           const {
-            data: taskData,
-            error: taskError,
+            data: weeklyTaskData,
+            error: weeklyTaskError,
           } = await supabase
             .from("tasks")
             .select(
@@ -394,26 +525,26 @@ export function MentorDashboard() {
               formatDate(weekEnd)
             );
 
-          if (taskError) {
+          if (weeklyTaskError) {
             throw new Error(
-              `Student task summary failed: ${taskError.message}`
+              `Student task summary failed: ${weeklyTaskError.message}`
             );
           }
 
           if (cancelled) return;
 
-          const weeklyTasks =
-            Array.isArray(taskData)
-              ? taskData
-              : [];
+          const weeklyTasks = Array.isArray(
+            weeklyTaskData
+          )
+            ? weeklyTaskData
+            : [];
 
           summaries = assignedStudents.map(
             (student) => {
               const studentTasks =
                 weeklyTasks.filter(
                   (task) =>
-                    task.student_id ===
-                    student.id
+                    task.student_id === student.id
                 );
 
               return {
@@ -422,8 +553,7 @@ export function MentorDashboard() {
                   studentTasks.length,
                 completedTasks:
                   studentTasks.filter(
-                    (task) =>
-                      task.completed
+                    (task) => task.completed
                   ).length,
               };
             }
@@ -434,13 +564,18 @@ export function MentorDashboard() {
 
         setStudents(summaries);
 
+        /*
+         * Keep the currently selected student if they are still assigned.
+         * Otherwise select the first assigned student.
+         */
+
         setSelectedStudentId(
           (current) =>
             current &&
-              summaries.some(
-                (student) =>
-                  student.id === current
-              )
+            summaries.some(
+              (student) =>
+                student.id === current
+            )
               ? current
               : summaries[0]?.id ?? null
         );
@@ -470,6 +605,149 @@ export function MentorDashboard() {
       cancelled = true;
     };
   }, [router, weekStart, weekEnd]);
+
+  /*
+   * ================================================================
+   * LOAD SELECTED STUDENT
+   * ================================================================
+   */
+
+ useEffect(() => {
+  let cancelled = false;
+
+  async function loadStudent() {
+    if (!selectedStudentId) {
+      setSelectedStudent(null);
+      setObjectives([]);
+      setTasks([]);
+      return;
+    }
+
+    setLoadingStudent(true);
+    setStudentError(null);
+
+    try {
+      const {
+        data: studentData,
+        error: profileError,
+      } = await supabase
+        .from("profiles")
+        .select(
+          "id, username, display_name, role, year, start_date, end_date, exam_date, mentor_id"
+        )
+        .eq("id", selectedStudentId)
+        .maybeSingle();
+
+      if (profileError) {
+        throw new Error(
+          `Student profile query failed: ${profileError.message}`
+        );
+      }
+
+      if (!studentData) {
+        throw new Error(
+          "The selected student could not be found."
+        );
+      }
+
+      const {
+        data: objectiveData,
+        error: objectiveError,
+      } = await supabase
+        .from("objectives")
+        .select("id, text, completed")
+        .eq("student_id", selectedStudentId)
+        .order("id");
+
+      if (objectiveError) {
+        throw new Error(
+          `Objectives query failed: ${objectiveError.message}`
+        );
+      }
+
+      const {
+        data: taskData,
+        error: taskError,
+      } = await supabase
+        .from("tasks")
+        .select(`
+          id,
+          name,
+          subject_id,
+          task_type_id,
+          student_id,
+          completed,
+          date,
+          created_at,
+          subject:subjects!tasks_subject_id_fkey (
+            id,
+            name,
+            display_name,
+            color
+          ),
+          task_type:task_types!tasks_task_type_id_fkey (
+            id,
+            name,
+            points
+          )
+        `)
+        .eq("student_id", selectedStudentId)
+        .gte("date", formatDate(weekStart))
+        .lte("date", formatDate(weekEnd))
+        .order("date")
+        .order("created_at");
+
+      if (taskError) {
+        throw new Error(
+          `Tasks query failed: ${taskError.message}`
+        );
+      }
+
+      if (cancelled) return;
+
+      setSelectedStudent(studentData);
+
+      setObjectives(
+        Array.isArray(objectiveData)
+          ? objectiveData
+          : []
+      );
+
+      setTasks(
+        Array.isArray(taskData)
+          ? taskData as Task[]
+          : []
+      );
+    } catch (err) {
+      if (cancelled) return;
+
+      console.error(
+        "Selected student loading error:",
+        err
+      );
+
+      setStudentError(
+        err instanceof Error
+          ? err.message
+          : "Failed to load student."
+      );
+    } finally {
+      if (!cancelled) {
+        setLoadingStudent(false);
+      }
+    }
+  }
+
+  loadStudent();
+
+  return () => {
+    cancelled = true;
+  };
+}, [
+  selectedStudentId,
+  weekStart,
+  weekEnd,
+]);
 
   useEffect(() => {
     let cancelled = false;
@@ -532,9 +810,32 @@ export function MentorDashboard() {
           error: taskError,
         } = await supabase
           .from("tasks")
-          .select(
-            "id, name, subject, type, student_id, completed, date, created_at"
-          )
+          .select(`
+            id,
+            name,
+            subject_id,
+            task_type_id,
+            student_id,
+            completed,
+            date,
+            created_at,
+            subject:subjects!tasks_subject_id_fkey (
+              id,
+              name,
+              display_name,
+              category,
+              color,
+              active,
+              display_order
+            ),
+            task_type:task_types!tasks_task_type_id_fkey (
+              id,
+              name,
+              points,
+              active,
+              display_order
+            )
+          `)
           .eq(
             "student_id",
             selectedStudentId
@@ -841,226 +1142,223 @@ export function MentorDashboard() {
     }
   }
 
-  function openAddTask(
-    date?: string
-  ) {
-    setActionError(null);
-    setEditingTask(null);
+  function openAddTask(date?: string) {
+  setActionError(null);
+  setEditingTask(null);
 
-    setTaskForm({
-      name: "",
-      subject: "",
-      type: "",
-      date:
-        date ||
-        weekDays[0]?.isoDate ||
-        formatDate(new Date()),
-    });
+  setTaskForm({
+    name: "",
+    subject_id: "",
+    task_type_id: "",
+    date:
+      date ||
+      weekDays[0]?.isoDate ||
+      formatDate(new Date()),
+  });
 
-    setModal("task");
-  }
+  setModal("task");
+}
 
   function openEditTask(task: Task) {
-    setActionError(null);
-    setEditingTask(task);
+  setActionError(null);
+  setEditingTask(task);
 
-    setTaskForm({
-      name: task.name,
-      subject: task.subject
-        ? task.subject.toLowerCase()
-        : "",
-      type: task.type
-        ? task.type.toLowerCase()
-        : "",
-      date: task.date,
-    });
+  setTaskForm({
+    name: task.name,
+    subject_id: task.subject_id || "",
+    task_type_id: task.task_type_id || "",
+    date: task.date,
+  });
 
-    setOpenTaskMenu(null);
-    setModal("task");
+  setOpenTaskMenu(null);
+  setModal("task");
+}
+
+async function saveTask() {
+  if (!selectedStudentId) return;
+
+  const name = taskForm.name.trim();
+
+  if (!name) {
+    setActionError(
+      "Task name cannot be empty."
+    );
+    return;
   }
 
-  async function saveTask() {
-    if (!selectedStudentId) return;
+  if (!taskForm.subject_id) {
+    setActionError(
+      "Please select a subject."
+    );
+    return;
+  }
 
-    const name = taskForm.name.trim();
+  if (!taskForm.task_type_id) {
+    setActionError(
+      "Please select a task type."
+    );
+    return;
+  }
 
-    if (!name) {
-      setActionError(
-        "Task name cannot be empty."
-      );
-      return;
-    }
+  if (!taskForm.date) {
+    setActionError(
+      "Please select a date."
+    );
+    return;
+  }
 
-    if (!taskForm.date) {
-      setActionError(
-        "Please select a date."
-      );
-      return;
-    }
+  setSaving(true);
+  setActionError(null);
 
-    setSaving(true);
-    setActionError(null);
+  try {
+    const selectWithRelations = `
+      id,
+      name,
+      subject_id,
+      task_type_id,
+      student_id,
+      completed,
+      date,
+      created_at,
+      subject:subjects!tasks_subject_id_fkey (
+        id,
+        name,
+        display_name,
+        color
+      ),
+      task_type:task_types!tasks_task_type_id_fkey (
+        id,
+        name,
+        points
+      )
+    `;
 
-    try {
-      if (editingTask) {
-        const {
-          data,
-          error,
-        } = await supabase
-          .from("tasks")
-          .update({
-            name,
-            subject:
-              taskForm.subject || null,
-            type:
-              taskForm.type || null,
-            date: taskForm.date,
-          })
-          .eq("id", editingTask.id)
-          .eq(
-            "student_id",
-            selectedStudentId
-          )
-          .select(
-            "id, name, subject, type, student_id, completed, date, created_at"
-          )
-          .single();
+    if (editingTask) {
+      const {
+        data,
+        error,
+      } = await supabase
+        .from("tasks")
+        .update({
+          name,
+          subject_id: taskForm.subject_id,
+          task_type_id: taskForm.task_type_id,
+          date: taskForm.date,
+        })
+        .eq("id", editingTask.id)
+        .eq("student_id", selectedStudentId)
+        .select(selectWithRelations)
+        .single();
 
-        if (error) {
-          throw error;
-        }
-
-        if (
-          data.date >=
-          formatDate(weekStart) &&
-          data.date <=
-          formatDate(weekEnd)
-        ) {
-          setTasks((current) =>
-            current
-              .map((task) =>
-                task.id === data.id
-                  ? data
-                  : task
-              )
-              .sort((a, b) => {
-                const dateCompare =
-                  a.date.localeCompare(
-                    b.date
-                  );
-
-                if (dateCompare !== 0) {
-                  return dateCompare;
-                }
-
-                return (
-                  (a.created_at || "").localeCompare(
-                    b.created_at || ""
-                  )
-                );
-              })
-          );
-        } else {
-          setTasks((current) =>
-            current.filter(
-              (task) =>
-                task.id !== data.id
-            )
-          );
-        }
-
-        const nextTasks = tasks
-          .map((task) =>
-            task.id === editingTask.id
-              ? data
-              : task
-          )
-          .filter(
-            (task) =>
-              task.date >=
-              formatDate(weekStart) &&
-              task.date <=
-              formatDate(weekEnd)
-          );
-
-        updateStudentTaskSummary(
-          selectedStudentId,
-          nextTasks
-        );
-      } else {
-        const {
-          data,
-          error,
-        } = await supabase
-          .from("tasks")
-          .insert({
-            student_id:
-              selectedStudentId,
-            name,
-            subject:
-              taskForm.subject || null,
-            type:
-              taskForm.type || null,
-            date: taskForm.date,
-            completed: false,
-          })
-          .select(
-            "id, name, subject, type, student_id, completed, date, created_at"
-          )
-          .single();
-
-        if (error) {
-          throw error;
-        }
-
-        if (
-          data.date >=
-          formatDate(weekStart) &&
-          data.date <=
-          formatDate(weekEnd)
-        ) {
-          setTasks((current) =>
-            [...current, data].sort(
-              (a, b) => {
-                const dateCompare =
-                  a.date.localeCompare(
-                    b.date
-                  );
-
-                if (dateCompare !== 0) {
-                  return dateCompare;
-                }
-
-                return (
-                  (a.created_at || "").localeCompare(
-                    b.created_at || ""
-                  )
-                );
-              }
-            )
-          );
-        }
-
-        await refreshStudentSummary();
+      if (error) {
+        throw error;
       }
 
-      setModal(null);
-      setEditingTask(null);
-    } catch (err) {
-      console.error(
-        "Task save error:",
-        err
-      );
+      const updatedTask = data as Task;
 
-      setActionError(
-        err instanceof Error
-          ? err.message
-          : "Failed to save task."
-      );
-    } finally {
-      setSaving(false);
+      if (
+        updatedTask.date >= formatDate(weekStart) &&
+        updatedTask.date <= formatDate(weekEnd)
+      ) {
+        setTasks((current) =>
+          current
+            .map((task) =>
+              task.id === updatedTask.id
+                ? updatedTask
+                : task
+            )
+            .sort((a, b) => {
+              const dateCompare =
+                a.date.localeCompare(b.date);
+
+              if (dateCompare !== 0) {
+                return dateCompare;
+              }
+
+              return (
+                a.created_at || ""
+              ).localeCompare(
+                b.created_at || ""
+              );
+            })
+        );
+      } else {
+        setTasks((current) =>
+          current.filter(
+            (task) =>
+              task.id !== updatedTask.id
+          )
+        );
+      }
+
+      await refreshStudentSummary();
+    } else {
+      const {
+        data,
+        error,
+      } = await supabase
+        .from("tasks")
+        .insert({
+          student_id: selectedStudentId,
+          name,
+          subject_id: taskForm.subject_id,
+          task_type_id: taskForm.task_type_id,
+          date: taskForm.date,
+          completed: false,
+        })
+        .select(selectWithRelations)
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      const newTask = data as Task;
+
+      if (
+        newTask.date >= formatDate(weekStart) &&
+        newTask.date <= formatDate(weekEnd)
+      ) {
+        setTasks((current) =>
+          [...current, newTask].sort(
+            (a, b) => {
+              const dateCompare =
+                a.date.localeCompare(b.date);
+
+              if (dateCompare !== 0) {
+                return dateCompare;
+              }
+
+              return (
+                a.created_at || ""
+              ).localeCompare(
+                b.created_at || ""
+              );
+            }
+          )
+        );
+      }
+
+      await refreshStudentSummary();
     }
+
+    setModal(null);
+    setEditingTask(null);
+  } catch (err) {
+    console.error(
+      "Task save error:",
+      err
+    );
+
+    setActionError(
+      err instanceof Error
+        ? err.message
+        : "Failed to save task."
+    );
+  } finally {
+    setSaving(false);
   }
+}
 
   async function toggleTask(task: Task) {
     setActionError(null);
@@ -1788,12 +2086,12 @@ export function MentorDashboard() {
                     </label>
 
                     <select
-                      value={taskForm.subject}
+                      value={taskForm.subject_id}
                       onChange={(event) =>
                         setTaskForm(
                           (current) => ({
                             ...current,
-                            subject:
+                            subject_id:
                               event.target
                                 .value,
                           })
@@ -1808,21 +2106,17 @@ export function MentorDashboard() {
                         Select subject
                       </option>
 
-                      {SUBJECT_OPTIONS.map(
-                        (option) => (
+                      {subjects
+                        .filter((subject) => subject.active)
+                        .map((subject) => (
                           <option
-                            key={
-                              option.value
-                            }
-                            value={
-                              option.value
-                            }
+                            key={subject.id}
+                            value={subject.id}
                             className="bg-[#191c21] text-white"
                           >
-                            {option.label}
+                            {subject.display_name}
                           </option>
-                        )
-                      )}
+                        ))}
                     </select>
                   </div>
 
@@ -1832,13 +2126,12 @@ export function MentorDashboard() {
                     </label>
 
                     <select
-                      value={taskForm.type}
+                      value={taskForm.task_type_id}
                       onChange={(event) =>
                         setTaskForm(
                           (current) => ({
                             ...current,
-                            type: event.target
-                              .value,
+                            task_type_id: event.target.value,
                           })
                         )
                       }
@@ -1851,21 +2144,17 @@ export function MentorDashboard() {
                         Select type
                       </option>
 
-                      {TASK_TYPE_OPTIONS.map(
-                        (option) => (
+                      {taskTypes
+                        .filter((taskType) => taskType.active)
+                        .map((taskType) => (
                           <option
-                            key={
-                              option.value
-                            }
-                            value={
-                              option.value
-                            }
+                            key={taskType.id}
+                            value={taskType.id}
                             className="bg-[#191c21] text-white"
                           >
-                            {option.label}
+                            {taskType.name}
                           </option>
-                        )
-                      )}
+                        ))}
                     </select>
                   </div>
                 </div>
