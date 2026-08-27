@@ -2126,13 +2126,12 @@ async function saveTask() {
                     </label>
 
                     <select
-                      value={taskForm.type}
+                      value={taskForm.task_type_id}
                       onChange={(event) =>
                         setTaskForm(
                           (current) => ({
                             ...current,
-                            type: event.target
-                              .value,
+                            task_type_id: event.target.value,
                           })
                         )
                       }
