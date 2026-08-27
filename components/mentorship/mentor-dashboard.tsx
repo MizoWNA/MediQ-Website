@@ -266,16 +266,22 @@ export function MentorDashboard() {
 
       seen.add(normalized);
 
-      const option = getSubjectOption(task.subject);
+      const subject = subjects.find(
+        (item) => item.id === task.subject_id
+      );
+
+      if (!subject) {
+        return;
+      }
 
       result.push({
-        value: normalized,
-        label:
-          option?.label ??
-          task.subject,
-        color:
-          option?.color ??
-          DEFAULT_SUBJECT_COLOR,
+        value: subject.id,
+        label: subject.display_name,
+        color: {
+          card: "bg-white/[0.025] border-white/[0.08]",
+          dot: "",
+          text: "text-white/50",
+        },
       });
 
       return result;
@@ -1808,21 +1814,17 @@ export function MentorDashboard() {
                         Select subject
                       </option>
 
-                      {SUBJECT_OPTIONS.map(
-                        (option) => (
+                      {subjects
+                        .filter((subject) => subject.active)
+                        .map((subject) => (
                           <option
-                            key={
-                              option.value
-                            }
-                            value={
-                              option.value
-                            }
+                            key={subject.id}
+                            value={subject.id}
                             className="bg-[#191c21] text-white"
                           >
-                            {option.label}
+                            {subject.display_name}
                           </option>
-                        )
-                      )}
+                        ))}
                     </select>
                   </div>
 
@@ -1851,21 +1853,17 @@ export function MentorDashboard() {
                         Select type
                       </option>
 
-                      {TASK_TYPE_OPTIONS.map(
-                        (option) => (
+                      {taskTypes
+                        .filter((taskType) => taskType.active)
+                        .map((taskType) => (
                           <option
-                            key={
-                              option.value
-                            }
-                            value={
-                              option.value
-                            }
+                            key={taskType.id}
+                            value={taskType.id}
                             className="bg-[#191c21] text-white"
                           >
-                            {option.label}
+                            {taskType.name}
                           </option>
-                        )
-                      )}
+                        ))}
                     </select>
                   </div>
                 </div>
