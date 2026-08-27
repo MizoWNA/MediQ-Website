@@ -121,11 +121,35 @@ type Objective = {
   completed: boolean;
 };
 
+/*
+ * IMPORTANT:
+ *
+ * The database now stores:
+ *   subject_id
+ *   task_type_id
+ *
+ * However DashboardCalendar still expects:
+ *   subject
+ *   type
+ *
+ * So the task state keeps BOTH:
+ *   - the new foreign-key IDs
+ *   - the resolved subject/type names
+ *
+ * This lets the database use the new schema without forcing
+ * DashboardCalendar to know about the database relationships.
+ */
+
 type Task = {
   id: string;
   name: string;
+
   subject_id: string;
   task_type_id: string;
+
+  subject: string | null;
+  type: string | null;
+
   student_id: string;
   completed: boolean;
   date: string;
@@ -511,7 +535,23 @@ export function MentorshipDashboard() {
         );
 
         /*
+         * ============================================================
          * TASKS
+         * ============================================================
+         *
+         * IMPORTANT:
+         *
+         * The old query was:
+         *
+         *   id, name, subject, type, ...
+         *
+         * Those columns no longer exist.
+         *
+         * We now fetch the foreign keys and their related records.
+         *
+         * Supabase/PostgREST can embed referenced tables using the
+         * foreign-key relationship names. This is the same relationship
+         * pattern already used successfully in the mentor dashboard.
          */
 
         const {
@@ -519,9 +559,26 @@ export function MentorshipDashboard() {
           error: taskError,
         } = await supabase
           .from("tasks")
-          .select(
-            "id, name, subject_id, task_type_id, student_id, completed, date"
-          )
+          .select(`
+            id,
+            name,
+            subject_id,
+            task_type_id,
+            student_id,
+            completed,
+            date,
+            created_at,
+            subject:subjects!tasks_subject_id_fkey (
+              id,
+              name,
+              display_name,
+              color
+            ),
+            task_type:task_types!tasks_task_type_id_fkey (
+              id,
+              name
+            )
+          `)
           .eq("student_id", studentId)
           .gte(
             "date",
@@ -542,11 +599,46 @@ export function MentorshipDashboard() {
 
         if (cancelled) return;
 
-        setTasks(
+        /*
+         * ============================================================
+         * NORMALIZE TASKS
+         * ============================================================
+         *
+         * DashboardCalendar still expects:
+         *
+         *   task.subject
+         *   task.type
+         *
+         * Resolve those values from the new foreign-key relationships.
+         *
+         * We deliberately keep subject_id/task_type_id too, because
+         * those are the real database identifiers and should be used
+         * for future task editing/updating.
+         */
+
+        const normalizedTasks: Task[] =
           Array.isArray(taskData)
-            ? taskData
-            : []
-        );
+            ? taskData.map((task) => ({
+                id: task.id,
+                name: task.name,
+                subject_id: task.subject_id,
+                task_type_id: task.task_type_id,
+                student_id: task.student_id,
+                completed: task.completed,
+                date: task.date,
+
+                subject:
+                  task.subject?.name ??
+                  task.subject?.display_name ??
+                  null,
+
+                type:
+                  task.task_type?.name ??
+                  null,
+              }))
+            : [];
+
+        setTasks(normalizedTasks);
       } catch (err) {
         if (cancelled) return;
 
@@ -572,7 +664,7 @@ export function MentorshipDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [weekStart, weekEnd]);
+  }, [weekStart, weekEnd, router]);
 
   /*
    * ================================================================
@@ -598,6 +690,11 @@ export function MentorshipDashboard() {
    * ================================================================
    * WEEK SUBJECTS
    * ================================================================
+   *
+   * These come directly from the database subjects table.
+   *
+   * This means the legend can use the database color instead of
+   * guessing it from the task name.
    */
 
   const weekSubjects = useMemo(() => {
@@ -1367,10 +1464,10 @@ export function MentorshipDashboard() {
             <DashboardCalendar
               days={days}
               today={today}
-              onToggleTask={
-                toggleTask
-              }
+              onToggleTask={toggleTask}
               breakpoint="md"
+              subjects={subjects}
+              taskTypes={taskTypes}
             />
           </section>
         </div>
