@@ -810,9 +810,32 @@ setTaskTypes(
           error: taskError,
         } = await supabase
           .from("tasks")
-          .select(
-            "id, name, subject, type, student_id, completed, date, created_at"
-          )
+          .select(`
+            id,
+            name,
+            subject_id,
+            task_type_id,
+            student_id,
+            completed,
+            date,
+            created_at,
+            subject:subjects!tasks_subject_id_fkey (
+              id,
+              name,
+              display_name,
+              category,
+              color,
+              active,
+              display_order
+            ),
+            task_type:task_types!tasks_task_type_id_fkey (
+              id,
+              name,
+              points,
+              active,
+              display_order
+            )
+          `)
           .eq(
             "student_id",
             selectedStudentId
