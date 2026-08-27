@@ -26,12 +26,6 @@ import { supabase } from "@/lib/supabase";
 import { DashboardCalendar } from "@/components/dashboard/DashboardCalendar";
 import { DashboardObjectives } from "@/components/dashboard/DashboardObjectives";
 import { MentorSidebar } from "@/components/dashboard/MentorSidebar";
-import {
-  SUBJECT_OPTIONS,
-  TASK_TYPE_OPTIONS,
-  DEFAULT_SUBJECT_COLOR,
-  getSubjectOption,
-} from "@/lib/task-options";
 
 type Profile = {
   id: string;
@@ -51,15 +45,46 @@ type Objective = {
   completed: boolean;
 };
 
+type Subject = {
+  id: string;
+  name: string;
+  display_name: string;
+  category: string;
+  color: string;
+  active: boolean;
+  display_order: number;
+};
+
+type TaskType = {
+  id: string;
+  name: string;
+  points: number;
+  active: boolean;
+  display_order: number;
+};
+
 type Task = {
   id: string;
   name: string;
-  subject: string | null;
-  type: string | null;
+  subject_id: string;
+  task_type_id: string;
   student_id: string;
   completed: boolean;
   date: string;
-  created_at?: string;
+  created_at: string;
+
+  subject: {
+    id: string;
+    name: string;
+    display_name: string;
+    color: string;
+  } | null;
+
+  task_type: {
+    id: string;
+    name: string;
+    points: number;
+  } | null;
 };
 
 type StudentSummary = Profile & {
@@ -79,8 +104,8 @@ type ModalType = "objective" | "task" | null;
 
 type TaskForm = {
   name: string;
-  subject: string;
-  type: string;
+  subject_id: string;
+  task_type_id: string;
   date: string;
 };
 
@@ -155,7 +180,9 @@ export function MentorDashboard() {
   const [mentorProfile, setMentorProfile] =
     useState<Profile | null>(null);
 
-  const [students, setStudents] = useState<StudentSummary[]>([]);
+  const [students, setStudents] =
+    useState<StudentSummary[]>([]);
+
   const [selectedStudentId, setSelectedStudentId] =
     useState<string | null>(null);
 
@@ -165,7 +192,22 @@ export function MentorDashboard() {
   const [objectives, setObjectives] =
     useState<Objective[]>([]);
 
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const [tasks, setTasks] =
+    useState<Task[]>([]);
+
+  /*
+   * ================================================================
+   * SUBJECTS + TASK TYPES
+   * ================================================================
+   *
+   * These now come from the database rather than task-options.ts.
+   */
+
+  const [subjects, setSubjects] =
+    useState<Subject[]>([]);
+
+  const [taskTypes, setTaskTypes] =
+    useState<TaskType[]>([]);
 
   const [weekStart, setWeekStart] = useState(() =>
     getSunday(INITIAL_RENDER_DATE)
@@ -175,7 +217,9 @@ export function MentorDashboard() {
     setWeekStart(getSunday(new Date()));
   }, []);
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] =
+    useState(true);
+
   const [loadingStudent, setLoadingStudent] =
     useState(false);
 
@@ -197,14 +241,16 @@ export function MentorDashboard() {
   const [objectiveText, setObjectiveText] =
     useState("");
 
-  const [taskForm, setTaskForm] = useState<TaskForm>({
-    name: "",
-    subject: "",
-    type: "",
-    date: formatDate(INITIAL_RENDER_DATE),
-  });
+  const [taskForm, setTaskForm] =
+    useState<TaskForm>({
+      name: "",
+      subject_id: "",
+      task_type_id: "",
+      date: formatDate(INITIAL_RENDER_DATE),
+    });
 
-  const [saving, setSaving] = useState(false);
+  const [saving, setSaving] =
+    useState(false);
 
   const [actionError, setActionError] =
     useState<string | null>(null);
@@ -214,6 +260,12 @@ export function MentorDashboard() {
 
   const [openObjectiveMenu, setOpenObjectiveMenu] =
     useState<string | null>(null);
+
+  /*
+   * ================================================================
+   * WEEK DAYS
+   * ================================================================
+   */
 
   const weekDays = useMemo(() => {
     return Array.from({ length: 7 }, (_, index) => {
@@ -239,13 +291,13 @@ export function MentorDashboard() {
 
   /*
    * ================================================================
-   * SUBJECTS USED THIS WEEK
+   * WEEK SUBJECTS
    * ================================================================
    *
-   * Only subjects that actually appear in the current week's tasks
-   * are shown in the legend.
+   * Only subjects actually used by the selected student's
+   * tasks this week are shown in the calendar legend.
    *
-   * Unknown/custom subjects are also included using the default color.
+   * Subject metadata now comes directly from the database.
    */
 
   const weekSubjects = useMemo(() => {
@@ -255,33 +307,23 @@ export function MentorDashboard() {
       Array<{
         value: string;
         label: string;
-        color: typeof DEFAULT_SUBJECT_COLOR;
+        color: string;
       }>
     >((result, task) => {
-      if (!task.subject) return result;
-
-      const normalized = task.subject.toLowerCase();
-
-      if (seen.has(normalized)) return result;
-
-      seen.add(normalized);
-
-      const subject = subjects.find(
-        (item) => item.id === task.subject_id
-      );
-
-      if (!subject) {
-        return;
+      if (!task.subject) {
+        return result;
       }
 
+      if (seen.has(task.subject.id)) {
+        return result;
+      }
+
+      seen.add(task.subject.id);
+
       result.push({
-        value: subject.id,
-        label: subject.display_name,
-        color: {
-          card: "bg-white/[0.025] border-white/[0.08]",
-          dot: "",
-          text: "text-white/50",
-        },
+        value: task.subject.id,
+        label: task.subject.display_name,
+        color: task.subject.color,
       });
 
       return result;
@@ -377,64 +419,81 @@ export function MentorDashboard() {
           }));
 
         if (assignedStudents.length > 0) {
-          const studentIds =
-            assignedStudents.map(
-              (student) => student.id
-            );
+  const studentIds = assignedStudents.map(
+    (student) => student.id
+  );
 
-          const {
-            data: taskData,
-            error: taskError,
-          } = await supabase
-            .from("tasks")
-            .select(
-              "id, student_id, completed, date"
-            )
-            .in("student_id", studentIds)
-            .gte(
-              "date",
-              formatDate(weekStart)
-            )
-            .lte(
-              "date",
-              formatDate(weekEnd)
-            );
+  const {
+  data: taskData,
+  error: taskError,
+} = await supabase
+  .from("tasks")
+  .select(`
+    id,
+    name,
+    subject_id,
+    task_type_id,
+    student_id,
+    completed,
+    date,
+    created_at,
+    subject:subjects (
+      id,
+      name,
+      display_name,
+      color
+    ),
+    task_type:task_types (
+      id,
+      name,
+      points
+    )
+  `)
+  .eq(
+    "student_id",
+    selectedStudentId
+  )
+  .gte(
+    "date",
+    formatDate(weekStart)
+  )
+  .lte(
+    "date",
+    formatDate(weekEnd)
+  )
+  .order("date")
+  .order("created_at");
 
-          if (taskError) {
-            throw new Error(
-              `Student task summary failed: ${taskError.message}`
-            );
-          }
+  if (taskError) {
+    throw new Error(
+      `Student task summary failed: ${taskError.message}`
+    );
+  }
 
-          if (cancelled) return;
+  if (cancelled) return;
 
-          const weeklyTasks =
-            Array.isArray(taskData)
-              ? taskData
-              : [];
+  const weeklyTasks = Array.isArray(taskData)
+    ? taskData
+    : [];
 
-          summaries = assignedStudents.map(
-            (student) => {
-              const studentTasks =
-                weeklyTasks.filter(
-                  (task) =>
-                    task.student_id ===
-                    student.id
-                );
+  summaries = assignedStudents.map(
+    (student) => {
+      const studentTasks = weeklyTasks.filter(
+        (task) =>
+          task.student_id === student.id
+      );
 
-              return {
-                ...student,
-                weeklyTasks:
-                  studentTasks.length,
-                completedTasks:
-                  studentTasks.filter(
-                    (task) =>
-                      task.completed
-                  ).length,
-              };
-            }
-          );
-        }
+      return {
+        ...student,
+        weeklyTasks: studentTasks.length,
+        completedTasks:
+          studentTasks.filter(
+            (task) => task.completed
+          ).length,
+      };
+    }
+  );
+}
 
         if (cancelled) return;
 
