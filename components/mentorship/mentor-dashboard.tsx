@@ -419,7 +419,7 @@ export function MentorDashboard() {
         `;
         const [profileResult, objectivesResult, tasksResult] = await Promise.all([
           supabase.from("profiles").select("id, username, display_name, role, year, start_date, end_date, exam_date, mentor_id").eq("id", studentId).single(),
-          supabase.from("objectives").select("id, text, completed").eq("student_id", studentId).order("created_at"),
+          supabase.from("objectives").select("id, text, completed").eq("student_id", studentId),
           supabase.from("tasks").select(selectWithRelations).eq("student_id", studentId).order("date").order("created_at"),
         ]);
 
