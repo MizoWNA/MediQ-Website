@@ -1,134 +1,89 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { CheckCircle2, Circle } from "lucide-react";
 import {
-  DEFAULT_SUBJECT_COLOR,
-  getSubjectOption,
-} from "@/lib/task-options";
-
-/*
- * ================================================================
- * TYPES
- * ================================================================
- */
-
-export type DashboardTaskSubject = {
-  id: string;
-  name: string;
-  display_name: string;
-  category: string;
-  color: string;
-  active: boolean;
-  display_order: number;
-};
-
-export type DashboardTaskType = {
-  id: string;
-  name: string;
-  points: number;
-  active: boolean;
-  display_order: number;
-};
+  CheckCircle2,
+  Circle,
+  Target,
+  ClipboardCheck,
+} from "lucide-react";
 
 export type DashboardTask = {
   id: string;
   name: string;
 
-  subject_id: string | null;
-  task_type_id: string | null;
+  subject: string | null;
+  type: string | null;
 
-  /*
-   * MCQ task data
-   */
-  question_count: number | null;
-  questions_solved: number | null;
-  completion_threshold: number | null;
+  subject_id?: string | null;
+  task_type_id?: string | null;
 
-  /*
-   * Embedded Supabase relationships.
-   */
-  subject?: DashboardTaskSubject | null;
-  task_type?: DashboardTaskType | null;
+  subject_name?: string | null;
+  subject_display_name?: string | null;
+  subject_color?: string | null;
+
+  type_name?: string | null;
 
   completed: boolean;
+
+  /*
+   * MCQ fields
+   */
+  question_count?: number | null;
+  questions_solved?: number | null;
+  completion_threshold?: number | null;
+};
+
+type DashboardTaskCardProps = {
+  task: DashboardTask;
+  onToggle: (task: DashboardTask) => void;
+  mobile?: boolean;
+  children?: ReactNode;
 };
 
 /*
  * ================================================================
- * COLOR HELPERS
+ * MCQ HELPERS
  * ================================================================
  */
 
-/**
- * Converts a hex color into rgba().
- *
- * The database stores subject.color as a normal color string,
- * while the old task-options system uses Tailwind class names.
- *
- * We use inline styles for database colors so the actual subject
- * color is rendered reliably.
- */
-function hexToRgba(
-  color: string,
-  alpha: number
-) {
-  const value = color.trim();
+function isMcqTask(task: DashboardTask) {
+  const type = (
+    task.type_name ??
+    task.type ??
+    ""
+  ).toLowerCase();
 
-  /*
-   * #RGB
-   */
-  if (/^#[0-9a-fA-F]{3}$/.test(value)) {
-    const r = parseInt(
-      value[1] + value[1],
-      16
-    );
+  return (
+    (task.question_count !== null &&
+      task.question_count !== undefined) ||
+    type === "solve mcq"
+  );
+}
 
-    const g = parseInt(
-      value[2] + value[2],
-      16
-    );
-
-    const b = parseInt(
-      value[3] + value[3],
-      16
-    );
-
-    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+function getProgress(task: DashboardTask) {
+  if (
+    task.question_count === null ||
+    task.question_count === undefined ||
+    task.question_count <= 0
+  ) {
+    return 0;
   }
 
-  /*
-   * #RRGGBB
-   */
-  if (/^#[0-9a-fA-F]{6}$/.test(value)) {
-    const r = parseInt(
-      value.slice(1, 3),
-      16
-    );
-
-    const g = parseInt(
-      value.slice(3, 5),
-      16
-    );
-
-    const b = parseInt(
-      value.slice(5, 7),
-      16
-    );
-
-    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-  }
-
-  /*
-   * If the database contains something other than hex,
-   * fall back to the raw CSS color.
-   */
-  return value;
+  return Math.min(
+    100,
+    Math.max(
+      0,
+      ((task.questions_solved ?? 0) /
+        task.question_count) *
+        100
+    )
+  );
 }
 
 /*
  * ================================================================
- * COMPONENT
+ * TASK CARD
  * ================================================================
  */
 
@@ -137,136 +92,50 @@ export function DashboardTaskCard({
   onToggle,
   mobile = false,
   children,
-}: {
-  task: DashboardTask;
-  onToggle: (task: DashboardTask) => void;
-  mobile?: boolean;
-  children?: ReactNode;
-}) {
+}: DashboardTaskCardProps) {
+  const mcq = isMcqTask(task);
+
   /*
-   * ================================================================
-   * SUBJECT
-   * ================================================================
-   *
-   * Prefer the actual Supabase relationship.
-   *
-   * This is important because the database now owns:
-   *
-   *   subject.id
-   *   subject.display_name
-   *   subject.color
-   *
-   * If the relationship isn't available yet, fall back to the
-   * static task-options configuration using subject_id.
+   * Display values
    */
 
-  const databaseSubject =
-    task.subject ?? null;
+  const subjectName =
+    task.subject_display_name ??
+    task.subject_name ??
+    task.subject ??
+    null;
 
-  const fallbackSubject =
-    !databaseSubject && task.subject_id
-      ? getSubjectOption(task.subject_id)
-      : null;
+  const typeName =
+    task.type_name ??
+    task.type ??
+    null;
+
+  /*
+   * Subject color comes directly from the task.
+   */
+
+  const subjectColor =
+    task.subject_color || "#94a3b8";
+
+  const progress = getProgress(task);
 
   /*
    * ================================================================
-   * SUBJECT LABEL
+   * CARD COLORS
    * ================================================================
    */
 
-  const subjectLabel =
-    databaseSubject?.display_name ||
-    databaseSubject?.name ||
-    fallbackSubject?.label ||
-    "Task";
+  const cardBackground = task.completed
+    ? "rgba(255, 255, 255, 0.015)"
+    : `color-mix(in srgb, ${subjectColor} 10%, transparent)`;
 
-  /*
-   * ================================================================
-   * SUBJECT COLOR
-   * ================================================================
-   */
+  const cardBorder = task.completed
+    ? "rgba(255, 255, 255, 0.05)"
+    : `color-mix(in srgb, ${subjectColor} 20%, transparent)`;
 
-  const databaseColor =
-    databaseSubject?.color?.trim() || null;
-
-  /*
-   * Database colors are actual CSS colors.
-   *
-   * Example:
-   *
-   *   "#38bdf8"
-   *
-   * We turn that into:
-   *
-   *   background: rgba(56, 189, 248, 0.10)
-   *   border:     rgba(56, 189, 248, 0.20)
-   *   text:       #38bdf8
-   */
-
-  const hasDatabaseColor =
-    Boolean(databaseColor);
-
-  const databaseCardStyle =
-    hasDatabaseColor
-      ? {
-          backgroundColor:
-            hexToRgba(
-              databaseColor!,
-              0.1
-            ),
-          borderColor:
-            hexToRgba(
-              databaseColor!,
-              0.2
-            ),
-        }
-      : undefined;
-
-  const databaseTextStyle =
-    hasDatabaseColor
-      ? {
-          color: databaseColor!,
-        }
-      : undefined;
-
-  /*
-   * Old/static fallback colors.
-   *
-   * getSubjectOption() returns the old structure:
-   *
-   * {
-   *   color: {
-   *     card,
-   *     dot,
-   *     text
-   *   }
-   * }
-   */
-  const fallbackColors =
-    fallbackSubject?.color ??
-    DEFAULT_SUBJECT_COLOR;
-
-  /*
-   * ================================================================
-   * TASK TYPE
-   * ================================================================
-   */
-
-  const taskTypeLabel =
-    task.task_type?.name || null;
-
-  const isMcqTask =
-    task.task_type?.name?.toLowerCase() ===
-    "solve mcq";
-
-  const mcqTarget =
-    task.question_count;
-
-  const mcqSolved =
-    task.questions_solved ?? 0;
-
-  const mcqThreshold =
-    task.completion_threshold ?? 75;
+  const hoverBackground = task.completed
+    ? "rgba(255, 255, 255, 0.025)"
+    : `color-mix(in srgb, ${subjectColor} 14%, transparent)`;
 
   /*
    * ================================================================
@@ -274,107 +143,132 @@ export function DashboardTaskCard({
    * ================================================================
    */
 
-console.log("DASHBOARD TASK:", {
-  id: task.id,
-  name: task.name,
-  taskType: task.task_type?.name,
-  questionCount: task.question_count,
-  questionsSolved: task.questions_solved,
-  threshold: task.completion_threshold,
-  completed: task.completed,
-  isMcqTask,
-});
-
   return (
     <div
-      className={`group relative rounded-xl border ${
-        mobile
-          ? "p-3.5"
-          : "p-3 transition hover:bg-white/[0.04]"
-      } ${
-        hasDatabaseColor
-          ? ""
-          : fallbackColors.card
+      role="button"
+      tabIndex={0}
+      onClick={() => onToggle(task)}
+      onKeyDown={(event) => {
+        if (
+          event.key === "Enter" ||
+          event.key === " "
+        ) {
+          event.preventDefault();
+          onToggle(task);
+        }
+      }}
+      className={`group relative cursor-pointer select-none overflow-hidden rounded-xl border transition-all duration-200 ${
+        mobile ? "p-3.5" : "p-3"
       }`}
-      style={databaseCardStyle}
+      style={{
+        backgroundColor: cardBackground,
+        borderColor: cardBorder,
+      }}
+      onMouseEnter={(event) => {
+        event.currentTarget.style.backgroundColor =
+          hoverBackground;
+      }}
+      onMouseLeave={(event) => {
+        event.currentTarget.style.backgroundColor =
+          cardBackground;
+      }}
+      aria-label={
+        mcq
+          ? `Update MCQ progress for ${task.name}`
+          : task.completed
+            ? `Mark ${task.name} incomplete`
+            : `Complete ${task.name}`
+      }
     >
+      {/* ==========================================================
+          SUBJECT ACCENT
+          ========================================================== */}
+
       <div
-        className={`flex items-start ${
-          mobile ? "gap-3" : "gap-2.5"
-        }`}
-      >
-        {/* ======================================================
-            COMPLETE BUTTON
-        ====================================================== */}
+        className="absolute inset-y-0 left-0 w-[2px]"
+        style={{
+          backgroundColor: task.completed
+            ? "rgba(255,255,255,0.08)"
+            : subjectColor,
+        }}
+      />
 
-        <button
-          type="button"
-          onClick={() => onToggle(task)}
-          className={`${
-            mobile
-              ? "mt-0.5"
-              : "mt-1.5"
-          } shrink-0`}
-          title={
-            task.completed
-              ? "Mark incomplete"
-              : "Mark complete"
-          }
-          aria-label={`${
-            task.completed
-              ? "Mark incomplete"
-              : "Mark complete"
-          }: ${task.name}`}
-        >
-          {task.completed ? (
-            <CheckCircle2
-              className={`${
-                mobile
-                  ? "h-5 w-5"
-                  : "h-4 w-4"
-              } text-emerald-400`}
+      {/* ==========================================================
+          MAIN ROW
+          ========================================================== */}
+
+      <div className="flex min-w-0 items-start gap-2.5">
+        {/* ========================================================
+            LEFT INDICATOR
+            ========================================================
+
+            There is intentionally only ONE indicator column.
+
+            Normal task:
+              check / empty circle
+
+            MCQ:
+              subject dot
+
+            This keeps the text aligned identically between task
+            types and removes the excessive left-side spacing.
+        */}
+
+        <div className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center">
+          {mcq ? (
+            <span
+              className="h-2 w-2 rounded-full"
+              style={{
+                backgroundColor: task.completed
+                  ? "rgba(255,255,255,0.15)"
+                  : subjectColor,
+              }}
             />
+          ) : task.completed ? (
+            <CheckCircle2 className="h-4 w-4 text-emerald-400" />
           ) : (
-            <Circle
-              className={`${
-                mobile
-                  ? "h-5 w-5"
-                  : "h-4 w-4"
-              } text-white/20 transition hover:text-white/60`}
-            />
+            <Circle className="h-4 w-4 text-white/20 transition-colors group-hover:text-white/40" />
           )}
-        </button>
+        </div>
 
-        {/* ======================================================
-            TASK CONTENT
-        ====================================================== */}
+        {/* ========================================================
+            CONTENT
+            ======================================================== */}
 
-        <div
-          className={`min-w-0 flex-1 ${
-            children ? "pr-7" : ""
-          }`}
-        >
-          {/* SUBJECT */}
+        <div className="min-w-0 flex-1">
+          {/* Metadata */}
 
-          <div
-            className={`text-[10px] font-medium uppercase tracking-wide ${
-              hasDatabaseColor
-                ? ""
-                : fallbackColors.text
-            }`}
-            style={databaseTextStyle}
-          >
-            {subjectLabel}
+          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 pr-6">
+            {subjectName && (
+              <span
+                className="text-[10px] font-semibold uppercase tracking-wide"
+                style={{
+                  color: task.completed
+                    ? "rgba(255,255,255,0.25)"
+                    : subjectColor,
+                }}
+              >
+                {subjectName}
+              </span>
+            )}
+
+            {subjectName && typeName && (
+              <span className="text-[9px] text-white/15">
+                •
+              </span>
+            )}
+
+            {typeName && (
+              <span className="text-[9px] font-medium uppercase tracking-wide text-white/30">
+                {typeName}
+              </span>
+            )}
           </div>
 
-          {/* TASK NAME */}
+          {/* Task name */}
 
           <div
-            className={`mt-1 ${
-              mobile
-                ? "text-sm leading-5"
-                : "text-xs leading-4"
-            } font-medium ${
+            className={`mt-1.5 min-w-0 text-xs font-medium leading-4 ${
               task.completed
                 ? "text-white/30 line-through"
                 : "text-white/75"
@@ -383,61 +277,88 @@ console.log("DASHBOARD TASK:", {
             {task.name}
           </div>
 
-{/* TASK TYPE / MCQ PROGRESS */}
+          {/* ======================================================
+              MCQ PROGRESS
+              ====================================================== */}
 
-{isMcqTask && mcqTarget ? (
-  <div className="mt-1.5">
-    <div className="flex items-center gap-1.5 text-[10px]">
-      <span
-        className="h-1.5 w-1.5 shrink-0 rounded-full"
-        style={
-          hasDatabaseColor
-            ? {
-                backgroundColor:
-                  databaseColor!,
-              }
-            : undefined
-        }
-      />
+          {mcq && (
+            <div className="mt-3">
+              {/* Progress header */}
 
-      <span className="text-white/45">
-        {mcqSolved} / {mcqTarget}
-      </span>
-    </div>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-1.5 text-[10px] text-white/35">
+                  <Target className="h-3 w-3 shrink-0" />
 
-    <div className="mt-1 text-[9px] text-white/20">
-      {mcqThreshold}% required
-    </div>
-  </div>
-) : (
-  taskTypeLabel && (
-    <div className="mt-1 flex items-center gap-1.5 text-[10px] text-white/30">
-      <span
-        className="h-1.5 w-1.5 shrink-0 rounded-full"
-        style={
-          hasDatabaseColor
-            ? {
-                backgroundColor:
-                  databaseColor!,
-              }
-            : undefined
-        }
-      />
+                  <span className="truncate">
+                    {task.questions_solved ?? 0} /{" "}
+                    {task.question_count ?? "—"} questions
+                  </span>
+                </div>
 
-      <span>
-        {taskTypeLabel}
-      </span>
-    </div>
-  )
-)}
+                <span className="shrink-0 text-[10px] font-medium text-white/30">
+                  {Math.round(progress)}%
+                </span>
+              </div>
+
+              {/* Progress bar */}
+
+              <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/[0.07]">
+                <div
+                  className="h-full rounded-full transition-all"
+                  style={{
+                    width: `${progress}%`,
+                    backgroundColor: subjectColor,
+                  }}
+                />
+              </div>
+
+              {/* Requirement */}
+
+              <div className="mt-1.5 flex items-center justify-between gap-3">
+                <span className="text-[9px] text-white/20">
+                  Required:{" "}
+                  {task.completion_threshold ?? 75}%
+                </span>
+
+                {task.completed ? (
+                  <span className="flex shrink-0 items-center gap-1 text-[9px] font-medium text-emerald-400/70">
+                    <ClipboardCheck className="h-3 w-3" />
+                    Complete
+                  </span>
+                ) : (
+                  <span className="shrink-0 text-[9px] text-white/20">
+                    Click to update
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ======================================================
+              NORMAL TASK ACTIONS
+              ====================================================== */}
+
+          {!mcq && children}
         </div>
-
-        {/* ======================================================
-            ACTIONS
-        ====================================================== */}
-
-        {children}
       </div>
+
+      {/* ==========================================================
+          MENTOR ACTIONS
+          ========================================================== */}
+
+      {children && (
+        <div
+          className="absolute right-1.5 top-1.5 z-10"
+          onClick={(event) => {
+            event.stopPropagation();
+          }}
+          onKeyDown={(event) => {
+            event.stopPropagation();
+          }}
+        >
+          {children}
+        </div>
+      )}
     </div>
   );
 }

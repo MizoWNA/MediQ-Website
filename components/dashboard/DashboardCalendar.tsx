@@ -6,12 +6,6 @@ import {
   type DashboardTask,
 } from "./DashboardTaskCard";
 
-/*
- * ================================================================
- * TYPES
- * ================================================================
- */
-
 export type DashboardSubject = {
   id: string;
   name: string;
@@ -41,56 +35,25 @@ export type DashboardCalendarDay = {
 type DashboardCalendarProps = {
   days: DashboardCalendarDay[];
   today: Date | null;
-
-  /*
-   * Normal task completion handler.
-   *
-   * MCQ tasks are handled by DashboardTaskCard through
-   * the onUpdateMcqProgress callback.
-   */
   onToggleTask: (task: DashboardTask) => void;
-
-  /*
-   * Called after the student enters a new MCQ progress value.
-   *
-   * The actual Supabase update lives in the student dashboard.
-   */
-  onUpdateMcqProgress?: (
-    task: DashboardTask,
-    questionsSolved: number
-  ) => Promise<void>;
-
   breakpoint?: "md" | "lg";
-
-  renderTaskActions?: (
-    task: DashboardTask
-  ) => ReactNode;
-
-  onAddTask?: (
-    date: string
-  ) => void;
+  renderTaskActions?: (task: DashboardTask) => ReactNode;
+  onAddTask?: (date: string) => void;
 
   /*
    * Subject/type metadata.
    *
    * Student tasks contain subject_id/task_type_id.
+   * Mentor tasks may already contain display metadata.
    */
   subjects?: DashboardSubject[];
-
   taskTypes?: DashboardTaskType[];
 };
-
-/*
- * ================================================================
- * COMPONENT
- * ================================================================
- */
 
 export function DashboardCalendar({
   days,
   today,
   onToggleTask,
-  onUpdateMcqProgress,
   breakpoint = "md",
   renderTaskActions,
   onAddTask,
@@ -108,120 +71,101 @@ export function DashboardCalendar({
       : "hidden overflow-x-auto md:block";
 
   /*
-   * ================================================================
-   * RESOLVE TASK METADATA
-   * ================================================================
+   * Resolve all subject/type metadata required by DashboardTaskCard.
    *
-   * The student dashboard stores:
+   * This is important for student tasks because the database task
+   * contains IDs while the card expects display metadata such as:
    *
-   *   subject_id
-   *   task_type_id
+   * - subject_name
+   * - subject_display_name
+   * - subject_color
+   * - type_name
    *
-   * while DashboardTaskCard can work with either:
-   *
-   *   subject / type
-   *
-   * or the richer database relationship objects.
-   *
-   * We resolve the metadata here without changing the original
-   * task object more than necessary.
+   * Previously we resolved only `subject` and `type`, which meant
+   * subject_color was lost and the card fell back to gray.
    */
-
   function getDisplayTask(
     task: DashboardTask
   ): DashboardTask {
-    const taskWithMetadata = task as DashboardTask & {
+    const taskWithIds = task as DashboardTask & {
       subject_id?: string | null;
       task_type_id?: string | null;
-      subject_color?: string | null;
-      type_points?: number | null;
     };
 
-    const subject =
-      taskWithMetadata.subject_id
-        ? subjects.find(
-            (item) =>
-              item.id ===
-              taskWithMetadata.subject_id
-          )
-        : null;
+    const subject = taskWithIds.subject_id
+      ? subjects.find(
+          (item) =>
+            item.id === taskWithIds.subject_id
+        )
+      : null;
 
-    const taskType =
-      taskWithMetadata.task_type_id
-        ? taskTypes.find(
-            (item) =>
-              item.id ===
-              taskWithMetadata.task_type_id
-          )
-        : null;
+    const taskType = taskWithIds.task_type_id
+      ? taskTypes.find(
+          (item) =>
+            item.id === taskWithIds.task_type_id
+        )
+      : null;
 
     return {
       ...task,
 
       /*
-      * Keep the human-readable subject name.
-      */
+       * Keep the IDs intact.
+       */
+      subject_id:
+        taskWithIds.subject_id ??
+        task.subject_id ??
+        null,
+
+      task_type_id:
+        taskWithIds.task_type_id ??
+        task.task_type_id ??
+        null,
+
+      /*
+       * Preserve the human-readable subject values.
+       */
       subject:
-        task.subject ??
-        subject?.display_name ??
         subject?.name ??
+        task.subject ??
+        null,
+
+      subject_name:
+        subject?.name ??
+        task.subject_name ??
+        task.subject ??
+        null,
+
+      subject_display_name:
+        subject?.display_name ??
+        task.subject_display_name ??
+        task.subject_name ??
+        task.subject ??
         null,
 
       /*
-      * Preserve the actual subject color.
-      */
+       * This was the missing piece causing the card background
+       * to lose its subject color.
+       */
       subject_color:
-        taskWithMetadata.subject_color ??
         subject?.color ??
+        task.subject_color ??
         null,
 
       /*
-      * Keep the human-readable task type.
-      */
+       * Resolve task type name.
+       */
       type:
-        task.type ??
         taskType?.name ??
+        task.type ??
         null,
 
-      /*
-      * Preserve task type points.
-      */
-      type_points:
-        taskWithMetadata.type_points ??
-        taskType?.points ??
+      type_name:
+        taskType?.name ??
+        task.type_name ??
+        task.type ??
         null,
     };
-  }
-
-  /*
-   * ================================================================
-   * RENDER TASK
-   * ================================================================
-   *
-   * Keeping this in one function prevents the desktop and mobile
-   * versions from slowly drifting apart.
-   */
-
-  function renderTask(
-    task: DashboardTask,
-    mobile = false
-  ) {
-    const displayTask =
-      getDisplayTask(task);
-
-    return (
-      <DashboardTaskCard
-        key={task.id}
-        task={displayTask}
-        onToggle={onToggleTask}
-        onUpdateMcqProgress={
-          onUpdateMcqProgress
-        }
-        mobile={mobile}
-      >
-        {renderTaskActions?.(task)}
-      </DashboardTaskCard>
-    );
   }
 
   return (
@@ -261,9 +205,22 @@ export function DashboardCalendar({
 
               <div className="space-y-2 p-2.5">
                 {day.tasks.length ? (
-                  day.tasks.map((task) =>
-                    renderTask(task)
-                  )
+                  day.tasks.map((task) => {
+                    const displayTask =
+                      getDisplayTask(task);
+
+                    return (
+                      <DashboardTaskCard
+                        key={task.id}
+                        task={displayTask}
+                        onToggle={onToggleTask}
+                      >
+                        {renderTaskActions?.(
+                          task
+                        )}
+                      </DashboardTaskCard>
+                    );
+                  })
                 ) : (
                   <RestDay
                     onAdd={
@@ -340,12 +297,23 @@ export function DashboardCalendar({
 
               <div className="space-y-2 px-3 pb-3">
                 {day.tasks.length ? (
-                  day.tasks.map((task) =>
-                    renderTask(
-                      task,
-                      true
-                    )
-                  )
+                  day.tasks.map((task) => {
+                    const displayTask =
+                      getDisplayTask(task);
+
+                    return (
+                      <DashboardTaskCard
+                        key={task.id}
+                        task={displayTask}
+                        onToggle={onToggleTask}
+                        mobile
+                      >
+                        {renderTaskActions?.(
+                          task
+                        )}
+                      </DashboardTaskCard>
+                    );
+                  })
                 ) : (
                   <RestDay
                     onAdd={
