@@ -1,29 +1,12 @@
 "use client";
 
-import {
-  useEffect,
-  useState,
-} from "react";
+import { useEffect, useState } from "react";
 
 import OnboardingProgress from "./OnboardingProgress";
 import OnboardingNavigation from "./OnboardingNavigation";
-import WelcomeSection from "./sections/WelcomeSection";
-
-interface OnboardingSection {
-  id: string;
-  title: string;
-  component: React.ComponentType;
-}
-
-const sections: OnboardingSection[] = [
-  {
-    id: "welcome",
-    title: "Welcome",
-    component: WelcomeSection,
-  },
-
-  // We'll add the rest one at a time.
-];
+import BootSequence from "./BootSequence";
+import { onboardingSections } from "./onboarding-sections";
+import OnboardingSidebar from "./OnboardingSidebar";
 
 interface OnboardingShellProps {
   onFinish: () => Promise<void> | void;
@@ -32,17 +15,20 @@ interface OnboardingShellProps {
 export default function OnboardingShell({
   onFinish,
 }: OnboardingShellProps) {
-  const [currentIndex, setCurrentIndex] =
-    useState(0);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [finishing, setFinishing] = useState(false);
+  const [booting, setBooting] = useState(true);
 
-  const [finishing, setFinishing] =
-    useState(false);
+  /*
+   * ================================================================
+   * ONBOARDING CONFIGURATION
+   * ================================================================
+   */
 
-  const currentSection =
-    sections[currentIndex];
+  const sections = onboardingSections;
 
-  const CurrentSection =
-    currentSection.component;
+  const currentSection = sections[currentIndex];
+  const CurrentSection = currentSection.component;
 
   /*
    * ================================================================
@@ -52,10 +38,7 @@ export default function OnboardingShell({
 
   function goNext() {
     setCurrentIndex((current) =>
-      Math.min(
-        current + 1,
-        sections.length - 1
-      )
+      Math.min(current + 1, sections.length - 1)
     );
   }
 
@@ -84,9 +67,7 @@ export default function OnboardingShell({
    */
 
   useEffect(() => {
-    function handleKeyDown(
-      event: KeyboardEvent
-    ) {
+    function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "ArrowRight") {
         goNext();
       }
@@ -96,16 +77,10 @@ export default function OnboardingShell({
       }
     }
 
-    window.addEventListener(
-      "keydown",
-      handleKeyDown
-    );
+    window.addEventListener("keydown", handleKeyDown);
 
     return () => {
-      window.removeEventListener(
-        "keydown",
-        handleKeyDown
-      );
+      window.removeEventListener("keydown", handleKeyDown);
     };
   }, []);
 
@@ -117,6 +92,15 @@ export default function OnboardingShell({
 
   return (
     <main className="relative flex min-h-screen overflow-hidden bg-[#0b0d10] text-white">
+      {/* ============================================================
+          BOOT SEQUENCE
+          ============================================================ */}
+
+      {booting && (
+        <BootSequence
+          onComplete={() => setBooting(false)}
+        />
+      )}
 
       {/* ============================================================
           BACKGROUND
@@ -142,7 +126,6 @@ export default function OnboardingShell({
           ============================================================ */}
 
       <div className="relative z-10 hidden min-h-screen w-full flex-col px-8 py-8 md:flex lg:px-12">
-
         {/* Header */}
 
         <header className="mx-auto w-full max-w-6xl">
@@ -177,8 +160,7 @@ export default function OnboardingShell({
               currentIndex={currentIndex}
               total={sections.length}
               titles={sections.map(
-                (section) =>
-                  section.title
+                (section) => section.title
               )}
             />
           </div>
@@ -186,38 +168,18 @@ export default function OnboardingShell({
 
         {/* Main */}
 
-        <div className="mx-auto flex w-full max-w-6xl flex-1 items-center py-8">
-
+        <div className="mx-auto flex min-h-0 w-full max-w-6xl flex-1 items-stretch py-8">
           {/* Explanation sidebar */}
 
-          <aside className="w-[280px] shrink-0 pr-10">
-            <div className="border-l border-white/[0.08] pl-5">
-              <p className="mb-2 text-[10px] font-medium uppercase tracking-[0.16em] text-[#5aa9d8]/60">
-                {String(
-                  currentIndex + 1
-                ).padStart(2, "0")}
-              </p>
-
-              <h2 className="text-lg font-semibold tracking-tight">
-                {currentSection.title}
-              </h2>
-
-              <p className="mt-3 text-xs leading-5 text-white/30">
-                We'll fill this area with
-                section-specific explanations
-                and annotations as we build
-                each section.
-              </p>
-            </div>
-          </aside>
+          <OnboardingSidebar
+            annotations={currentSection.annotations}
+          />
 
           {/* Section */}
 
-          <div className="min-w-0 flex-1">
-            <div className="mx-auto max-w-3xl">
-              <CurrentSection
-                key={currentSection.id}
-              />
+          <div className="flex min-h-0 min-w-0 flex-1 items-center">
+            <div className="mx-auto flex h-full w-full max-w-3xl items-center">
+              <CurrentSection key={currentSection.id} />
             </div>
           </div>
         </div>
@@ -225,12 +187,10 @@ export default function OnboardingShell({
         {/* Navigation */}
 
         <footer className="mx-auto w-full max-w-6xl">
-          <div className="ml-[280px] flex max-w-3xl justify-end">
+          <div className="ml-[300px] flex max-w-3xl justify-end">
             <div className="w-full max-w-md">
               <OnboardingNavigation
-                currentIndex={
-                  currentIndex
-                }
+                currentIndex={currentIndex}
                 total={sections.length}
                 onBack={goBack}
                 onNext={goNext}
@@ -249,28 +209,21 @@ export default function OnboardingShell({
       <div
         className="relative z-10 flex min-h-screen w-full flex-col md:hidden"
         onClick={(event) => {
-          const target =
-            event.target as HTMLElement;
+          const target = event.target as HTMLElement;
 
-          if (
-            target.closest("button")
-          ) {
+          if (target.closest("button")) {
             return;
           }
 
-          const midpoint =
-            window.innerWidth / 2;
+          const midpoint = window.innerWidth / 2;
 
-          if (
-            event.clientX < midpoint
-          ) {
+          if (event.clientX < midpoint) {
             goBack();
           } else {
             goNext();
           }
         }}
       >
-
         {/* Progress */}
 
         <div className="px-4 pt-5">
@@ -278,8 +231,7 @@ export default function OnboardingShell({
             currentIndex={currentIndex}
             total={sections.length}
             titles={sections.map(
-              (section) =>
-                section.title
+              (section) => section.title
             )}
           />
         </div>
@@ -302,8 +254,7 @@ export default function OnboardingShell({
           </div>
 
           <span className="text-[10px] text-white/20">
-            {currentIndex + 1} /{" "}
-            {sections.length}
+            {currentIndex + 1} / {sections.length}
           </span>
         </div>
 
@@ -311,9 +262,7 @@ export default function OnboardingShell({
 
         <div className="flex flex-1 items-center px-5">
           <div className="w-full">
-            <CurrentSection
-              key={currentSection.id}
-            />
+            <CurrentSection key={currentSection.id} />
           </div>
         </div>
 
