@@ -106,12 +106,33 @@ export function DashboardCalendar({
         )
       : null;
 
+    // Supabase relationship selects can remain as objects when metadata
+    // has not loaded yet. Never pass those objects into JSX text nodes.
+    const subjectValue = task.subject as
+      | string
+      | { name?: string | null; display_name?: string | null }
+      | null
+      | undefined;
+    const typeValue = task.type as
+      | string
+      | { name?: string | null }
+      | null
+      | undefined;
+    const subjectText =
+      typeof subjectValue === "string"
+        ? subjectValue
+        : subjectValue?.display_name ??
+          subjectValue?.name ??
+          null;
+    const typeText =
+      typeof typeValue === "string"
+        ? typeValue
+        : typeValue?.name ?? null;
+
     return {
       ...task,
 
-      /*
-       * Keep the IDs intact.
-       */
+      /* Keep the IDs intact. */
       subject_id:
         taskWithIds.subject_id ??
         task.subject_id ??
@@ -122,48 +143,40 @@ export function DashboardCalendar({
         task.task_type_id ??
         null,
 
-      /*
-       * Preserve the human-readable subject values.
-       */
+      /* Preserve display values as render-safe strings. */
       subject:
         subject?.name ??
-        task.subject ??
+        subjectText ??
         null,
 
       subject_name:
         subject?.name ??
         task.subject_name ??
-        task.subject ??
+        subjectText ??
         null,
 
       subject_display_name:
         subject?.display_name ??
         task.subject_display_name ??
         task.subject_name ??
-        task.subject ??
+        subjectText ??
         null,
 
-      /*
-       * This was the missing piece causing the card background
-       * to lose its subject color.
-       */
       subject_color:
         subject?.color ??
         task.subject_color ??
         null,
 
-      /*
-       * Resolve task type name.
-       */
+      /* Resolve task type name as a render-safe string. */
       type:
         taskType?.name ??
-        task.type ??
+        typeText ??
         null,
 
       type_name:
         taskType?.name ??
         task.type_name ??
-        task.type ??
+        typeText ??
         null,
     };
   }
