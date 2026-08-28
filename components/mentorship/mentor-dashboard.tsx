@@ -683,6 +683,9 @@ setTaskTypes(
           completed,
           date,
           created_at,
+          question_count,
+          questions_solved,
+          completion_threshold,
           subject:subjects!tasks_subject_id_fkey (
             id,
             name,
