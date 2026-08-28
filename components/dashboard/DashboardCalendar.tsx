@@ -6,6 +6,12 @@ import {
   type DashboardTask,
 } from "./DashboardTaskCard";
 
+/*
+ * ================================================================
+ * TYPES
+ * ================================================================
+ */
+
 export type DashboardSubject = {
   id: string;
   name: string;
@@ -35,25 +41,56 @@ export type DashboardCalendarDay = {
 type DashboardCalendarProps = {
   days: DashboardCalendarDay[];
   today: Date | null;
+
+  /*
+   * Normal task completion handler.
+   *
+   * MCQ tasks are handled by DashboardTaskCard through
+   * the onUpdateMcqProgress callback.
+   */
   onToggleTask: (task: DashboardTask) => void;
+
+  /*
+   * Called after the student enters a new MCQ progress value.
+   *
+   * The actual Supabase update lives in the student dashboard.
+   */
+  onUpdateMcqProgress?: (
+    task: DashboardTask,
+    questionsSolved: number
+  ) => Promise<void>;
+
   breakpoint?: "md" | "lg";
-  renderTaskActions?: (task: DashboardTask) => ReactNode;
-  onAddTask?: (date: string) => void;
+
+  renderTaskActions?: (
+    task: DashboardTask
+  ) => ReactNode;
+
+  onAddTask?: (
+    date: string
+  ) => void;
 
   /*
    * Subject/type metadata.
    *
-   * The student dashboard has IDs on its tasks rather than
-   * the human-readable subject/type values.
+   * Student tasks contain subject_id/task_type_id.
    */
   subjects?: DashboardSubject[];
+
   taskTypes?: DashboardTaskType[];
 };
+
+/*
+ * ================================================================
+ * COMPONENT
+ * ================================================================
+ */
 
 export function DashboardCalendar({
   days,
   today,
   onToggleTask,
+  onUpdateMcqProgress,
   breakpoint = "md",
   renderTaskActions,
   onAddTask,
@@ -61,7 +98,9 @@ export function DashboardCalendar({
   taskTypes = [],
 }: DashboardCalendarProps) {
   const mobileClass =
-    breakpoint === "lg" ? "lg:hidden" : "md:hidden";
+    breakpoint === "lg"
+      ? "lg:hidden"
+      : "md:hidden";
 
   const desktopClass =
     breakpoint === "lg"
@@ -69,27 +108,40 @@ export function DashboardCalendar({
       : "hidden overflow-x-auto md:block";
 
   /*
-   * Resolve the subject/type information for a task.
+   * ================================================================
+   * RESOLVE TASK METADATA
+   * ================================================================
    *
-   * Mentor tasks may already contain display values.
-   * Student tasks contain subject_id/task_type_id.
+   * The student dashboard stores:
    *
-   * This keeps DashboardTaskCard simple and means both dashboards
-   * can use the same calendar component.
+   *   subject_id
+   *   task_type_id
+   *
+   * while DashboardTaskCard can work with either:
+   *
+   *   subject / type
+   *
+   * or the richer database relationship objects.
+   *
+   * We resolve the metadata here without changing the original
+   * task object more than necessary.
    */
+
   function getDisplayTask(
     task: DashboardTask
   ): DashboardTask {
-    const taskWithIds = task as DashboardTask & {
-      subject_id?: string | null;
-      task_type_id?: string | null;
-    };
+    const taskWithIds =
+      task as DashboardTask & {
+        subject_id?: string | null;
+        task_type_id?: string | null;
+      };
 
     const subject =
       taskWithIds.subject_id
         ? subjects.find(
             (item) =>
-              item.id === taskWithIds.subject_id
+              item.id ===
+              taskWithIds.subject_id
           )
         : null;
 
@@ -97,17 +149,27 @@ export function DashboardCalendar({
       taskWithIds.task_type_id
         ? taskTypes.find(
             (item) =>
-              item.id === taskWithIds.task_type_id
+              item.id ===
+              taskWithIds.task_type_id
           )
         : null;
+
+    /*
+     * Preserve ALL existing task fields.
+     *
+     * This is important now because MCQ tasks contain:
+     *
+     *   question_count
+     *   questions_solved
+     *   completion_threshold
+     *
+     * We don't want normalization to accidentally throw
+     * any of that information away.
+     */
 
     return {
       ...task,
 
-      /*
-       * Convert the database IDs into the values expected
-       * by DashboardTaskCard.
-       */
       subject:
         subject?.id ??
         task.subject ??
@@ -117,7 +179,48 @@ export function DashboardCalendar({
         taskType?.name ??
         task.type ??
         null,
+
+      subject_id:
+        taskWithIds.subject_id ??
+        task.subject_id ??
+        null,
+
+      task_type_id:
+        taskWithIds.task_type_id ??
+        task.task_type_id ??
+        null,
     };
+  }
+
+  /*
+   * ================================================================
+   * RENDER TASK
+   * ================================================================
+   *
+   * Keeping this in one function prevents the desktop and mobile
+   * versions from slowly drifting apart.
+   */
+
+  function renderTask(
+    task: DashboardTask,
+    mobile = false
+  ) {
+    const displayTask =
+      getDisplayTask(task);
+
+    return (
+      <DashboardTaskCard
+        key={task.id}
+        task={displayTask}
+        onToggle={onToggleTask}
+        onUpdateMcqProgress={
+          onUpdateMcqProgress
+        }
+        mobile={mobile}
+      >
+        {renderTaskActions?.(task)}
+      </DashboardTaskCard>
+    );
   }
 
   return (
@@ -157,22 +260,9 @@ export function DashboardCalendar({
 
               <div className="space-y-2 p-2.5">
                 {day.tasks.length ? (
-                  day.tasks.map((task) => {
-                    const displayTask =
-                      getDisplayTask(task);
-
-                    return (
-                      <DashboardTaskCard
-                        key={task.id}
-                        task={displayTask}
-                        onToggle={onToggleTask}
-                      >
-                        {renderTaskActions?.(
-                          task
-                        )}
-                      </DashboardTaskCard>
-                    );
-                  })
+                  day.tasks.map((task) =>
+                    renderTask(task)
+                  )
                 ) : (
                   <RestDay
                     onAdd={
@@ -249,23 +339,12 @@ export function DashboardCalendar({
 
               <div className="space-y-2 px-3 pb-3">
                 {day.tasks.length ? (
-                  day.tasks.map((task) => {
-                    const displayTask =
-                      getDisplayTask(task);
-
-                    return (
-                      <DashboardTaskCard
-                        key={task.id}
-                        task={displayTask}
-                        onToggle={onToggleTask}
-                        mobile
-                      >
-                        {renderTaskActions?.(
-                          task
-                        )}
-                      </DashboardTaskCard>
-                    );
-                  })
+                  day.tasks.map((task) =>
+                    renderTask(
+                      task,
+                      true
+                    )
+                  )
                 ) : (
                   <RestDay
                     onAdd={
