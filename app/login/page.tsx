@@ -53,7 +53,7 @@ export default function LoginPage() {
 
       const { data: profile } = await supabase
         .from("profiles")
-        .select("role")
+        .select("role, first_time")
         .eq("id", session.user.id)
         .maybeSingle();
 
@@ -68,7 +68,12 @@ export default function LoginPage() {
       }
 
       if (profile?.role === "student") {
-        router.replace("/dashboard");
+        if (profile.first_time) {
+          router.replace("/onboarding");
+        } else {
+          router.replace("/dashboard");
+        }
+
         return;
       }
 
@@ -141,7 +146,7 @@ export default function LoginPage() {
         error: profileError,
       } = await supabase
         .from("profiles")
-        .select("role")
+        .select("role, first_time")
         .eq("id", data.user.id)
         .maybeSingle();
 
@@ -170,7 +175,12 @@ export default function LoginPage() {
       }
 
       if (profile.role === "student") {
-        router.replace("/dashboard");
+        router.replace(
+          profile.first_time
+            ? "/onboarding"
+            : "/dashboard"
+        );
+
         router.refresh();
         return;
       }
