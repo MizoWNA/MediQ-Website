@@ -1960,7 +1960,7 @@ export function MentorshipDashboard() {
               days={days}
               today={today}
               onToggleTask={toggleTask}
-              breakpoint="md"
+              breakpoint="lg"
               subjects={subjects}
               taskTypes={taskTypes}
             />
