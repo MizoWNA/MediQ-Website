@@ -3,6 +3,7 @@
 import {
   useEffect,
   useState,
+  type ComponentType,
 } from "react";
 
 import OnboardingProgress from "./OnboardingProgress";
@@ -12,7 +13,7 @@ import WelcomeSection from "./sections/WelcomeSection";
 interface OnboardingSection {
   id: string;
   title: string;
-  component: React.ComponentType;
+  component: ComponentType;
 }
 
 const sections: OnboardingSection[] = [

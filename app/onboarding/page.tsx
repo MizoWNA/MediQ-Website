@@ -3,7 +3,13 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  ArrowRight,
+  CheckCircle2,
+  ChevronLeft,
   Loader2,
+  Target,
+  CalendarDays,
+  BookOpen,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import OnboardingShell from "@/components/onboarding/OnboardingShell";
