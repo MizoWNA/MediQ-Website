@@ -72,6 +72,8 @@ type Task = {
   completed: boolean;
   date: string;
   created_at: string;
+  question_count: number | null;
+  completion_threshold: number | null;
 
   subject: {
     id: string;
@@ -107,6 +109,8 @@ type TaskForm = {
   subject_id: string;
   task_type_id: string;
   date: string;
+  question_count: string;
+  completion_threshold: string;
 };
 
 const INITIAL_RENDER_DATE = new Date(2026, 0, 5);
@@ -1154,6 +1158,8 @@ setTaskTypes(
       date ||
       weekDays[0]?.isoDate ||
       formatDate(new Date()),
+    question_count: "40",
+    completion_threshold: "75",
   });
 
   setModal("task");
@@ -1168,6 +1174,14 @@ setTaskTypes(
     subject_id: task.subject_id || "",
     task_type_id: task.task_type_id || "",
     date: task.date,
+    question_count:
+      task.question_count != null
+        ? String(task.question_count)
+        : "40",
+    completion_threshold:
+      task.completion_threshold != null
+        ? String(task.completion_threshold)
+        : "75",
   });
 
   setOpenTaskMenu(null);
@@ -1207,6 +1221,46 @@ async function saveTask() {
     return;
   }
 
+  const selectedTaskType = taskTypes.find(
+  (taskType) =>
+    taskType.id === taskForm.task_type_id
+);
+
+const isMCQ =
+  selectedTaskType?.name === "Solve MCQ";
+
+
+  if (isMCQ) {
+  const questionCount = Number(
+    taskForm.question_count
+  );
+
+  const completionThreshold = Number(
+    taskForm.completion_threshold
+  );
+
+  if (
+    !Number.isInteger(questionCount) ||
+    questionCount <= 0
+  ) {
+    setActionError(
+      "MCQ question count must be a positive whole number."
+    );
+    return;
+  }
+
+  if (
+    !Number.isFinite(completionThreshold) ||
+    completionThreshold < 1 ||
+    completionThreshold > 100
+  ) {
+    setActionError(
+      "MCQ completion threshold must be between 1% and 100%."
+    );
+    return;
+  }
+}
+
   setSaving(true);
   setActionError(null);
 
@@ -1220,6 +1274,9 @@ async function saveTask() {
       completed,
       date,
       created_at,
+      question_count,
+      questions_solved,
+      completion_threshold,
       subject:subjects!tasks_subject_id_fkey (
         id,
         name,
@@ -1244,6 +1301,14 @@ async function saveTask() {
           subject_id: taskForm.subject_id,
           task_type_id: taskForm.task_type_id,
           date: taskForm.date,
+
+          question_count: isMCQ
+            ? Number(taskForm.question_count)
+            : null,
+
+          completion_threshold: isMCQ
+            ? Number(taskForm.completion_threshold)
+            : null,
         })
         .eq("id", editingTask.id)
         .eq("student_id", selectedStudentId)
@@ -1305,6 +1370,16 @@ async function saveTask() {
           task_type_id: taskForm.task_type_id,
           date: taskForm.date,
           completed: false,
+
+          question_count: isMCQ
+            ? Number(taskForm.question_count)
+            : null,
+
+          completion_threshold: isMCQ
+            ? Number(taskForm.completion_threshold)
+            : null,
+
+          questions_solved: 0,
         })
         .select(selectWithRelations)
         .single();
@@ -2158,6 +2233,66 @@ async function saveTask() {
                     </select>
                   </div>
                 </div>
+
+
+                {taskTypes.find(
+                  (taskType) =>
+                    taskType.id === taskForm.task_type_id
+                )?.name === "Solve MCQ" && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="mb-2 block text-[10px] font-medium uppercase tracking-wider text-white/30">
+                        Questions
+                      </label>
+
+                      <input
+                        type="number"
+                        min="1"
+                        step="1"
+                        value={taskForm.question_count}
+                        onChange={(event) =>
+                          setTaskForm((current) => ({
+                            ...current,
+                            question_count:
+                              event.target.value,
+                          }))
+                        }
+                        placeholder="e.g. 40"
+                        className="w-full rounded-xl border border-white/[0.08] bg-white/[0.025] px-3 py-2.5 text-xs text-white outline-none transition placeholder:text-white/20 focus:border-white/20 focus:bg-white/[0.04]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="mb-2 block text-[10px] font-medium uppercase tracking-wider text-white/30">
+                        Completion Threshold
+                      </label>
+
+                      <div className="relative">
+                        <input
+                          type="number"
+                          min="1"
+                          max="100"
+                          step="1"
+                          value={taskForm.completion_threshold}
+                          onChange={(event) =>
+                            setTaskForm((current) => ({
+                              ...current,
+                              completion_threshold:
+                                event.target.value,
+                            }))
+                          }
+                          placeholder="75"
+                          className="w-full rounded-xl border border-white/[0.08] bg-white/[0.025] px-3 pr-8 py-2.5 text-xs text-white outline-none transition placeholder:text-white/20 focus:border-white/20 focus:bg-white/[0.04]"
+                        />
+
+                        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-white/30">
+                          %
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
 
                 <div>
                   <label className="mb-2 block text-[10px] font-medium uppercase tracking-wider text-white/30">
