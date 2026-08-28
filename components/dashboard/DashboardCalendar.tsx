@@ -43,8 +43,8 @@ type DashboardCalendarProps = {
   /*
    * Subject/type metadata.
    *
-   * The student dashboard has IDs on its tasks rather than
-   * the human-readable subject/type values.
+   * Student tasks contain subject_id/task_type_id.
+   * Mentor tasks may already contain display metadata.
    */
   subjects?: DashboardSubject[];
   taskTypes?: DashboardTaskType[];
@@ -61,7 +61,9 @@ export function DashboardCalendar({
   taskTypes = [],
 }: DashboardCalendarProps) {
   const mobileClass =
-    breakpoint === "lg" ? "lg:hidden" : "md:hidden";
+    breakpoint === "lg"
+      ? "lg:hidden"
+      : "md:hidden";
 
   const desktopClass =
     breakpoint === "lg"
@@ -69,13 +71,18 @@ export function DashboardCalendar({
       : "hidden overflow-x-auto md:block";
 
   /*
-   * Resolve the subject/type information for a task.
+   * Resolve all subject/type metadata required by DashboardTaskCard.
    *
-   * Mentor tasks may already contain display values.
-   * Student tasks contain subject_id/task_type_id.
+   * This is important for student tasks because the database task
+   * contains IDs while the card expects display metadata such as:
    *
-   * This keeps DashboardTaskCard simple and means both dashboards
-   * can use the same calendar component.
+   * - subject_name
+   * - subject_display_name
+   * - subject_color
+   * - type_name
+   *
+   * Previously we resolved only `subject` and `type`, which meant
+   * subject_color was lost and the card fell back to gray.
    */
   function getDisplayTask(
     task: DashboardTask
@@ -85,37 +92,91 @@ export function DashboardCalendar({
       task_type_id?: string | null;
     };
 
-    const subject =
-      taskWithIds.subject_id
-        ? subjects.find(
-            (item) =>
-              item.id === taskWithIds.subject_id
-          )
-        : null;
+    const subject = taskWithIds.subject_id
+      ? subjects.find(
+          (item) =>
+            item.id === taskWithIds.subject_id
+        )
+      : null;
 
-    const taskType =
-      taskWithIds.task_type_id
-        ? taskTypes.find(
-            (item) =>
-              item.id === taskWithIds.task_type_id
-          )
-        : null;
+    const taskType = taskWithIds.task_type_id
+      ? taskTypes.find(
+          (item) =>
+            item.id === taskWithIds.task_type_id
+        )
+      : null;
+
+    // Supabase relationship selects can remain as objects when metadata
+    // has not loaded yet. Never pass those objects into JSX text nodes.
+    const subjectValue = task.subject as
+      | string
+      | { name?: string | null; display_name?: string | null }
+      | null
+      | undefined;
+    const typeValue = task.type as
+      | string
+      | { name?: string | null }
+      | null
+      | undefined;
+    const subjectText =
+      typeof subjectValue === "string"
+        ? subjectValue
+        : subjectValue?.display_name ??
+          subjectValue?.name ??
+          null;
+    const typeText =
+      typeof typeValue === "string"
+        ? typeValue
+        : typeValue?.name ?? null;
 
     return {
       ...task,
 
-      /*
-       * Convert the database IDs into the values expected
-       * by DashboardTaskCard.
-       */
-      subject:
-        subject?.id ??
-        task.subject ??
+      /* Keep the IDs intact. */
+      subject_id:
+        taskWithIds.subject_id ??
+        task.subject_id ??
         null,
 
+      task_type_id:
+        taskWithIds.task_type_id ??
+        task.task_type_id ??
+        null,
+
+      /* Preserve display values as render-safe strings. */
+      subject:
+        subject?.name ??
+        subjectText ??
+        null,
+
+      subject_name:
+        subject?.name ??
+        task.subject_name ??
+        subjectText ??
+        null,
+
+      subject_display_name:
+        subject?.display_name ??
+        task.subject_display_name ??
+        task.subject_name ??
+        subjectText ??
+        null,
+
+      subject_color:
+        subject?.color ??
+        task.subject_color ??
+        null,
+
+      /* Resolve task type name as a render-safe string. */
       type:
         taskType?.name ??
-        task.type ??
+        typeText ??
+        null,
+
+      type_name:
+        taskType?.name ??
+        task.type_name ??
+        typeText ??
         null,
     };
   }

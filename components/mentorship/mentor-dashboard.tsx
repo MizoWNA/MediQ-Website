@@ -66,25 +66,19 @@ type TaskType = {
 type Task = {
   id: string;
   name: string;
-  subject_id: string;
-  task_type_id: string;
+  subject_id: string | null;
+  task_type_id: string | null;
+  subject: string | null;
+  subject_color: string | null;
+  type: string | null;
+  type_points: number | null;
   student_id: string;
   completed: boolean;
   date: string;
-  created_at: string;
-
-  subject: {
-    id: string;
-    name: string;
-    display_name: string;
-    color: string;
-  } | null;
-
-  task_type: {
-    id: string;
-    name: string;
-    points: number;
-  } | null;
+  created_at?: string;
+  question_count: number | null;
+  questions_solved: number | null;
+  completion_threshold: number | null;
 };
 
 type StudentSummary = Profile & {
@@ -102,11 +96,49 @@ type CalendarDay = {
 
 type ModalType = "objective" | "task" | null;
 
+type TaskRow = {
+  id: string;
+  name: string;
+  subject_id: string | null;
+  task_type_id: string | null;
+  student_id: string;
+  completed: boolean;
+  date: string;
+  created_at?: string;
+  question_count?: number | null;
+  questions_solved?: number | null;
+  completion_threshold?: number | null;
+  subject?: { name?: string | null; display_name?: string | null; color?: string | null } | null;
+  task_type?: { name?: string | null; points?: number | null } | null;
+};
+
+function normalizeTask(task: TaskRow): Task {
+  return {
+    id: task.id,
+    name: task.name,
+    subject_id: task.subject_id ?? null,
+    task_type_id: task.task_type_id ?? null,
+    subject: task.subject?.display_name ?? task.subject?.name ?? null,
+    subject_color: task.subject?.color ?? null,
+    type: task.task_type?.name ?? null,
+    type_points: task.task_type?.points ?? null,
+    student_id: task.student_id,
+    completed: Boolean(task.completed),
+    date: task.date,
+    created_at: task.created_at,
+    question_count: task.question_count ?? null,
+    questions_solved: task.questions_solved ?? null,
+    completion_threshold: task.completion_threshold ?? null,
+  };
+}
+
 type TaskForm = {
   name: string;
   subject_id: string;
   task_type_id: string;
   date: string;
+  question_count: string;
+  completion_threshold: string;
 };
 
 const INITIAL_RENDER_DATE = new Date(2026, 0, 5);
@@ -259,7 +291,174 @@ export function MentorDashboard() {
     useState<string | null>(null);
 
   const [openObjectiveMenu, setOpenObjectiveMenu] =
-    useState<string | null>(null);
+  useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadMentorContext() {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const { data: authData, error: authError } =
+          await supabase.auth.getUser();
+        if (authError) {
+          console.error("[v0] Mentor auth error:", {
+            message: authError.message,
+            code: authError.code,
+            details: authError.details,
+            hint: authError.hint,
+          });
+          throw authError;
+        }
+
+        if (!authData.user) {
+          if (!cancelled) setLoading(false);
+          router.replace("/login");
+          return;
+        }
+
+        const { data: mentor, error: mentorError } = await supabase
+          .from("profiles")
+          .select("id, username, display_name, role, year, start_date, end_date, exam_date, mentor_id")
+          .eq("id", authData.user.id)
+          .single();
+        if (mentorError) {
+          console.error("[v0] Mentor profile error:", {
+            message: mentorError.message,
+            code: mentorError.code,
+            details: mentorError.details,
+            hint: mentorError.hint,
+          });
+          throw mentorError;
+        }
+
+        const [studentsResult, subjectsResult, taskTypesResult] = await Promise.all([
+          supabase
+            .from("profiles")
+            .select("id, username, display_name, role, year, start_date, end_date, exam_date, mentor_id")
+            .eq("mentor_id", authData.user.id)
+            .eq("role", "student")
+            .order("display_name"),
+          supabase
+            .from("subjects")
+            .select("id, name, display_name, category, color, active, display_order")
+            .order("display_order"),
+          supabase
+            .from("task_types")
+            .select("id, name, points, active, display_order")
+            .order("display_order"),
+        ]);
+
+        for (const [label, result] of [
+          ["students", studentsResult],
+          ["subjects", subjectsResult],
+          ["task types", taskTypesResult],
+        ] as const) {
+          if (result.error) {
+            console.error(`[v0] Mentor ${label} error:`, {
+              message: result.error.message,
+              code: result.error.code,
+              details: result.error.details,
+              hint: result.error.hint,
+            });
+            throw result.error;
+          }
+        }
+
+        if (cancelled) return;
+
+        const studentRows = (studentsResult.data ?? []) as Profile[];
+        setMentorProfile(mentor as Profile);
+        setSubjects((subjectsResult.data ?? []) as Subject[]);
+        setTaskTypes((taskTypesResult.data ?? []) as TaskType[]);
+        setStudents(studentRows.map((student) => ({ ...student, weeklyTasks: 0, completedTasks: 0 })));
+        setSelectedStudentId((current) => current ?? studentRows[0]?.id ?? null);
+        setLoading(false);
+      } catch (err) {
+        if (cancelled) return;
+        console.error("[v0] Mentor dashboard load error:", err);
+        setError(err instanceof Error ? err.message : "Failed to load mentor dashboard.");
+        setLoading(false);
+      }
+    }
+
+    void loadMentorContext();
+    return () => {
+      cancelled = true;
+    };
+  }, [router]);
+
+  useEffect(() => {
+    if (!selectedStudentId) {
+      setSelectedStudent(null);
+      setObjectives([]);
+      setTasks([]);
+      setStudentError(null);
+      setLoadingStudent(false);
+      return;
+    }
+
+    let cancelled = false;
+    const studentId = selectedStudentId;
+
+    async function loadSelectedStudent() {
+      setLoadingStudent(true);
+      setStudentError(null);
+      setSelectedStudent(null);
+      setObjectives([]);
+      setTasks([]);
+
+      try {
+        const selectWithRelations = `
+          id, name, subject_id, task_type_id, student_id, completed, date, created_at,
+          question_count, questions_solved, completion_threshold,
+          subject:subjects!tasks_subject_id_fkey (id, name, display_name, color),
+          task_type:task_types!tasks_task_type_id_fkey (id, name, points)
+        `;
+        const [profileResult, objectivesResult, tasksResult] = await Promise.all([
+          supabase.from("profiles").select("id, username, display_name, role, year, start_date, end_date, exam_date, mentor_id").eq("id", studentId).single(),
+          supabase.from("objectives").select("id, text, completed").eq("student_id", studentId),
+          supabase.from("tasks").select(selectWithRelations).eq("student_id", studentId).order("date").order("created_at"),
+        ]);
+
+        for (const [label, result] of [
+          ["student profile", profileResult],
+          ["objectives", objectivesResult],
+          ["tasks", tasksResult],
+        ] as const) {
+          if (result.error) {
+            console.error(`[v0] Mentor ${label} error:`, {
+              message: result.error.message,
+              code: result.error.code,
+              details: result.error.details,
+              hint: result.error.hint,
+            });
+            throw result.error;
+          }
+        }
+
+        if (cancelled) return;
+        const loadedTasks = (tasksResult.data ?? []).map((task) => normalizeTask(task as TaskRow));
+        setSelectedStudent(profileResult.data as Profile);
+        setObjectives((objectivesResult.data ?? []) as Objective[]);
+        setTasks(loadedTasks);
+        updateStudentTaskSummary(studentId, loadedTasks);
+      } catch (err) {
+        if (cancelled) return;
+        console.error("[v0] Selected student load error:", err);
+        setStudentError(err instanceof Error ? err.message : "Failed to load student planner.");
+      } finally {
+        if (!cancelled) setLoadingStudent(false);
+      }
+    }
+
+    void loadSelectedStudent();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedStudentId]);
 
   /*
    * ================================================================
@@ -303,607 +502,24 @@ export function MentorDashboard() {
 const weekSubjects = useMemo(() => {
   const seen = new Set<string>();
 
-  return tasks.reduce<
-    Array<{
-      value: string;
-      label: string;
-      color: string;
-    }>
-  >((result, task) => {
-    if (!task.subject) {
+  return tasks.reduce<Array<{ value: string; label: string; color: string }>>(
+    (result, task) => {
+      const value = task.subject_id ?? task.subject ?? task.id;
+      if (seen.has(value) || !task.subject) return result;
+
+      seen.add(value);
+      result.push({
+        value,
+        label: task.subject,
+        color: task.subject_color ?? "#94a3b8",
+      });
       return result;
-    }
-
-    if (seen.has(task.subject.id)) {
-      return result;
-    }
-
-    seen.add(task.subject.id);
-
-    result.push({
-      value: task.subject.id,
-      label: task.subject.display_name,
-      color: task.subject.color,
-    });
-
-    return result;
-  }, []);
+    },
+    []
+  );
 }, [tasks]);
 
-    useEffect(() => {
-    let cancelled = false;
-
-    async function loadMentorDashboard() {
-      setLoading(true);
-      setError(null);
-
-      try {
-        const {
-          data: { user },
-          error: authError,
-        } = await supabase.auth.getUser();
-
-        if (authError) {
-          throw new Error(
-            `Authentication failed: ${authError.message}`
-          );
-        }
-
-        if (!user) {
-          router.replace("/login");
-          return;
-        }
-
-        /*
-         * ================================================================
-         * LOAD MENTOR PROFILE
-         * ================================================================
-         */
-
-        const {
-          data: mentorData,
-          error: mentorError,
-        } = await supabase
-          .from("profiles")
-          .select(
-            "id, username, display_name, role, year, start_date, end_date, exam_date, mentor_id"
-          )
-          .eq("id", user.id)
-          .maybeSingle();
-
-        if (mentorError) {
-          throw new Error(
-            `Mentor profile query failed: ${mentorError.message}`
-          );
-        }
-
-        if (!mentorData) {
-          throw new Error(
-            "Your account is authenticated, but no mentor profile was found."
-          );
-        }
-
-        if (mentorData.role !== "mentor") {
-          router.replace("/dashboard");
-          return;
-        }
-
-        if (cancelled) return;
-
-        setMentorProfile(mentorData);
-
-        const [
-  { data: subjectData, error: subjectError },
-  { data: taskTypeData, error: taskTypeError },
-] = await Promise.all([
-  supabase
-    .from("subjects")
-    .select(
-      "id, name, display_name, category, color, active, display_order"
-    )
-    .eq("active", true)
-    .order("display_order"),
-
-  supabase
-    .from("task_types")
-    .select(
-      "id, name, points, active, display_order"
-    )
-    .eq("active", true)
-    .order("display_order"),
-]);
-
-if (subjectError) {
-  throw new Error(
-    `Subjects query failed: ${subjectError.message}`
-  );
-}
-
-if (taskTypeError) {
-  throw new Error(
-    `Task types query failed: ${taskTypeError.message}`
-  );
-}
-
-if (cancelled) return;
-
-setSubjects(
-  Array.isArray(subjectData)
-    ? subjectData
-    : []
-);
-
-setTaskTypes(
-  Array.isArray(taskTypeData)
-    ? taskTypeData
-    : []
-);
-
-        /*
-         * ================================================================
-         * LOAD ASSIGNED STUDENTS
-         * ================================================================
-         */
-
-        const {
-          data: studentData,
-          error: studentsError,
-        } = await supabase
-          .from("profiles")
-          .select(
-            "id, username, display_name, role, year, start_date, end_date, exam_date, mentor_id"
-          )
-          .eq("role", "student")
-          .eq("mentor_id", user.id)
-          .order("display_name");
-
-        if (studentsError) {
-          throw new Error(
-            `Students query failed: ${studentsError.message}`
-          );
-        }
-
-        if (cancelled) return;
-
-        const assignedStudents = Array.isArray(studentData)
-          ? studentData.filter(
-              (student) =>
-                typeof student.id === "string" &&
-                student.id.trim() !== "" &&
-                student.id !== "null" &&
-                student.id !== "undefined"
-            )
-          : [];
-
-        /*
-         * ================================================================
-         * BUILD STUDENT SUMMARIES
-         * ================================================================
-         */
-
-        let summaries: StudentSummary[] =
-          assignedStudents.map((student) => ({
-            ...student,
-            weeklyTasks: 0,
-            completedTasks: 0,
-          }));
-
-        /*
-         * ================================================================
-         * LOAD WEEKLY TASK COUNTS
-         * ================================================================
-         *
-         * IMPORTANT:
-         * This query is ONLY for calculating the summary cards.
-         *
-         * Do NOT use selectedStudentId here.
-         * selectedStudentId can be null when this effect first runs.
-         *
-         * We query all assigned students using their actual UUIDs.
-         */
-
-        if (assignedStudents.length > 0) {
-          const studentIds = assignedStudents.map(
-            (student) => student.id
-          );
-
-          const {
-            data: weeklyTaskData,
-            error: weeklyTaskError,
-          } = await supabase
-            .from("tasks")
-            .select(
-              "id, student_id, completed, date"
-            )
-            .in("student_id", studentIds)
-            .gte(
-              "date",
-              formatDate(weekStart)
-            )
-            .lte(
-              "date",
-              formatDate(weekEnd)
-            );
-
-          if (weeklyTaskError) {
-            throw new Error(
-              `Student task summary failed: ${weeklyTaskError.message}`
-            );
-          }
-
-          if (cancelled) return;
-
-          const weeklyTasks = Array.isArray(
-            weeklyTaskData
-          )
-            ? weeklyTaskData
-            : [];
-
-          summaries = assignedStudents.map(
-            (student) => {
-              const studentTasks =
-                weeklyTasks.filter(
-                  (task) =>
-                    task.student_id === student.id
-                );
-
-              return {
-                ...student,
-                weeklyTasks:
-                  studentTasks.length,
-                completedTasks:
-                  studentTasks.filter(
-                    (task) => task.completed
-                  ).length,
-              };
-            }
-          );
-        }
-
-        if (cancelled) return;
-
-        setStudents(summaries);
-
-        /*
-         * Keep the currently selected student if they are still assigned.
-         * Otherwise select the first assigned student.
-         */
-
-        setSelectedStudentId(
-          (current) =>
-            current &&
-            summaries.some(
-              (student) =>
-                student.id === current
-            )
-              ? current
-              : summaries[0]?.id ?? null
-        );
-      } catch (err) {
-        if (cancelled) return;
-
-        console.error(
-          "Mentor dashboard loading error:",
-          err
-        );
-
-        setError(
-          err instanceof Error
-            ? err.message
-            : "Failed to load mentor dashboard."
-        );
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    }
-
-    loadMentorDashboard();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [router, weekStart, weekEnd]);
-
-  /*
-   * ================================================================
-   * LOAD SELECTED STUDENT
-   * ================================================================
-   */
-
- useEffect(() => {
-  let cancelled = false;
-
-  async function loadStudent() {
-    if (!selectedStudentId) {
-      setSelectedStudent(null);
-      setObjectives([]);
-      setTasks([]);
-      return;
-    }
-
-    setLoadingStudent(true);
-    setStudentError(null);
-
-    try {
-      const {
-        data: studentData,
-        error: profileError,
-      } = await supabase
-        .from("profiles")
-        .select(
-          "id, username, display_name, role, year, start_date, end_date, exam_date, mentor_id"
-        )
-        .eq("id", selectedStudentId)
-        .maybeSingle();
-
-      if (profileError) {
-        throw new Error(
-          `Student profile query failed: ${profileError.message}`
-        );
-      }
-
-      if (!studentData) {
-        throw new Error(
-          "The selected student could not be found."
-        );
-      }
-
-      const {
-        data: objectiveData,
-        error: objectiveError,
-      } = await supabase
-        .from("objectives")
-        .select("id, text, completed")
-        .eq("student_id", selectedStudentId)
-        .order("id");
-
-      if (objectiveError) {
-        throw new Error(
-          `Objectives query failed: ${objectiveError.message}`
-        );
-      }
-
-      const {
-        data: taskData,
-        error: taskError,
-      } = await supabase
-        .from("tasks")
-        .select(`
-          id,
-          name,
-          subject_id,
-          task_type_id,
-          student_id,
-          completed,
-          date,
-          created_at,
-          subject:subjects!tasks_subject_id_fkey (
-            id,
-            name,
-            display_name,
-            color
-          ),
-          task_type:task_types!tasks_task_type_id_fkey (
-            id,
-            name,
-            points
-          )
-        `)
-        .eq("student_id", selectedStudentId)
-        .gte("date", formatDate(weekStart))
-        .lte("date", formatDate(weekEnd))
-        .order("date")
-        .order("created_at");
-
-      if (taskError) {
-        throw new Error(
-          `Tasks query failed: ${taskError.message}`
-        );
-      }
-
-      if (cancelled) return;
-
-      setSelectedStudent(studentData);
-
-      setObjectives(
-        Array.isArray(objectiveData)
-          ? objectiveData
-          : []
-      );
-
-      setTasks(
-        Array.isArray(taskData)
-          ? taskData as Task[]
-          : []
-      );
-    } catch (err) {
-      if (cancelled) return;
-
-      console.error(
-        "Selected student loading error:",
-        err
-      );
-
-      setStudentError(
-        err instanceof Error
-          ? err.message
-          : "Failed to load student."
-      );
-    } finally {
-      if (!cancelled) {
-        setLoadingStudent(false);
-      }
-    }
-  }
-
-  loadStudent();
-
-  return () => {
-    cancelled = true;
-  };
-}, [
-  selectedStudentId,
-  weekStart,
-  weekEnd,
-]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadStudent() {
-      if (!selectedStudentId) {
-        setSelectedStudent(null);
-        setObjectives([]);
-        setTasks([]);
-        return;
-      }
-
-      setLoadingStudent(true);
-      setStudentError(null);
-
-      try {
-        const {
-          data: studentData,
-          error: profileError,
-        } = await supabase
-          .from("profiles")
-          .select(
-            "id, username, display_name, role, year, start_date, end_date, exam_date, mentor_id"
-          )
-          .eq("id", selectedStudentId)
-          .maybeSingle();
-
-        if (profileError) {
-          throw new Error(
-            `Student profile query failed: ${profileError.message}`
-          );
-        }
-
-        if (!studentData) {
-          throw new Error(
-            "The selected student could not be found."
-          );
-        }
-
-        const {
-          data: objectiveData,
-          error: objectiveError,
-        } = await supabase
-          .from("objectives")
-          .select("id, text, completed")
-          .eq(
-            "student_id",
-            selectedStudentId
-          )
-          .order("id");
-
-        if (objectiveError) {
-          throw new Error(
-            `Objectives query failed: ${objectiveError.message}`
-          );
-        }
-
-        const {
-          data: taskData,
-          error: taskError,
-        } = await supabase
-          .from("tasks")
-          .select(`
-            id,
-            name,
-            subject_id,
-            task_type_id,
-            student_id,
-            completed,
-            date,
-            created_at,
-            subject:subjects!tasks_subject_id_fkey (
-              id,
-              name,
-              display_name,
-              category,
-              color,
-              active,
-              display_order
-            ),
-            task_type:task_types!tasks_task_type_id_fkey (
-              id,
-              name,
-              points,
-              active,
-              display_order
-            )
-          `)
-          .eq(
-            "student_id",
-            selectedStudentId
-          )
-          .gte(
-            "date",
-            formatDate(weekStart)
-          )
-          .lte(
-            "date",
-            formatDate(weekEnd)
-          )
-          .order("date")
-          .order("created_at");
-
-        if (taskError) {
-          throw new Error(
-            `Tasks query failed: ${taskError.message}`
-          );
-        }
-
-        if (cancelled) return;
-
-        setSelectedStudent(studentData);
-
-        setObjectives(
-          Array.isArray(objectiveData)
-            ? objectiveData
-            : []
-        );
-
-        setTasks(
-          Array.isArray(taskData)
-            ? taskData
-            : []
-        );
-      } catch (err) {
-        if (cancelled) return;
-
-        console.error(
-          "Selected student loading error:",
-          err
-        );
-
-        setStudentError(
-          err instanceof Error
-            ? err.message
-            : "Failed to load student."
-        );
-      } finally {
-        if (!cancelled) {
-          setLoadingStudent(false);
-        }
-      }
-    }
-
-    loadStudent();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    selectedStudentId,
-    weekStart,
-    weekEnd,
-  ]);
-
-  const days: CalendarDay[] = useMemo(() => {
+    const days: CalendarDay[] = useMemo(() => {
     return weekDays.map((day) => ({
       name: day.name,
       short: day.short,
@@ -1154,6 +770,8 @@ setTaskTypes(
       date ||
       weekDays[0]?.isoDate ||
       formatDate(new Date()),
+    question_count: "40",
+    completion_threshold: "75",
   });
 
   setModal("task");
@@ -1168,6 +786,14 @@ setTaskTypes(
     subject_id: task.subject_id || "",
     task_type_id: task.task_type_id || "",
     date: task.date,
+    question_count:
+      task.question_count != null
+        ? String(task.question_count)
+        : "40",
+    completion_threshold:
+      task.completion_threshold != null
+        ? String(task.completion_threshold)
+        : "75",
   });
 
   setOpenTaskMenu(null);
@@ -1207,31 +833,74 @@ async function saveTask() {
     return;
   }
 
+  const selectedTaskType = taskTypes.find(
+  (taskType) =>
+    taskType.id === taskForm.task_type_id
+);
+
+const isMCQ =
+  selectedTaskType?.name === "Solve MCQ";
+
+
+  if (isMCQ) {
+  const questionCount = Number(
+    taskForm.question_count
+  );
+
+  const completionThreshold = Number(
+    taskForm.completion_threshold
+  );
+
+  if (
+    !Number.isInteger(questionCount) ||
+    questionCount <= 0
+  ) {
+    setActionError(
+      "MCQ question count must be a positive whole number."
+    );
+    return;
+  }
+
+  if (
+    !Number.isFinite(completionThreshold) ||
+    completionThreshold < 1 ||
+    completionThreshold > 100
+  ) {
+    setActionError(
+      "MCQ completion threshold must be between 1% and 100%."
+    );
+    return;
+  }
+}
+
   setSaving(true);
   setActionError(null);
 
   try {
     const selectWithRelations = `
-      id,
-      name,
-      subject_id,
-      task_type_id,
-      student_id,
-      completed,
-      date,
-      created_at,
-      subject:subjects!tasks_subject_id_fkey (
-        id,
-        name,
-        display_name,
-        color
-      ),
-      task_type:task_types!tasks_task_type_id_fkey (
-        id,
-        name,
-        points
-      )
-    `;
+  id,
+  name,
+  subject_id,
+  task_type_id,
+  student_id,
+  completed,
+  date,
+  created_at,
+  question_count,
+  questions_solved,
+  completion_threshold,
+  subject:subjects!tasks_subject_id_fkey (
+    id,
+    name,
+    display_name,
+    color
+  ),
+  task_type:task_types!tasks_task_type_id_fkey (
+    id,
+    name,
+    points
+  )
+`;
 
     if (editingTask) {
       const {
@@ -1244,6 +913,14 @@ async function saveTask() {
           subject_id: taskForm.subject_id,
           task_type_id: taskForm.task_type_id,
           date: taskForm.date,
+
+          question_count: isMCQ
+            ? Number(taskForm.question_count)
+            : null,
+
+          completion_threshold: isMCQ
+            ? Number(taskForm.completion_threshold)
+            : null,
         })
         .eq("id", editingTask.id)
         .eq("student_id", selectedStudentId)
@@ -1254,7 +931,7 @@ async function saveTask() {
         throw error;
       }
 
-      const updatedTask = data as Task;
+      const updatedTask = normalizeTask(data as TaskRow);
 
       if (
         updatedTask.date >= formatDate(weekStart) &&
@@ -1305,6 +982,16 @@ async function saveTask() {
           task_type_id: taskForm.task_type_id,
           date: taskForm.date,
           completed: false,
+
+          question_count: isMCQ
+            ? Number(taskForm.question_count)
+            : null,
+
+          completion_threshold: isMCQ
+            ? Number(taskForm.completion_threshold)
+            : null,
+
+          questions_solved: 0,
         })
         .select(selectWithRelations)
         .single();
@@ -1313,7 +1000,7 @@ async function saveTask() {
         throw error;
       }
 
-      const newTask = data as Task;
+      const newTask = normalizeTask(data as TaskRow);
 
       if (
         newTask.date >= formatDate(weekStart) &&
@@ -1879,7 +1566,8 @@ async function saveTask() {
                                 className="flex items-center gap-1.5"
                               >
                                 <span
-                                  className={`h-2 w-2 rounded-full ${subject.color.dot}`}
+                                  className="h-2 w-2 rounded-full"
+                                  style={{ backgroundColor: subject.color }}
                                 />
 
                                 {subject.label}
@@ -1918,7 +1606,10 @@ async function saveTask() {
                     breakpoint="lg"
                     onAddTask={openAddTask}
                     renderTaskActions={(task) => (
-                      <div className="absolute right-2 top-2">
+                    <div
+                      className="absolute right-2 top-2"
+                      onClick={(event) => event.stopPropagation()}
+                    >
                         <button type="button" onClick={() => setOpenTaskMenu((current) => current === task.id ? null : task.id)} className="flex h-7 w-7 items-center justify-center rounded-md text-white/20 opacity-0 transition hover:bg-white/[0.06] hover:text-white group-hover:opacity-100">
                           <MoreHorizontal className="h-4 w-4" />
                         </button>
@@ -2158,6 +1849,66 @@ async function saveTask() {
                     </select>
                   </div>
                 </div>
+
+
+                {taskTypes.find(
+                  (taskType) =>
+                    taskType.id === taskForm.task_type_id
+                )?.name === "Solve MCQ" && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="mb-2 block text-[10px] font-medium uppercase tracking-wider text-white/30">
+                        Questions
+                      </label>
+
+                      <input
+                        type="number"
+                        min="1"
+                        step="1"
+                        value={taskForm.question_count}
+                        onChange={(event) =>
+                          setTaskForm((current) => ({
+                            ...current,
+                            question_count:
+                              event.target.value,
+                          }))
+                        }
+                        placeholder="e.g. 40"
+                        className="w-full rounded-xl border border-white/[0.08] bg-white/[0.025] px-3 py-2.5 text-xs text-white outline-none transition placeholder:text-white/20 focus:border-white/20 focus:bg-white/[0.04]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="mb-2 block text-[10px] font-medium uppercase tracking-wider text-white/30">
+                        Completion Threshold
+                      </label>
+
+                      <div className="relative">
+                        <input
+                          type="number"
+                          min="1"
+                          max="100"
+                          step="1"
+                          value={taskForm.completion_threshold}
+                          onChange={(event) =>
+                            setTaskForm((current) => ({
+                              ...current,
+                              completion_threshold:
+                                event.target.value,
+                            }))
+                          }
+                          placeholder="75"
+                          className="w-full rounded-xl border border-white/[0.08] bg-white/[0.025] px-3 pr-8 py-2.5 text-xs text-white outline-none transition placeholder:text-white/20 focus:border-white/20 focus:bg-white/[0.04]"
+                        />
+
+                        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-white/30">
+                          %
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
 
                 <div>
                   <label className="mb-2 block text-[10px] font-medium uppercase tracking-wider text-white/30">
