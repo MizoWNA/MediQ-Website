@@ -155,12 +155,9 @@ export default function OnboardingPage() {
         throw updateError;
       }
 
-      if (updateError) {
-        throw updateError;
-      }
-
       router.replace("/dashboard");
       router.refresh();
+
     } catch (err) {
       console.error(
         "Failed to finish onboarding:",
