@@ -274,6 +274,17 @@ export function DashboardTaskCard({
    * ================================================================
    */
 
+console.log("DASHBOARD TASK:", {
+  id: task.id,
+  name: task.name,
+  taskType: task.task_type?.name,
+  questionCount: task.question_count,
+  questionsSolved: task.questions_solved,
+  threshold: task.completion_threshold,
+  completed: task.completed,
+  isMcqTask,
+});
+
   return (
     <div
       className={`group relative rounded-xl border ${
