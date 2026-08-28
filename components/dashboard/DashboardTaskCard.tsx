@@ -111,7 +111,7 @@ export function DashboardTaskCard({
     null;
 
   /*
-   * Subject color comes directly from the task.
+   * Subject color
    */
 
   const subjectColor =
@@ -139,6 +139,37 @@ export function DashboardTaskCard({
 
   /*
    * ================================================================
+   * CARD CLICK
+   * ================================================================
+   *
+   * MCQ and normal tasks both use the same parent callback.
+   *
+   * The important distinction is that the card itself NEVER directly
+   * changes completion state. The dashboard's onToggle handler decides
+   * what an MCQ means versus a normal task.
+   *
+   * This keeps the card compatible with both student and mentor
+   * dashboards.
+   */
+
+  function handleCardClick() {
+    onToggle(task);
+  }
+
+  function handleCardKeyDown(
+    event: React.KeyboardEvent<HTMLDivElement>
+  ) {
+    if (
+      event.key === "Enter" ||
+      event.key === " "
+    ) {
+      event.preventDefault();
+      onToggle(task);
+    }
+  }
+
+  /*
+   * ================================================================
    * RENDER
    * ================================================================
    */
@@ -147,17 +178,9 @@ export function DashboardTaskCard({
     <div
       role="button"
       tabIndex={0}
-      onClick={() => onToggle(task)}
-      onKeyDown={(event) => {
-        if (
-          event.key === "Enter" ||
-          event.key === " "
-        ) {
-          event.preventDefault();
-          onToggle(task);
-        }
-      }}
-      className={`group relative cursor-pointer select-none overflow-hidden rounded-xl border transition-all duration-200 ${
+      onClick={handleCardClick}
+      onKeyDown={handleCardKeyDown}
+      className={`group relative cursor-pointer select-none rounded-xl border transition-all duration-200 ${
         mobile ? "p-3.5" : "p-3"
       }`}
       style={{
@@ -185,7 +208,7 @@ export function DashboardTaskCard({
           ========================================================== */}
 
       <div
-        className="absolute inset-y-0 left-0 w-[2px]"
+        className="pointer-events-none absolute inset-y-0 left-0 w-[2px] overflow-hidden rounded-l-xl"
         style={{
           backgroundColor: task.completed
             ? "rgba(255,255,255,0.08)"
@@ -197,20 +220,26 @@ export function DashboardTaskCard({
           MENTOR ACTIONS
           ==========================================================
 
-          This is intentionally rendered ONCE.
+          Rendered exactly once.
 
-          The wrapper stops clicks from reaching the card, so
-          clicking the three-dot edit menu does not trigger the
-          task's normal click behavior.
+          This wrapper:
+          - sits above the card content
+          - prevents clicks from reaching the card
+          - prevents the card's keyboard handler from firing
+          - allows the dropdown itself to escape the card's clipping
+            context because the card no longer uses overflow-hidden
       */}
 
       {children && (
         <div
-          className="absolute right-1.5 top-1.5 z-10"
+          className="absolute right-1.5 top-1.5 z-50"
           onClick={(event) => {
             event.stopPropagation();
           }}
           onMouseDown={(event) => {
+            event.stopPropagation();
+          }}
+          onPointerDown={(event) => {
             event.stopPropagation();
           }}
           onKeyDown={(event) => {
