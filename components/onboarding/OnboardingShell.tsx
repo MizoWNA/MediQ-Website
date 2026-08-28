@@ -172,7 +172,7 @@ export default function OnboardingShell({
           {/* Explanation sidebar */}
 
           <OnboardingSidebar
-  annotation={currentSection.annotation}
+            annotations={currentSection.annotations}
           />
 
           {/* Section */}
