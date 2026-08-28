@@ -148,12 +148,12 @@ export default function OnboardingPage() {
         return;
       }
 
-      const { error: updateError } = await supabase
-        .from("profiles")
-        .update({
-          first_time: false,
-        })
-        .eq("id", user.id);
+      const { error: updateError } =
+        await supabase.rpc("complete_onboarding");
+
+      if (updateError) {
+        throw updateError;
+      }
 
       if (updateError) {
         throw updateError;
