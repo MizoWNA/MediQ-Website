@@ -10,65 +10,43 @@ export default function BootSequence({
   onComplete,
 }: BootSequenceProps) {
   const [phase, setPhase] = useState(0);
-  const [exiting, setExiting] = useState(false);
 
   useEffect(() => {
-    /*
-     * ================================================================
-     * BOOT TIMELINE
-     *
-     * 0ms     — Initial black screen
-     * 350ms   — Logo appears
-     * 850ms   — Brand appears
-     * 1250ms  — Platform label appears
-     * 1650ms  — Preparing line appears
-     * 2150ms  — Everything settles
-     * 2550ms  — Begin exit
-     * 3100ms  — Hand control back to onboarding
-     * ================================================================
-     */
-
     const timers = [
-      window.setTimeout(() => {
-        setPhase(1);
-      }, 350),
+      // Atmosphere
+      window.setTimeout(() => setPhase(1), 350),
 
-      window.setTimeout(() => {
-        setPhase(2);
-      }, 850),
+      // Logo
+      window.setTimeout(() => setPhase(2), 850),
 
-      window.setTimeout(() => {
-        setPhase(3);
-      }, 1250),
+      // Brand
+      window.setTimeout(() => setPhase(3), 1400),
 
-      window.setTimeout(() => {
-        setPhase(4);
-      }, 1650),
+      // Platform label
+      window.setTimeout(() => setPhase(4), 1950),
 
-      window.setTimeout(() => {
-        setPhase(5);
-      }, 2150),
+      // Progress line
+      window.setTimeout(() => setPhase(5), 2450),
 
-      window.setTimeout(() => {
-        setExiting(true);
-      }, 2550),
+      // Preparing status
+      window.setTimeout(() => setPhase(6), 2950),
 
-      window.setTimeout(() => {
-        onComplete();
-      }, 3100),
+      // Start fading out
+      window.setTimeout(() => setPhase(7), 4050),
+
+      // Fully complete
+      window.setTimeout(() => onComplete(), 4700),
     ];
 
     return () => {
-      timers.forEach((timer) => {
-        window.clearTimeout(timer);
-      });
+      timers.forEach(window.clearTimeout);
     };
   }, [onComplete]);
 
   return (
     <div
-      className={`absolute inset-0 z-50 flex items-center justify-center overflow-hidden bg-[#0b0d10] transition-opacity duration-500 ease-out ${
-        exiting ? "pointer-events-none opacity-0" : "opacity-100"
+      className={`absolute inset-0 z-50 flex items-center justify-center overflow-hidden bg-[#0b0d10] transition-opacity duration-650 ${
+        phase >= 7 ? "opacity-0" : "opacity-100"
       }`}
     >
       {/* ============================================================
@@ -79,9 +57,9 @@ export default function BootSequence({
         {/* Main blue glow */}
 
         <div
-          className={`absolute left-1/2 top-1/2 h-[420px] w-[420px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#1f71a1]/[0.06] blur-[120px] transition-all duration-[1400ms] ease-out ${
+          className={`absolute left-1/2 top-1/2 h-[520px] w-[520px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#1f71a1]/[0.065] blur-[140px] transition-all duration-[1600ms] ease-out ${
             phase >= 1
-              ? "scale-100 opacity-100"
+              ? "scale-125 opacity-100"
               : "scale-75 opacity-0"
           }`}
         />
@@ -89,18 +67,20 @@ export default function BootSequence({
         {/* Secondary glow */}
 
         <div
-          className={`absolute bottom-[-180px] right-[-100px] h-[380px] w-[380px] rounded-full bg-[#46a65c]/[0.025] blur-[120px] transition-all duration-[1800ms] ease-out ${
+          className={`absolute left-1/2 top-1/2 h-[260px] w-[260px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#46a65c]/[0.025] blur-[100px] transition-all duration-[1800ms] ${
             phase >= 3
-              ? "scale-100 opacity-100"
-              : "scale-75 opacity-0"
+              ? "scale-150 opacity-100"
+              : "scale-50 opacity-0"
           }`}
         />
 
         {/* Grid */}
 
         <div
-          className={`absolute inset-0 transition-opacity duration-1000 ${
-            phase >= 2 ? "opacity-[0.025]" : "opacity-0"
+          className={`absolute inset-0 transition-opacity duration-[1400ms] ${
+            phase >= 1
+              ? "opacity-[0.025]"
+              : "opacity-0"
           }`}
           style={{
             backgroundImage:
@@ -119,23 +99,22 @@ export default function BootSequence({
           ============================================================ */}
 
       <div className="relative z-10 flex flex-col items-center">
-
-        {/* ==========================================================
+        {/* ============================================================
             LOGO
-            ========================================================== */}
+            ============================================================ */}
 
         <div
-          className={`relative flex h-20 w-20 items-center justify-center transition-all duration-[900ms] ease-out ${
-            phase >= 1
+          className={`relative flex h-28 w-28 items-center justify-center transition-all duration-900 ease-out ${
+            phase >= 2
               ? "scale-100 opacity-100"
-              : "scale-90 opacity-0"
+              : "scale-85 opacity-0"
           }`}
         >
           {/* Glow */}
 
           <div
-            className={`absolute inset-[-14px] rounded-[28px] bg-[#1f71a1]/10 blur-2xl transition-all duration-[1200ms] ${
-              phase >= 2
+            className={`absolute inset-[-18px] rounded-[34px] bg-[#1f71a1]/[0.12] blur-3xl transition-all duration-[1200ms] ${
+              phase >= 3
                 ? "scale-110 opacity-100"
                 : "scale-75 opacity-0"
             }`}
@@ -144,122 +123,86 @@ export default function BootSequence({
           {/* Logo container */}
 
           <div
-            className={`relative flex h-16 w-16 items-center justify-center rounded-[20px] border border-white/[0.08] bg-[#111419] transition-all duration-700 ${
-              phase >= 1
-                ? "scale-100"
-                : "scale-90"
-            }`}
+            className="relative flex h-20 w-20 items-center justify-center rounded-[24px] border border-white/[0.08] bg-[#111419]"
             style={{
               boxShadow:
-                "0 0 0 1px rgba(31,113,161,0.12), 0 0 0 2px rgba(70,166,92,0.04)",
+                "0 0 0 1px rgba(31,113,161,0.14), 0 0 0 2px rgba(70,166,92,0.05), 0 20px 60px rgba(0,0,0,0.35)",
             }}
           >
             <img
               src="/mediq.svg"
               alt="MediQ"
-              className="h-10 w-10 object-contain"
+              className="h-12 w-12 object-contain"
             />
           </div>
         </div>
 
-        {/* ==========================================================
+        {/* ============================================================
             BRAND
-            ========================================================== */}
+            ============================================================ */}
 
         <div
-          className={`mt-5 text-[11px] font-semibold tracking-[0.28em] text-white transition-all duration-700 ease-out ${
-            phase >= 2
-              ? "translate-y-0 opacity-80"
+          className={`mt-6 text-sm font-semibold tracking-[0.34em] text-white transition-all duration-700 ease-out ${
+            phase >= 3
+              ? "translate-y-0 opacity-85"
               : "translate-y-3 opacity-0"
           }`}
         >
           MEDIQ
         </div>
 
-        {/* ==========================================================
-            PLATFORM LABEL
-            ========================================================== */}
+        {/* ============================================================
+            PLATFORM
+            ============================================================ */}
 
         <div
-          className={`mt-2 flex items-center gap-2 transition-all duration-700 ease-out ${
-            phase >= 3
+          className={`mt-3 flex items-center gap-2.5 transition-all duration-700 ease-out ${
+            phase >= 4
               ? "translate-y-0 opacity-100"
               : "translate-y-3 opacity-0"
           }`}
         >
-          <span
-            className={`h-1 w-1 rounded-full bg-[#5aa9d8] transition-all duration-500 ${
-              phase >= 3
-                ? "scale-100 opacity-100"
-                : "scale-0 opacity-0"
-            }`}
-          />
+          <span className="h-1.5 w-1.5 rounded-full bg-[#5aa9d8] shadow-[0_0_10px_rgba(90,169,216,0.45)]" />
 
-          <span className="text-[9px] font-medium uppercase tracking-[0.2em] text-white/25">
+          <span className="text-[10px] font-medium uppercase tracking-[0.22em] text-white/30">
             Mentorship Platform
           </span>
         </div>
 
-        {/* ==========================================================
-            PROGRESS LINE
-            ========================================================== */}
+        {/* ============================================================
+            PROGRESS
+            ============================================================ */}
 
         <div
-          className={`mt-7 h-px w-44 overflow-hidden bg-white/[0.06] transition-opacity duration-700 ${
-            phase >= 4 ? "opacity-100" : "opacity-0"
+          className={`mt-9 h-px w-52 overflow-hidden bg-white/[0.07] transition-opacity duration-700 ${
+            phase >= 5
+              ? "opacity-100"
+              : "opacity-0"
           }`}
         >
           <div
-            className={`h-full w-full bg-gradient-to-r from-transparent via-[#5aa9d8]/70 to-transparent transition-transform duration-[900ms] ease-out ${
-              phase >= 4
+            className={`h-full w-full bg-gradient-to-r from-transparent via-[#5aa9d8]/70 to-transparent transition-transform duration-[1100ms] ease-out ${
+              phase >= 5
                 ? "translate-x-0"
                 : "-translate-x-full"
             }`}
           />
         </div>
 
-        {/* ==========================================================
+        {/* ============================================================
             STATUS
-            ========================================================== */}
+            ============================================================ */}
 
         <div
-          className={`mt-3 text-[8px] uppercase tracking-[0.18em] text-white/15 transition-all duration-700 ease-out ${
-            phase >= 4
+          className={`mt-4 text-[9px] font-medium uppercase tracking-[0.2em] text-white/20 transition-all duration-700 ${
+            phase >= 6
               ? "translate-y-0 opacity-100"
               : "translate-y-2 opacity-0"
           }`}
         >
           Preparing your workspace
         </div>
-
-        {/* ==========================================================
-            READY INDICATOR
-            ========================================================== */}
-
-        <div
-          className={`mt-5 flex items-center gap-2 transition-all duration-700 ease-out ${
-            phase >= 5
-              ? "translate-y-0 opacity-100"
-              : "translate-y-2 opacity-0"
-          }`}
-        >
-          <span className="h-1.5 w-1.5 rounded-full bg-[#46a65c]/70 shadow-[0_0_10px_rgba(70,166,92,0.35)]" />
-
-          <span className="text-[8px] font-medium uppercase tracking-[0.18em] text-white/20">
-            Ready
-          </span>
-        </div>
       </div>
-
-      {/* ============================================================
-          EXIT VEIL
-          ============================================================ */}
-
-      <div
-        className={`pointer-events-none absolute inset-0 bg-[#0b0d10] transition-opacity duration-500 ${
-          exiting ? "opacity-0" : "opacity-100"
-        }`}
-      />
     </div>
   );
 }
