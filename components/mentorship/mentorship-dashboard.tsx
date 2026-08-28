@@ -124,8 +124,16 @@ type Objective = {
  * TASK
  * ================================================================
  *
- * The MCQ-specific fields now travel with the student dashboard
- * task so the dashboard can display and edit progress.
+ * MCQ tasks use:
+ *
+ *   question_count
+ *   questions_solved
+ *   completion_threshold
+ *
+ * `completed` is database-derived.
+ *
+ * The student dashboard NEVER calculates or writes `completed`
+ * for an MCQ task.
  */
 
 type Task = {
@@ -142,9 +150,6 @@ type Task = {
   completed: boolean;
   date: string;
 
-  /*
-   * MCQ progress
-   */
   question_count: number | null;
   questions_solved: number | null;
   completion_threshold: number | null;
@@ -551,6 +556,15 @@ export function MentorshipDashboard() {
          * ============================================================
          * TASKS
          * ============================================================
+         *
+         * MCQ fields are intentionally fetched directly from tasks.
+         *
+         * The database remains the source of truth for:
+         *
+         *   - questions_solved
+         *   - question_count
+         *   - completion_threshold
+         *   - completed
          */
 
         const {
@@ -609,36 +623,57 @@ export function MentorshipDashboard() {
 
         const normalizedTasks: Task[] =
           Array.isArray(taskData)
-            ? taskData.map((task) => ({
-                id: task.id,
-                name: task.name,
-                subject_id: task.subject_id,
-                task_type_id: task.task_type_id,
-                student_id: task.student_id,
-                completed: task.completed,
-                date: task.date,
+            ? taskData.map((task) => {
+                const questionCount =
+                  typeof task.question_count ===
+                    "number"
+                    ? task.question_count
+                    : null;
 
-                subject:
-                  task.subject?.name ??
-                  task.subject?.display_name ??
-                  null,
+                const questionsSolved =
+                  typeof task.questions_solved ===
+                    "number"
+                    ? task.questions_solved
+                    : questionCount !== null
+                      ? 0
+                      : null;
 
-                type:
-                  task.task_type?.name ??
-                  null,
+                const completionThreshold =
+                  typeof task.completion_threshold ===
+                    "number"
+                    ? task.completion_threshold
+                    : null;
 
-                question_count:
-                  task.question_count ??
-                  null,
+                return {
+                  id: task.id,
+                  name: task.name,
+                  subject_id: task.subject_id,
+                  task_type_id: task.task_type_id,
+                  student_id: task.student_id,
+                  completed: Boolean(
+                    task.completed
+                  ),
+                  date: task.date,
 
-                questions_solved:
-                  task.questions_solved ??
-                  null,
+                  subject:
+                    task.subject?.name ??
+                    task.subject?.display_name ??
+                    null,
 
-                completion_threshold:
-                  task.completion_threshold ??
-                  null,
-              }))
+                  type:
+                    task.task_type?.name ??
+                    null,
+
+                  question_count:
+                    questionCount,
+
+                  questions_solved:
+                    questionsSolved,
+
+                  completion_threshold:
+                    completionThreshold,
+                };
+              })
             : [];
 
         setTasks(normalizedTasks);
@@ -765,14 +800,41 @@ export function MentorshipDashboard() {
    */
 
   function isMcqTask(task: Task) {
+    const taskType =
+      task.type?.trim().toLowerCase();
+
+    /*
+     * Primary detection:
+     *
+     * A task is MCQ if its task type explicitly says
+     * "Solve MCQ".
+     *
+     * Fallback:
+     *
+     * Existing MCQ tasks may already contain question_count.
+     */
+
     return (
-      task.type?.toLowerCase() ===
-        "solve mcq" ||
+      taskType === "solve mcq" ||
       task.question_count !== null
     );
   }
 
   function openMcqEditor(task: Task) {
+    if (
+      task.question_count === null ||
+      task.question_count <= 0
+    ) {
+      setMcqTask(task);
+      setMcqValue(
+        String(task.questions_solved ?? 0)
+      );
+      setMcqError(
+        "This MCQ task does not have a valid question goal."
+      );
+      return;
+    }
+
     setMcqTask(task);
 
     setMcqValue(
@@ -795,12 +857,23 @@ export function MentorshipDashboard() {
    * SAVE MCQ PROGRESS
    * ================================================================
    *
-   * We only update questions_solved here.
+   * IMPORTANT:
    *
-   * completed is deliberately NOT calculated client-side.
+   * We ONLY update questions_solved.
    *
-   * The database trigger is responsible for determining whether
-   * the task has crossed its completion threshold.
+   * We DO NOT calculate completed here.
+   *
+   * The database trigger determines completed from:
+   *
+   *   questions_solved
+   *   question_count
+   *   completion_threshold
+   *
+   * This works in both directions:
+   *
+   *   below threshold -> incomplete
+   *   reaches threshold -> complete
+   *   drops below threshold -> incomplete again
    */
 
   async function saveMcqProgress() {
@@ -821,7 +894,7 @@ export function MentorshipDashboard() {
 
     const parsedValue =
       Number.parseInt(
-        mcqValue,
+        mcqValue.trim(),
         10
       );
 
@@ -854,10 +927,9 @@ export function MentorshipDashboard() {
 
     try {
       /*
-       * Update only questions_solved.
+       * Only questions_solved is written.
        *
-       * The database trigger will update completed based on
-       * completion_threshold.
+       * The DB trigger handles completed.
        */
 
       const {
@@ -892,11 +964,9 @@ export function MentorshipDashboard() {
       }
 
       /*
-       * Update the local task using the actual database response.
+       * Use the actual database response.
        *
-       * This means if the trigger marked it complete, the UI knows
-       * immediately. Likewise, if the student drops below the
-       * threshold, the task becomes incomplete again.
+       * Do not derive completed locally.
        */
 
       setTasks((current) =>
@@ -911,14 +981,16 @@ export function MentorshipDashboard() {
                 completion_threshold:
                   updatedTask.completion_threshold,
                 completed:
-                  updatedTask.completed,
+                  Boolean(
+                    updatedTask.completed
+                  ),
               }
             : task
         )
       );
 
       /*
-       * Update the modal's copy too in case we keep it open.
+       * Keep modal state synchronized until it closes.
        */
 
       setMcqTask((current) =>
@@ -932,13 +1004,15 @@ export function MentorshipDashboard() {
               completion_threshold:
                 updatedTask.completion_threshold,
               completed:
-                updatedTask.completed,
+                Boolean(
+                  updatedTask.completed
+                ),
             }
           : current
       );
 
       /*
-       * Close after a successful save.
+       * Successful save.
        */
 
       setMcqTask(null);
@@ -964,11 +1038,11 @@ export function MentorshipDashboard() {
    * TOGGLE / EDIT TASK
    * ================================================================
    *
-   * Normal tasks:
+   * Normal task:
    *   click -> toggle completed
    *
-   * MCQ tasks:
-   *   click -> open progress editor
+   * MCQ task:
+   *   click -> open MCQ progress editor
    */
 
   async function toggleTask(task: Task) {
@@ -979,6 +1053,10 @@ export function MentorshipDashboard() {
 
     const newCompleted =
       !task.completed;
+
+    /*
+     * Optimistic UI update for normal tasks.
+     */
 
     setTasks((current) =>
       current.map((item) =>
@@ -1003,6 +1081,10 @@ export function MentorshipDashboard() {
         "Task update failed:",
         error
       );
+
+      /*
+       * Roll back if the database update failed.
+       */
 
       setTasks((current) =>
         current.map((item) =>
@@ -1500,7 +1582,7 @@ export function MentorshipDashboard() {
 
       {/* ============================================================
           MCQ PROGRESS MODAL
-          ============================================================ */}
+      ============================================================ */}
 
       {mcqTask && (
         <div
@@ -1560,6 +1642,7 @@ export function MentorshipDashboard() {
                     <div className="mt-1 text-2xl font-semibold tracking-tight text-white">
                       {mcqTask.questions_solved ??
                         0}
+
                       <span className="text-white/25">
                         {" "}
                         /{" "}
@@ -1576,15 +1659,15 @@ export function MentorshipDashboard() {
 
                     <div className="mt-1 text-sm font-medium text-white/60">
                       {mcqTask.completion_threshold ??
-                        75}
+                        "—"}
                       %
                     </div>
                   </div>
                 </div>
 
-                {mcqTask.question_count &&
-                  mcqTask.questions_solved !==
-                    null && (
+                {mcqTask.question_count !==
+                    null &&
+                  mcqTask.question_count > 0 && (
                     <div className="mt-4">
                       <div className="h-1.5 overflow-hidden rounded-full bg-white/[0.07]">
                         <div
@@ -1592,7 +1675,8 @@ export function MentorshipDashboard() {
                           style={{
                             width: `${Math.min(
                               100,
-                              (mcqTask.questions_solved /
+                              ((mcqTask.questions_solved ??
+                                0) /
                                 mcqTask.question_count) *
                                 100
                             )}%`,
@@ -1684,7 +1768,13 @@ export function MentorshipDashboard() {
                 onClick={
                   saveMcqProgress
                 }
-                disabled={savingMcq}
+                disabled={
+                  savingMcq ||
+                  mcqTask.question_count ===
+                    null ||
+                  mcqTask.question_count <=
+                    0
+                }
                 className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-xs font-semibold text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <Save className="h-3.5 w-3.5" />
