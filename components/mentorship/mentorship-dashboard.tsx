@@ -124,32 +124,38 @@ type Objective = {
  * TASK
  * ================================================================
  *
- * MCQ tasks use:
+ * This is the shared task shape passed into DashboardCalendar.
  *
- *   question_count
- *   questions_solved
- *   completion_threshold
- *
- * `completed` is database-derived.
- *
- * The student dashboard NEVER calculates or writes `completed`
- * for an MCQ task.
+ * IMPORTANT:
+ * - subject is the human-readable subject name
+ * - subject_color is the subject's actual color
+ * - type is the human-readable task type
+ * - type_points contains the task type's point value
+ * - MCQ fields are preserved all the way to DashboardTaskCard
  */
 
 type Task = {
   id: string;
   name: string;
 
-  subject_id: string;
-  task_type_id: string;
+  subject_id: string | null;
+  task_type_id: string | null;
 
   subject: string | null;
+  subject_color: string | null;
+
   type: string | null;
+  type_points: number | null;
 
   student_id: string;
   completed: boolean;
   date: string;
 
+  created_at?: string;
+
+  /*
+   * MCQ progress
+   */
   question_count: number | null;
   questions_solved: number | null;
   completion_threshold: number | null;
@@ -388,7 +394,9 @@ export function MentorshipDashboard() {
 
       try {
         /*
+         * ==========================================================
          * AUTH
+         * ==========================================================
          */
 
         const {
@@ -410,7 +418,9 @@ export function MentorshipDashboard() {
         const studentId = user.id;
 
         /*
+         * ==========================================================
          * PROFILE
+         * ==========================================================
          */
 
         const {
@@ -441,7 +451,9 @@ export function MentorshipDashboard() {
         setProfile(profileData);
 
         /*
+         * ==========================================================
          * MENTOR
+         * ==========================================================
          */
 
         setMentorName(null);
@@ -468,7 +480,9 @@ export function MentorshipDashboard() {
         }
 
         /*
+         * ==========================================================
          * OBJECTIVES
+         * ==========================================================
          */
 
         const {
@@ -495,7 +509,9 @@ export function MentorshipDashboard() {
         );
 
         /*
+         * ==========================================================
          * SUBJECTS
+         * ==========================================================
          */
 
         const {
@@ -524,7 +540,9 @@ export function MentorshipDashboard() {
         );
 
         /*
+         * ==========================================================
          * TASK TYPES
+         * ==========================================================
          */
 
         const {
@@ -553,18 +571,14 @@ export function MentorshipDashboard() {
         );
 
         /*
-         * ============================================================
+         * ==========================================================
          * TASKS
-         * ============================================================
+         * ==========================================================
          *
-         * MCQ fields are intentionally fetched directly from tasks.
+         * Pull the complete subject + task type relationships.
          *
-         * The database remains the source of truth for:
-         *
-         *   - questions_solved
-         *   - question_count
-         *   - completion_threshold
-         *   - completed
+         * The explicit foreign-key names matter because these are
+         * the relationships used by the tasks table.
          */
 
         const {
@@ -581,18 +595,27 @@ export function MentorshipDashboard() {
             completed,
             date,
             created_at,
+
             question_count,
             questions_solved,
             completion_threshold,
+
             subject:subjects!tasks_subject_id_fkey (
               id,
               name,
               display_name,
-              color
+              category,
+              color,
+              active,
+              display_order
             ),
+
             task_type:task_types!tasks_task_type_id_fkey (
               id,
-              name
+              name,
+              points,
+              active,
+              display_order
             )
           `)
           .eq("student_id", studentId)
@@ -616,64 +639,94 @@ export function MentorshipDashboard() {
         if (cancelled) return;
 
         /*
-         * ============================================================
+         * ==========================================================
          * NORMALIZE TASKS
-         * ============================================================
+         * ==========================================================
+         *
+         * DO NOT reduce the relationship to an ID here.
+         *
+         * The task card needs:
+         *
+         * subject       -> display name
+         * subject_color -> actual subject color
+         * type          -> task type name
+         * type_points   -> task type points
+         *
+         * MCQ tasks additionally retain:
+         *
+         * question_count
+         * questions_solved
+         * completion_threshold
          */
 
         const normalizedTasks: Task[] =
           Array.isArray(taskData)
-            ? taskData.map((task) => {
-                const questionCount =
-                  typeof task.question_count ===
-                    "number"
-                    ? task.question_count
-                    : null;
+            ? taskData.map((task) => ({
+                id: task.id,
+                name: task.name,
 
-                const questionsSolved =
-                  typeof task.questions_solved ===
-                    "number"
-                    ? task.questions_solved
-                    : questionCount !== null
-                      ? 0
-                      : null;
+                subject_id:
+                  task.subject_id ?? null,
 
-                const completionThreshold =
-                  typeof task.completion_threshold ===
-                    "number"
-                    ? task.completion_threshold
-                    : null;
+                task_type_id:
+                  task.task_type_id ?? null,
 
-                return {
-                  id: task.id,
-                  name: task.name,
-                  subject_id: task.subject_id,
-                  task_type_id: task.task_type_id,
-                  student_id: task.student_id,
-                  completed: Boolean(
-                    task.completed
-                  ),
-                  date: task.date,
+                student_id:
+                  task.student_id,
 
-                  subject:
-                    task.subject?.name ??
-                    task.subject?.display_name ??
-                    null,
+                completed:
+                  task.completed,
 
-                  type:
-                    task.task_type?.name ??
-                    null,
+                date:
+                  task.date,
 
-                  question_count:
-                    questionCount,
+                created_at:
+                  task.created_at,
 
-                  questions_solved:
-                    questionsSolved,
+                /*
+                 * Human-readable subject
+                 */
+                subject:
+                  task.subject?.display_name ??
+                  task.subject?.name ??
+                  null,
 
-                  completion_threshold:
-                    completionThreshold,
-                };
-              })
+                /*
+                 * Actual subject color
+                 */
+                subject_color:
+                  task.subject?.color ??
+                  null,
+
+                /*
+                 * Human-readable task type
+                 */
+                type:
+                  task.task_type?.name ??
+                  null,
+
+                /*
+                 * Task type points
+                 */
+                type_points:
+                  task.task_type?.points ??
+                  null,
+
+                /*
+                 * MCQ progress
+                 */
+                question_count:
+                  task.question_count ??
+                  null,
+
+                questions_solved:
+                  task.questions_solved ??
+                  null,
+
+                completion_threshold:
+                  task.completion_threshold ??
+                  null,
+              }))
             : [];
 
         setTasks(normalizedTasks);
@@ -732,9 +785,16 @@ export function MentorshipDashboard() {
 
   const weekSubjects = useMemo(() => {
     const subjectIds = new Set(
-      tasks.map(
-        (task) => task.subject_id
-      )
+      tasks
+        .map(
+          (task) => task.subject_id
+        )
+        .filter(
+          (
+            id
+          ): id is string =>
+            Boolean(id)
+        )
     );
 
     return subjects.filter(
@@ -760,7 +820,8 @@ export function MentorshipDashboard() {
         item.id === objective.id
           ? {
               ...item,
-              completed: newCompleted,
+              completed:
+                newCompleted,
             }
           : item
       )
@@ -800,45 +861,22 @@ export function MentorshipDashboard() {
    */
 
   function isMcqTask(task: Task) {
-    const taskType =
+    const typeName =
       task.type?.trim().toLowerCase();
 
-    /*
-     * Primary detection:
-     *
-     * A task is MCQ if its task type explicitly says
-     * "Solve MCQ".
-     *
-     * Fallback:
-     *
-     * Existing MCQ tasks may already contain question_count.
-     */
-
     return (
-      taskType === "solve mcq" ||
+      typeName === "solve mcq" ||
       task.question_count !== null
     );
   }
 
   function openMcqEditor(task: Task) {
-    if (
-      task.question_count === null ||
-      task.question_count <= 0
-    ) {
-      setMcqTask(task);
-      setMcqValue(
-        String(task.questions_solved ?? 0)
-      );
-      setMcqError(
-        "This MCQ task does not have a valid question goal."
-      );
-      return;
-    }
-
     setMcqTask(task);
 
     setMcqValue(
-      String(task.questions_solved ?? 0)
+      String(
+        task.questions_solved ?? 0
+      )
     );
 
     setMcqError(null);
@@ -857,23 +895,10 @@ export function MentorshipDashboard() {
    * SAVE MCQ PROGRESS
    * ================================================================
    *
-   * IMPORTANT:
+   * Only questions_solved is written from the dashboard.
    *
-   * We ONLY update questions_solved.
-   *
-   * We DO NOT calculate completed here.
-   *
-   * The database trigger determines completed from:
-   *
-   *   questions_solved
-   *   question_count
-   *   completion_threshold
-   *
-   * This works in both directions:
-   *
-   *   below threshold -> incomplete
-   *   reaches threshold -> complete
-   *   drops below threshold -> incomplete again
+   * completed remains database-controlled by the MCQ completion
+   * trigger.
    */
 
   async function saveMcqProgress() {
@@ -894,7 +919,7 @@ export function MentorshipDashboard() {
 
     const parsedValue =
       Number.parseInt(
-        mcqValue.trim(),
+        mcqValue,
         10
       );
 
@@ -926,12 +951,6 @@ export function MentorshipDashboard() {
     setMcqError(null);
 
     try {
-      /*
-       * Only questions_solved is written.
-       *
-       * The DB trigger handles completed.
-       */
-
       const {
         data: updatedTask,
         error,
@@ -964,9 +983,8 @@ export function MentorshipDashboard() {
       }
 
       /*
-       * Use the actual database response.
-       *
-       * Do not derive completed locally.
+       * Update local task with the actual
+       * database result.
        */
 
       setTasks((current) =>
@@ -981,16 +999,14 @@ export function MentorshipDashboard() {
                 completion_threshold:
                   updatedTask.completion_threshold,
                 completed:
-                  Boolean(
-                    updatedTask.completed
-                  ),
+                  updatedTask.completed,
               }
             : task
         )
       );
 
       /*
-       * Keep modal state synchronized until it closes.
+       * Keep modal state synchronized as well.
        */
 
       setMcqTask((current) =>
@@ -1004,16 +1020,10 @@ export function MentorshipDashboard() {
               completion_threshold:
                 updatedTask.completion_threshold,
               completed:
-                Boolean(
-                  updatedTask.completed
-                ),
+                updatedTask.completed,
             }
           : current
       );
-
-      /*
-       * Successful save.
-       */
 
       setMcqTask(null);
       setMcqValue("");
@@ -1037,15 +1047,15 @@ export function MentorshipDashboard() {
    * ================================================================
    * TOGGLE / EDIT TASK
    * ================================================================
-   *
-   * Normal task:
-   *   click -> toggle completed
-   *
-   * MCQ task:
-   *   click -> open MCQ progress editor
    */
 
   async function toggleTask(task: Task) {
+    /*
+     * MCQ tasks don't use the normal checkbox behaviour.
+     *
+     * Clicking them opens the progress editor.
+     */
+
     if (isMcqTask(task)) {
       openMcqEditor(task);
       return;
@@ -1054,16 +1064,13 @@ export function MentorshipDashboard() {
     const newCompleted =
       !task.completed;
 
-    /*
-     * Optimistic UI update for normal tasks.
-     */
-
     setTasks((current) =>
       current.map((item) =>
         item.id === task.id
           ? {
               ...item,
-              completed: newCompleted,
+              completed:
+                newCompleted,
             }
           : item
       )
@@ -1081,10 +1088,6 @@ export function MentorshipDashboard() {
         "Task update failed:",
         error
       );
-
-      /*
-       * Roll back if the database update failed.
-       */
 
       setTasks((current) =>
         current.map((item) =>
@@ -1642,7 +1645,6 @@ export function MentorshipDashboard() {
                     <div className="mt-1 text-2xl font-semibold tracking-tight text-white">
                       {mcqTask.questions_solved ??
                         0}
-
                       <span className="text-white/25">
                         {" "}
                         /{" "}
@@ -1659,15 +1661,15 @@ export function MentorshipDashboard() {
 
                     <div className="mt-1 text-sm font-medium text-white/60">
                       {mcqTask.completion_threshold ??
-                        "—"}
+                        75}
                       %
                     </div>
                   </div>
                 </div>
 
-                {mcqTask.question_count !==
-                    null &&
-                  mcqTask.question_count > 0 && (
+                {mcqTask.question_count &&
+                  mcqTask.questions_solved !==
+                    null && (
                     <div className="mt-4">
                       <div className="h-1.5 overflow-hidden rounded-full bg-white/[0.07]">
                         <div
@@ -1675,8 +1677,7 @@ export function MentorshipDashboard() {
                           style={{
                             width: `${Math.min(
                               100,
-                              ((mcqTask.questions_solved ??
-                                0) /
+                              (mcqTask.questions_solved /
                                 mcqTask.question_count) *
                                 100
                             )}%`,
@@ -1768,13 +1769,7 @@ export function MentorshipDashboard() {
                 onClick={
                   saveMcqProgress
                 }
-                disabled={
-                  savingMcq ||
-                  mcqTask.question_count ===
-                    null ||
-                  mcqTask.question_count <=
-                    0
-                }
+                disabled={savingMcq}
                 className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-xs font-semibold text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <Save className="h-3.5 w-3.5" />

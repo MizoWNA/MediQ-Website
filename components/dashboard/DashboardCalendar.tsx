@@ -130,64 +130,65 @@ export function DashboardCalendar({
   function getDisplayTask(
     task: DashboardTask
   ): DashboardTask {
-    const taskWithIds =
-      task as DashboardTask & {
-        subject_id?: string | null;
-        task_type_id?: string | null;
-      };
+    const taskWithMetadata = task as DashboardTask & {
+      subject_id?: string | null;
+      task_type_id?: string | null;
+      subject_color?: string | null;
+      type_points?: number | null;
+    };
 
     const subject =
-      taskWithIds.subject_id
+      taskWithMetadata.subject_id
         ? subjects.find(
             (item) =>
               item.id ===
-              taskWithIds.subject_id
+              taskWithMetadata.subject_id
           )
         : null;
 
     const taskType =
-      taskWithIds.task_type_id
+      taskWithMetadata.task_type_id
         ? taskTypes.find(
             (item) =>
               item.id ===
-              taskWithIds.task_type_id
+              taskWithMetadata.task_type_id
           )
         : null;
-
-    /*
-     * Preserve ALL existing task fields.
-     *
-     * This is important now because MCQ tasks contain:
-     *
-     *   question_count
-     *   questions_solved
-     *   completion_threshold
-     *
-     * We don't want normalization to accidentally throw
-     * any of that information away.
-     */
 
     return {
       ...task,
 
+      /*
+      * Keep the human-readable subject name.
+      */
       subject:
-        subject?.id ??
         task.subject ??
+        subject?.display_name ??
+        subject?.name ??
         null,
 
+      /*
+      * Preserve the actual subject color.
+      */
+      subject_color:
+        taskWithMetadata.subject_color ??
+        subject?.color ??
+        null,
+
+      /*
+      * Keep the human-readable task type.
+      */
       type:
-        taskType?.name ??
         task.type ??
+        taskType?.name ??
         null,
 
-      subject_id:
-        taskWithIds.subject_id ??
-        task.subject_id ??
-        null,
-
-      task_type_id:
-        taskWithIds.task_type_id ??
-        task.task_type_id ??
+      /*
+      * Preserve task type points.
+      */
+      type_points:
+        taskWithMetadata.type_points ??
+        taskType?.points ??
         null,
     };
   }
