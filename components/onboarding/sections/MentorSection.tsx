@@ -21,10 +21,10 @@ mentor?: Mentor;
 
 const previewMentor: Mentor = {
 username: "mentor",
-name: "Dr. Ahmed Hassan",
+name: "Dr. Diaa AlAwady",
 role: "Academic Mentor",
 phone: "+20 100 000 0000",
-specialty: "Medical Education",
+specialty: "5th Year",
 };
 
 function getInitials(name: string) {
