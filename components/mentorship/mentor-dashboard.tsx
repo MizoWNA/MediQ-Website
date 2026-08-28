@@ -291,7 +291,174 @@ export function MentorDashboard() {
     useState<string | null>(null);
 
   const [openObjectiveMenu, setOpenObjectiveMenu] =
-    useState<string | null>(null);
+  useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadMentorContext() {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const { data: authData, error: authError } =
+          await supabase.auth.getUser();
+        if (authError) {
+          console.error("[v0] Mentor auth error:", {
+            message: authError.message,
+            code: authError.code,
+            details: authError.details,
+            hint: authError.hint,
+          });
+          throw authError;
+        }
+
+        if (!authData.user) {
+          if (!cancelled) setLoading(false);
+          router.replace("/login");
+          return;
+        }
+
+        const { data: mentor, error: mentorError } = await supabase
+          .from("profiles")
+          .select("id, username, display_name, role, year, start_date, end_date, exam_date, mentor_id")
+          .eq("id", authData.user.id)
+          .single();
+        if (mentorError) {
+          console.error("[v0] Mentor profile error:", {
+            message: mentorError.message,
+            code: mentorError.code,
+            details: mentorError.details,
+            hint: mentorError.hint,
+          });
+          throw mentorError;
+        }
+
+        const [studentsResult, subjectsResult, taskTypesResult] = await Promise.all([
+          supabase
+            .from("profiles")
+            .select("id, username, display_name, role, year, start_date, end_date, exam_date, mentor_id")
+            .eq("mentor_id", authData.user.id)
+            .eq("role", "student")
+            .order("display_name"),
+          supabase
+            .from("subjects")
+            .select("id, name, display_name, category, color, active, display_order")
+            .order("display_order"),
+          supabase
+            .from("task_types")
+            .select("id, name, points, active, display_order")
+            .order("display_order"),
+        ]);
+
+        for (const [label, result] of [
+          ["students", studentsResult],
+          ["subjects", subjectsResult],
+          ["task types", taskTypesResult],
+        ] as const) {
+          if (result.error) {
+            console.error(`[v0] Mentor ${label} error:`, {
+              message: result.error.message,
+              code: result.error.code,
+              details: result.error.details,
+              hint: result.error.hint,
+            });
+            throw result.error;
+          }
+        }
+
+        if (cancelled) return;
+
+        const studentRows = (studentsResult.data ?? []) as Profile[];
+        setMentorProfile(mentor as Profile);
+        setSubjects((subjectsResult.data ?? []) as Subject[]);
+        setTaskTypes((taskTypesResult.data ?? []) as TaskType[]);
+        setStudents(studentRows.map((student) => ({ ...student, weeklyTasks: 0, completedTasks: 0 })));
+        setSelectedStudentId((current) => current ?? studentRows[0]?.id ?? null);
+        setLoading(false);
+      } catch (err) {
+        if (cancelled) return;
+        console.error("[v0] Mentor dashboard load error:", err);
+        setError(err instanceof Error ? err.message : "Failed to load mentor dashboard.");
+        setLoading(false);
+      }
+    }
+
+    void loadMentorContext();
+    return () => {
+      cancelled = true;
+    };
+  }, [router]);
+
+  useEffect(() => {
+    if (!selectedStudentId) {
+      setSelectedStudent(null);
+      setObjectives([]);
+      setTasks([]);
+      setStudentError(null);
+      setLoadingStudent(false);
+      return;
+    }
+
+    let cancelled = false;
+    const studentId = selectedStudentId;
+
+    async function loadSelectedStudent() {
+      setLoadingStudent(true);
+      setStudentError(null);
+      setSelectedStudent(null);
+      setObjectives([]);
+      setTasks([]);
+
+      try {
+        const selectWithRelations = `
+          id, name, subject_id, task_type_id, student_id, completed, date, created_at,
+          question_count, questions_solved, completion_threshold,
+          subject:subjects!tasks_subject_id_fkey (id, name, display_name, color),
+          task_type:task_types!tasks_task_type_id_fkey (id, name, points)
+        `;
+        const [profileResult, objectivesResult, tasksResult] = await Promise.all([
+          supabase.from("profiles").select("id, username, display_name, role, year, start_date, end_date, exam_date, mentor_id").eq("id", studentId).single(),
+          supabase.from("objectives").select("id, text, completed").eq("student_id", studentId).order("created_at"),
+          supabase.from("tasks").select(selectWithRelations).eq("student_id", studentId).order("date").order("created_at"),
+        ]);
+
+        for (const [label, result] of [
+          ["student profile", profileResult],
+          ["objectives", objectivesResult],
+          ["tasks", tasksResult],
+        ] as const) {
+          if (result.error) {
+            console.error(`[v0] Mentor ${label} error:`, {
+              message: result.error.message,
+              code: result.error.code,
+              details: result.error.details,
+              hint: result.error.hint,
+            });
+            throw result.error;
+          }
+        }
+
+        if (cancelled) return;
+        const loadedTasks = (tasksResult.data ?? []).map((task) => normalizeTask(task as TaskRow));
+        setSelectedStudent(profileResult.data as Profile);
+        setObjectives((objectivesResult.data ?? []) as Objective[]);
+        setTasks(loadedTasks);
+        updateStudentTaskSummary(studentId, loadedTasks);
+      } catch (err) {
+        if (cancelled) return;
+        console.error("[v0] Selected student load error:", err);
+        setStudentError(err instanceof Error ? err.message : "Failed to load student planner.");
+      } finally {
+        if (!cancelled) setLoadingStudent(false);
+      }
+    }
+
+    void loadSelectedStudent();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedStudentId]);
 
   /*
    * ================================================================
