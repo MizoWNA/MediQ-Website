@@ -1,6 +1,7 @@
 import type { ComponentType } from "react";
 
 import WelcomeSection from "./sections/WelcomeSection";
+import MentorSection from "./sections/MentorSection";
 
 export interface OnboardingAnnotation {
   label: string;
@@ -38,5 +39,24 @@ export const onboardingSections: OnboardingSection[] = [
 
     // Add when the recording is ready:
     // voiceover: "/audio/onboarding/welcome.mp3",
+  },
+  {
+    id: "mentor",
+    title: "Your Mentor",
+    component: MentorSection,
+    annotations: [
+      {
+        label: "YOUR MENTOR",
+        text: "Someone assigned specifically to support your journey through MediQ.",
+      },
+      {
+        label: "GUIDANCE",
+        text: "Get another perspective when you're unsure what to do next.",
+      },
+      {
+        label: "ACCOUNTABILITY",
+        text: "Turn your plans into goals you can actually follow through on.",
+      },
+    ],
   },
 ];
