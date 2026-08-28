@@ -14,6 +14,9 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   LogOut,
+  TargetIcon,
+  X,
+  Save,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
@@ -28,11 +31,6 @@ import type { LeaderboardEntry } from "@/components/dashboard/DashboardLeaderboa
  * ================================================================
  * TEMP LEADERBOARD DATA
  * ================================================================
- *
- * This will eventually come from weekly_leaderboards +
- * weekly_leaderboard_entries.
- *
- * Keep this here for now while we build the database logic.
  */
 
 const mockLeaderboard: LeaderboardEntry[] = [
@@ -122,22 +120,12 @@ type Objective = {
 };
 
 /*
- * IMPORTANT:
+ * ================================================================
+ * TASK
+ * ================================================================
  *
- * The database now stores:
- *   subject_id
- *   task_type_id
- *
- * However DashboardCalendar still expects:
- *   subject
- *   type
- *
- * So the task state keeps BOTH:
- *   - the new foreign-key IDs
- *   - the resolved subject/type names
- *
- * This lets the database use the new schema without forcing
- * DashboardCalendar to know about the database relationships.
+ * The MCQ-specific fields now travel with the student dashboard
+ * task so the dashboard can display and edit progress.
  */
 
 type Task = {
@@ -153,6 +141,13 @@ type Task = {
   student_id: string;
   completed: boolean;
   date: string;
+
+  /*
+   * MCQ progress
+   */
+  question_count: number | null;
+  questions_solved: number | null;
+  completion_threshold: number | null;
 };
 
 type CalendarDay = {
@@ -282,6 +277,24 @@ export function MentorshipDashboard() {
 
   const [sidebarCollapsed, setSidebarCollapsed] =
     useState(false);
+
+  /*
+   * ================================================================
+   * MCQ MODAL
+   * ================================================================
+   */
+
+  const [mcqTask, setMcqTask] =
+    useState<Task | null>(null);
+
+  const [mcqValue, setMcqValue] =
+    useState("");
+
+  const [savingMcq, setSavingMcq] =
+    useState(false);
+
+  const [mcqError, setMcqError] =
+    useState<string | null>(null);
 
   /*
    * ================================================================
@@ -538,20 +551,6 @@ export function MentorshipDashboard() {
          * ============================================================
          * TASKS
          * ============================================================
-         *
-         * IMPORTANT:
-         *
-         * The old query was:
-         *
-         *   id, name, subject, type, ...
-         *
-         * Those columns no longer exist.
-         *
-         * We now fetch the foreign keys and their related records.
-         *
-         * Supabase/PostgREST can embed referenced tables using the
-         * foreign-key relationship names. This is the same relationship
-         * pattern already used successfully in the mentor dashboard.
          */
 
         const {
@@ -568,6 +567,9 @@ export function MentorshipDashboard() {
             completed,
             date,
             created_at,
+            question_count,
+            questions_solved,
+            completion_threshold,
             subject:subjects!tasks_subject_id_fkey (
               id,
               name,
@@ -603,17 +605,6 @@ export function MentorshipDashboard() {
          * ============================================================
          * NORMALIZE TASKS
          * ============================================================
-         *
-         * DashboardCalendar still expects:
-         *
-         *   task.subject
-         *   task.type
-         *
-         * Resolve those values from the new foreign-key relationships.
-         *
-         * We deliberately keep subject_id/task_type_id too, because
-         * those are the real database identifiers and should be used
-         * for future task editing/updating.
          */
 
         const normalizedTasks: Task[] =
@@ -634,6 +625,18 @@ export function MentorshipDashboard() {
 
                 type:
                   task.task_type?.name ??
+                  null,
+
+                question_count:
+                  task.question_count ??
+                  null,
+
+                questions_solved:
+                  task.questions_solved ??
+                  null,
+
+                completion_threshold:
+                  task.completion_threshold ??
                   null,
               }))
             : [];
@@ -690,11 +693,6 @@ export function MentorshipDashboard() {
    * ================================================================
    * WEEK SUBJECTS
    * ================================================================
-   *
-   * These come directly from the database subjects table.
-   *
-   * This means the legend can use the database color instead of
-   * guessing it from the task name.
    */
 
   const weekSubjects = useMemo(() => {
@@ -762,11 +760,223 @@ export function MentorshipDashboard() {
 
   /*
    * ================================================================
-   * TOGGLE TASK
+   * MCQ HELPERS
    * ================================================================
    */
 
+  function isMcqTask(task: Task) {
+    return (
+      task.type?.toLowerCase() ===
+        "solve mcq" ||
+      task.question_count !== null
+    );
+  }
+
+  function openMcqEditor(task: Task) {
+    setMcqTask(task);
+
+    setMcqValue(
+      String(task.questions_solved ?? 0)
+    );
+
+    setMcqError(null);
+  }
+
+  function closeMcqEditor() {
+    if (savingMcq) return;
+
+    setMcqTask(null);
+    setMcqValue("");
+    setMcqError(null);
+  }
+
+  /*
+   * ================================================================
+   * SAVE MCQ PROGRESS
+   * ================================================================
+   *
+   * We only update questions_solved here.
+   *
+   * completed is deliberately NOT calculated client-side.
+   *
+   * The database trigger is responsible for determining whether
+   * the task has crossed its completion threshold.
+   */
+
+  async function saveMcqProgress() {
+    if (!mcqTask) return;
+
+    const target =
+      mcqTask.question_count;
+
+    if (
+      target === null ||
+      target <= 0
+    ) {
+      setMcqError(
+        "This MCQ task does not have a valid question goal."
+      );
+      return;
+    }
+
+    const parsedValue =
+      Number.parseInt(
+        mcqValue,
+        10
+      );
+
+    if (
+      Number.isNaN(parsedValue) ||
+      !Number.isInteger(parsedValue)
+    ) {
+      setMcqError(
+        "Please enter a valid whole number."
+      );
+      return;
+    }
+
+    if (parsedValue < 0) {
+      setMcqError(
+        "Questions completed cannot be negative."
+      );
+      return;
+    }
+
+    if (parsedValue > target) {
+      setMcqError(
+        `You cannot enter more than ${target} questions.`
+      );
+      return;
+    }
+
+    setSavingMcq(true);
+    setMcqError(null);
+
+    try {
+      /*
+       * Update only questions_solved.
+       *
+       * The database trigger will update completed based on
+       * completion_threshold.
+       */
+
+      const {
+        data: updatedTask,
+        error,
+      } = await supabase
+        .from("tasks")
+        .update({
+          questions_solved:
+            parsedValue,
+        })
+        .eq("id", mcqTask.id)
+        .select(`
+          id,
+          completed,
+          questions_solved,
+          question_count,
+          completion_threshold
+        `)
+        .single();
+
+      if (error) {
+        throw new Error(
+          error.message
+        );
+      }
+
+      if (!updatedTask) {
+        throw new Error(
+          "The task was not returned after the update."
+        );
+      }
+
+      /*
+       * Update the local task using the actual database response.
+       *
+       * This means if the trigger marked it complete, the UI knows
+       * immediately. Likewise, if the student drops below the
+       * threshold, the task becomes incomplete again.
+       */
+
+      setTasks((current) =>
+        current.map((task) =>
+          task.id === mcqTask.id
+            ? {
+                ...task,
+                questions_solved:
+                  updatedTask.questions_solved,
+                question_count:
+                  updatedTask.question_count,
+                completion_threshold:
+                  updatedTask.completion_threshold,
+                completed:
+                  updatedTask.completed,
+              }
+            : task
+        )
+      );
+
+      /*
+       * Update the modal's copy too in case we keep it open.
+       */
+
+      setMcqTask((current) =>
+        current
+          ? {
+              ...current,
+              questions_solved:
+                updatedTask.questions_solved,
+              question_count:
+                updatedTask.question_count,
+              completion_threshold:
+                updatedTask.completion_threshold,
+              completed:
+                updatedTask.completed,
+            }
+          : current
+      );
+
+      /*
+       * Close after a successful save.
+       */
+
+      setMcqTask(null);
+      setMcqValue("");
+    } catch (err) {
+      console.error(
+        "MCQ progress update failed:",
+        err
+      );
+
+      setMcqError(
+        err instanceof Error
+          ? err.message
+          : "Failed to update MCQ progress."
+      );
+    } finally {
+      setSavingMcq(false);
+    }
+  }
+
+  /*
+   * ================================================================
+   * TOGGLE / EDIT TASK
+   * ================================================================
+   *
+   * Normal tasks:
+   *   click -> toggle completed
+   *
+   * MCQ tasks:
+   *   click -> open progress editor
+   */
+
   async function toggleTask(task: Task) {
+    if (isMcqTask(task)) {
+      openMcqEditor(task);
+      return;
+    }
+
     const newCompleted =
       !task.completed;
 
@@ -1287,6 +1497,206 @@ export function MentorshipDashboard() {
           goToToday
         }
       />
+
+      {/* ============================================================
+          MCQ PROGRESS MODAL
+          ============================================================ */}
+
+      {mcqTask && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+          onMouseDown={(event) => {
+            if (
+              event.target ===
+              event.currentTarget
+            ) {
+              closeMcqEditor();
+            }
+          }}
+        >
+          <div className="w-full max-w-md rounded-2xl border border-white/[0.09] bg-[#15181d] shadow-2xl">
+            {/* Header */}
+
+            <div className="flex items-start justify-between border-b border-white/[0.07] px-5 py-5">
+              <div className="flex items-start gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/[0.06]">
+                  <TargetIcon className="h-5 w-5 text-white/70" />
+                </div>
+
+                <div>
+                  <h2 className="text-sm font-semibold text-white">
+                    Update MCQ Progress
+                  </h2>
+
+                  <p className="mt-1 max-w-[280px] text-xs leading-5 text-white/40">
+                    {mcqTask.name}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={
+                  closeMcqEditor
+                }
+                disabled={savingMcq}
+                className="rounded-lg p-1.5 text-white/30 transition hover:bg-white/[0.05] hover:text-white/70 disabled:cursor-not-allowed disabled:opacity-50"
+                aria-label="Close"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Body */}
+
+            <div className="px-5 py-6">
+              <div className="mb-5 rounded-xl border border-white/[0.07] bg-white/[0.025] p-4">
+                <div className="flex items-end justify-between">
+                  <div>
+                    <div className="text-[10px] font-medium uppercase tracking-wider text-white/30">
+                      Progress
+                    </div>
+
+                    <div className="mt-1 text-2xl font-semibold tracking-tight text-white">
+                      {mcqTask.questions_solved ??
+                        0}
+                      <span className="text-white/25">
+                        {" "}
+                        /{" "}
+                        {mcqTask.question_count ??
+                          "—"}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="text-right">
+                    <div className="text-[10px] font-medium uppercase tracking-wider text-white/30">
+                      Required
+                    </div>
+
+                    <div className="mt-1 text-sm font-medium text-white/60">
+                      {mcqTask.completion_threshold ??
+                        75}
+                      %
+                    </div>
+                  </div>
+                </div>
+
+                {mcqTask.question_count &&
+                  mcqTask.questions_solved !==
+                    null && (
+                    <div className="mt-4">
+                      <div className="h-1.5 overflow-hidden rounded-full bg-white/[0.07]">
+                        <div
+                          className="h-full rounded-full bg-white transition-all"
+                          style={{
+                            width: `${Math.min(
+                              100,
+                              (mcqTask.questions_solved /
+                                mcqTask.question_count) *
+                                100
+                            )}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                <div className="mt-3 text-xs text-white/30">
+                  {mcqTask.completed
+                    ? "Requirement reached"
+                    : "Keep going — you haven't reached the required threshold yet."}
+                </div>
+              </div>
+
+              <label
+                htmlFor="mcq-progress"
+                className="text-xs font-medium text-white/55"
+              >
+                Questions completed
+              </label>
+
+              <div className="mt-2">
+                <input
+                  id="mcq-progress"
+                  type="number"
+                  min={0}
+                  max={
+                    mcqTask.question_count ??
+                    undefined
+                  }
+                  step={1}
+                  value={mcqValue}
+                  onChange={(event) =>
+                    setMcqValue(
+                      event.target.value
+                    )
+                  }
+                  onKeyDown={(event) => {
+                    if (
+                      event.key ===
+                        "Enter" &&
+                      !savingMcq
+                    ) {
+                      saveMcqProgress();
+                    }
+
+                    if (
+                      event.key ===
+                      "Escape"
+                    ) {
+                      closeMcqEditor();
+                    }
+                  }}
+                  autoFocus
+                  className="h-12 w-full rounded-xl border border-white/[0.09] bg-white/[0.035] px-4 text-base text-white outline-none transition placeholder:text-white/20 focus:border-white/20 focus:bg-white/[0.05]"
+                  placeholder="e.g. 35"
+                />
+              </div>
+
+              {mcqError && (
+                <div className="mt-3 rounded-lg border border-rose-500/20 bg-rose-500/10 px-3 py-2.5 text-xs text-rose-300">
+                  {mcqError}
+                </div>
+              )}
+
+              <div className="mt-4 text-[11px] leading-5 text-white/30">
+                Enter the total number of questions you've completed so far. Your task will automatically be marked complete once the required threshold is reached.
+              </div>
+            </div>
+
+            {/* Footer */}
+
+            <div className="flex items-center justify-end gap-2 border-t border-white/[0.07] px-5 py-4">
+              <button
+                type="button"
+                onClick={
+                  closeMcqEditor
+                }
+                disabled={savingMcq}
+                className="rounded-lg px-4 py-2 text-xs font-medium text-white/45 transition hover:bg-white/[0.04] hover:text-white/70 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={
+                  saveMcqProgress
+                }
+                disabled={savingMcq}
+                className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-xs font-semibold text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Save className="h-3.5 w-3.5" />
+
+                {savingMcq
+                  ? "Saving..."
+                  : "Save Progress"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Loading */}
 
