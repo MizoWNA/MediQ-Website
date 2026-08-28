@@ -35,19 +35,18 @@ export type DashboardTask = {
   id: string;
   name: string;
 
-  /*
-   * New database schema
-   */
   subject_id: string | null;
   task_type_id: string | null;
 
   /*
+   * MCQ task data
+   */
+  question_count: number | null;
+  questions_solved: number | null;
+  completion_threshold: number | null;
+
+  /*
    * Embedded Supabase relationships.
-   *
-   * These are populated when the dashboard query uses:
-   *
-   * subject:subjects!tasks_subject_id_fkey (...)
-   * task_type:task_types!tasks_task_type_id_fkey (...)
    */
   subject?: DashboardTaskSubject | null;
   task_type?: DashboardTaskType | null;
@@ -256,6 +255,19 @@ export function DashboardTaskCard({
   const taskTypeLabel =
     task.task_type?.name || null;
 
+  const isMcqTask =
+    task.task_type?.name?.toLowerCase() ===
+    "solve mcq";
+
+  const mcqTarget =
+    task.question_count;
+
+  const mcqSolved =
+    task.questions_solved ?? 0;
+
+  const mcqThreshold =
+    task.completion_threshold ?? 75;
+
   /*
    * ================================================================
    * RENDER
@@ -360,27 +372,53 @@ export function DashboardTaskCard({
             {task.name}
           </div>
 
-          {/* TASK TYPE */}
+{/* TASK TYPE / MCQ PROGRESS */}
 
-          {taskTypeLabel && (
-            <div className="mt-1 flex items-center gap-1.5 text-[10px] text-white/30">
-              <span
-                className="h-1.5 w-1.5 shrink-0 rounded-full"
-                style={
-                  hasDatabaseColor
-                    ? {
-                        backgroundColor:
-                          databaseColor!,
-                      }
-                    : undefined
-                }
-              />
+{isMcqTask && mcqTarget ? (
+  <div className="mt-1.5">
+    <div className="flex items-center gap-1.5 text-[10px]">
+      <span
+        className="h-1.5 w-1.5 shrink-0 rounded-full"
+        style={
+          hasDatabaseColor
+            ? {
+                backgroundColor:
+                  databaseColor!,
+              }
+            : undefined
+        }
+      />
 
-              <span>
-                {taskTypeLabel}
-              </span>
-            </div>
-          )}
+      <span className="text-white/45">
+        {mcqSolved} / {mcqTarget}
+      </span>
+    </div>
+
+    <div className="mt-1 text-[9px] text-white/20">
+      {mcqThreshold}% required
+    </div>
+  </div>
+) : (
+  taskTypeLabel && (
+    <div className="mt-1 flex items-center gap-1.5 text-[10px] text-white/30">
+      <span
+        className="h-1.5 w-1.5 shrink-0 rounded-full"
+        style={
+          hasDatabaseColor
+            ? {
+                backgroundColor:
+                  databaseColor!,
+              }
+            : undefined
+        }
+      />
+
+      <span>
+        {taskTypeLabel}
+      </span>
+    </div>
+  )
+)}
         </div>
 
         {/* ======================================================

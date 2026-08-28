@@ -1266,29 +1266,29 @@ const isMCQ =
 
   try {
     const selectWithRelations = `
-      id,
-      name,
-      subject_id,
-      task_type_id,
-      student_id,
-      completed,
-      date,
-      created_at,
-      question_count,
-      questions_solved,
-      completion_threshold,
-      subject:subjects!tasks_subject_id_fkey (
-        id,
-        name,
-        display_name,
-        color
-      ),
-      task_type:task_types!tasks_task_type_id_fkey (
-        id,
-        name,
-        points
-      )
-    `;
+  id,
+  name,
+  subject_id,
+  task_type_id,
+  student_id,
+  completed,
+  date,
+  created_at,
+  question_count,
+  questions_solved,
+  completion_threshold,
+  subject:subjects!tasks_subject_id_fkey (
+    id,
+    name,
+    display_name,
+    color
+  ),
+  task_type:task_types!tasks_task_type_id_fkey (
+    id,
+    name,
+    points
+  )
+`;
 
     if (editingTask) {
       const {
