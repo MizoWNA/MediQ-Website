@@ -6,6 +6,7 @@ import OnboardingProgress from "./OnboardingProgress";
 import OnboardingNavigation from "./OnboardingNavigation";
 import BootSequence from "./BootSequence";
 import { onboardingSections } from "./onboarding-sections";
+import OnboardingSidebar from "./OnboardingSidebar";
 
 interface OnboardingShellProps {
   onFinish: () => Promise<void> | void;
@@ -170,23 +171,9 @@ export default function OnboardingShell({
         <div className="mx-auto flex min-h-0 w-full max-w-6xl flex-1 items-stretch py-8">
           {/* Explanation sidebar */}
 
-          <aside className="flex w-[300px] shrink-0 items-center pr-12">
-            <div className="border-l border-white/[0.08] pl-6">
-              <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.16em] text-[#5aa9d8]/60">
-                {String(currentIndex + 1).padStart(2, "0")}
-              </p>
-
-              <h2 className="text-xl font-semibold tracking-tight">
-                {currentSection.title}
-              </h2>
-
-              <p className="mt-3 max-w-[220px] text-sm leading-6 text-white/35">
-                We'll fill this area with section-specific
-                explanations and annotations as we build
-                each section.
-              </p>
-            </div>
-          </aside>
+          <OnboardingSidebar
+  annotation={currentSection.annotation}
+          />
 
           {/* Section */}
 
