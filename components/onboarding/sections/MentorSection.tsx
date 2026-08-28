@@ -53,8 +53,6 @@ const avatarSrc =
 const initials = getInitials(mentor.name);
 
 return ( <section className="relative flex h-full w-full items-center px-4 py-8 text-white sm:px-6"> <div className="mx-auto w-full max-w-4xl"> <div className="flex w-full flex-col items-center gap-10 lg:flex-row lg:items-center lg:gap-14">
-
-```
       {/* ======================================================
           MENTOR CARD
           ====================================================== */}
