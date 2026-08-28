@@ -194,25 +194,41 @@ export function DashboardTaskCard({
       />
 
       {/* ==========================================================
+          MENTOR ACTIONS
+          ==========================================================
+
+          This is intentionally rendered ONCE.
+
+          The wrapper stops clicks from reaching the card, so
+          clicking the three-dot edit menu does not trigger the
+          task's normal click behavior.
+      */}
+
+      {children && (
+        <div
+          className="absolute right-1.5 top-1.5 z-10"
+          onClick={(event) => {
+            event.stopPropagation();
+          }}
+          onMouseDown={(event) => {
+            event.stopPropagation();
+          }}
+          onKeyDown={(event) => {
+            event.stopPropagation();
+          }}
+        >
+          {children}
+        </div>
+      )}
+
+      {/* ==========================================================
           MAIN ROW
           ========================================================== */}
 
       <div className="flex min-w-0 items-start gap-2.5">
         {/* ========================================================
             LEFT INDICATOR
-            ========================================================
-
-            There is intentionally only ONE indicator column.
-
-            Normal task:
-              check / empty circle
-
-            MCQ:
-              subject dot
-
-            This keeps the text aligned identically between task
-            types and removes the excessive left-side spacing.
-        */}
+            ======================================================== */}
 
         <div className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center">
           {mcq ? (
@@ -238,7 +254,7 @@ export function DashboardTaskCard({
         <div className="min-w-0 flex-1">
           {/* Metadata */}
 
-          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 pr-6">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
             {subjectName && (
               <span
                 className="text-[10px] font-semibold uppercase tracking-wide"
@@ -333,32 +349,8 @@ export function DashboardTaskCard({
               </div>
             </div>
           )}
-
-          {/* ======================================================
-              NORMAL TASK ACTIONS
-              ====================================================== */}
-
-          {!mcq && children}
         </div>
       </div>
-
-      {/* ==========================================================
-          MENTOR ACTIONS
-          ========================================================== */}
-
-      {children && (
-        <div
-          className="absolute right-1.5 top-1.5 z-10"
-          onClick={(event) => {
-            event.stopPropagation();
-          }}
-          onKeyDown={(event) => {
-            event.stopPropagation();
-          }}
-        >
-          {children}
-        </div>
-      )}
     </div>
   );
 }
