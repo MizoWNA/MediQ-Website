@@ -196,7 +196,7 @@ export default function OnboardingShell({
 
         {/* Main */}
 
-        <div className="mx-auto flex w-full max-w-6xl flex-1 items-center py-8">
+        <div className="mx-auto flex min-h-0 w-full max-w-6xl flex-1 items-stretch py-8">
 
           {/* Explanation sidebar */}
 
@@ -223,8 +223,8 @@ export default function OnboardingShell({
 
           {/* Section */}
 
-          <div className="min-w-0 flex-1">
-            <div className="mx-auto max-w-3xl">
+          <div className="flex min-h-0 min-w-0 flex-1 items-center">
+            <div className="mx-auto flex h-full w-full max-w-3xl items-center">
               <CurrentSection
                 key={currentSection.id}
               />
