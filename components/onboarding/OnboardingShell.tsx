@@ -200,22 +200,19 @@ export default function OnboardingShell({
 
           {/* Explanation sidebar */}
 
-          <aside className="w-[280px] shrink-0 pr-10">
-            <div className="border-l border-white/[0.08] pl-5">
-              <p className="mb-2 text-[10px] font-medium uppercase tracking-[0.16em] text-[#5aa9d8]/60">
-                {String(
-                  currentIndex + 1
-                ).padStart(2, "0")}
+          <aside className="flex w-[300px] shrink-0 items-center pr-12">
+            <div className="border-l border-white/[0.08] pl-6">
+              <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.16em] text-[#5aa9d8]/60">
+                {String(currentIndex + 1).padStart(2, "0")}
               </p>
 
-              <h2 className="text-lg font-semibold tracking-tight">
+              <h2 className="text-xl font-semibold tracking-tight">
                 {currentSection.title}
               </h2>
 
-              <p className="mt-3 text-xs leading-5 text-white/30">
-                We'll fill this area with
-                section-specific explanations
-                and annotations as we build
+              <p className="mt-3 max-w-[220px] text-sm leading-6 text-white/35">
+                We'll fill this area with section-specific
+                explanations and annotations as we build
                 each section.
               </p>
             </div>
@@ -235,7 +232,7 @@ export default function OnboardingShell({
         {/* Navigation */}
 
         <footer className="mx-auto w-full max-w-6xl">
-          <div className="ml-[280px] flex max-w-3xl justify-end">
+          <div className="ml-[300px] flex max-w-3xl justify-end">
             <div className="w-full max-w-md">
               <OnboardingNavigation
                 currentIndex={
