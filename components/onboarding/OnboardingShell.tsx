@@ -9,6 +9,7 @@ import {
 import OnboardingProgress from "./OnboardingProgress";
 import OnboardingNavigation from "./OnboardingNavigation";
 import WelcomeSection from "./sections/WelcomeSection";
+import BootSequence from "./BootSequence";
 
 interface OnboardingSection {
   id: string;
@@ -44,6 +45,8 @@ export default function OnboardingShell({
 
   const CurrentSection =
     currentSection.component;
+
+  const [booting, setBooting] = useState(true);
 
   /*
    * ================================================================
@@ -118,6 +121,12 @@ export default function OnboardingShell({
 
   return (
     <main className="relative flex min-h-screen overflow-hidden bg-[#0b0d10] text-white">
+
+      {booting && (
+        <BootSequence
+          onComplete={() => setBooting(false)}
+        />
+      )}
 
       {/* ============================================================
           BACKGROUND

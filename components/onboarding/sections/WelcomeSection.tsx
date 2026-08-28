@@ -2,7 +2,7 @@
 
 export default function WelcomeSection() {
   return (
-    <section className="flex w-full items-center justify-center px-4 py-8 sm:px-6 md:py-12">
+    <section className="relative flex h-full w-full items-center justify-center overflow-hidden bg-[#0b0d10] px-6 text-white">
       <div className="relative flex w-full max-w-3xl flex-col items-center text-center">
         {/* Logo */}
 
