@@ -1993,7 +1993,10 @@ const isMCQ =
                     breakpoint="lg"
                     onAddTask={openAddTask}
                     renderTaskActions={(task) => (
-                      <div className="absolute right-2 top-2">
+                    <div
+                      className="absolute right-2 top-2"
+                      onClick={(event) => event.stopPropagation()}
+                    >
                         <button type="button" onClick={() => setOpenTaskMenu((current) => current === task.id ? null : task.id)} className="flex h-7 w-7 items-center justify-center rounded-md text-white/20 opacity-0 transition hover:bg-white/[0.06] hover:text-white group-hover:opacity-100">
                           <MoreHorizontal className="h-4 w-4" />
                         </button>
