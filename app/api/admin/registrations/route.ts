@@ -663,7 +663,7 @@ export async function POST(
         username: cleanUsername,
         display_name: cleanDisplayName,
 
-        phone_number: cleanPhoneNumber,a
+        phone_number: cleanPhoneNumber,
         university: registration.university,
 
         role: "student",
