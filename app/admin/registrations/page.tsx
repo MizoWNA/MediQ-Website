@@ -90,6 +90,8 @@ export default function RegistrationsPage() {
   const [mentors, setMentors] = useState<Mentor[]>([]);
   const [selectedMentorId, setSelectedMentorId] = useState("");
 
+  const [cancellingRegistration, setCancellingRegistration] = useState(false);
+
   const [accountForm, setAccountForm] = useState({
     username: "",
     password: "",
@@ -409,6 +411,79 @@ export default function RegistrationsPage() {
     setEditError(null);
     setEditingRegistration(true);
   }
+
+  async function cancelRegistration() {
+  if (!selectedRegistration) {
+    return;
+  }
+
+  const confirmed = window.confirm(
+    `Cancel the registration for ${selectedRegistration.full_name}?\n\n` +
+      `Registration: ${selectedRegistration.registration_code}\n\n` +
+      `This will move it to the Cancelled list.`
+  );
+
+  if (!confirmed) {
+    return;
+  }
+
+  try {
+    setCancellingRegistration(true);
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session?.access_token) {
+      throw new Error(
+        "Your admin session has expired. Please log in again."
+      );
+    }
+
+    const response = await fetch(
+      `/api/admin/registrations/${selectedRegistration.id}`,
+      {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          status: "cancelled",
+        }),
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data?.error || "Failed to cancel registration."
+      );
+    }
+
+    // Remove it from the current list immediately.
+    setRegistrations((current) =>
+      current.filter(
+        (registration) =>
+          registration.id !== selectedRegistration.id
+      )
+    );
+
+    setTotal((current) => Math.max(0, current - 1));
+    setSelectedRegistration(null);
+  } catch (err) {
+    console.error("Failed to cancel registration:", err);
+
+    window.alert(
+      err instanceof Error
+        ? err.message
+        : "Failed to cancel registration."
+    );
+  } finally {
+    setCancellingRegistration(false);
+  }
+}
 
   async function saveRegistrationChanges() {
     if (!selectedRegistration) {
@@ -1151,14 +1226,13 @@ export default function RegistrationsPage() {
                   selectedRegistration.status === "pending" && (
                     <button
                       type="button"
-                      onClick={() =>
-                        startEditingRegistration(
-                          selectedRegistration
-                        )
-                      }
-                      className="rounded-lg border border-white/[0.07] bg-white/[0.025] px-4 py-2.5 text-xs font-medium text-white/45 transition hover:bg-white/[0.05] hover:text-white"
+                      disabled={cancellingRegistration}
+                      onClick={cancelRegistration}
+                      className="rounded-lg border border-red-400/10 bg-red-400/[0.025] px-4 py-2.5 text-xs font-medium text-red-300/60 transition hover:border-red-400/20 hover:bg-red-400/[0.06] hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-40"
                     >
-                      Edit
+                      {cancellingRegistration
+                        ? "Cancelling..."
+                        : "Cancel Registration"}
                     </button>
                   )}
               </div>

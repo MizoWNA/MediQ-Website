@@ -7,6 +7,8 @@ const VALID_STATUSES = [
   "cancelled",
 ] as const;
 
+type RegistrationStatus = (typeof VALID_STATUSES)[number];
+
 async function authenticateAdmin(request: NextRequest) {
   const authorization = request.headers.get("authorization");
 
@@ -67,6 +69,12 @@ export async function PATCH(
   }
 ) {
   try {
+    /*
+     * ============================================================
+     * AUTHENTICATION
+     * ============================================================
+     */
+
     const { error } = await authenticateAdmin(request);
 
     if (error) {
@@ -82,7 +90,186 @@ export async function PATCH(
       );
     }
 
+    /*
+     * ============================================================
+     * PARSE REQUEST
+     * ============================================================
+     */
+
     const body = await request.json();
+
+    /*
+     * ============================================================
+     * CHECK REGISTRATION EXISTS
+     * ============================================================
+     */
+
+    const {
+      data: existingRegistration,
+      error: existingError,
+    } = await supabaseAdmin
+      .from("registrations")
+      .select(
+        `
+          id,
+          status
+        `
+      )
+      .eq("id", id)
+      .maybeSingle();
+
+    if (existingError) {
+      console.error(
+        "Failed to load registration:",
+        existingError.message
+      );
+
+      return NextResponse.json(
+        {
+          error: "Failed to load registration.",
+        },
+        { status: 500 }
+      );
+    }
+
+    if (!existingRegistration) {
+      return NextResponse.json(
+        {
+          error: "Registration not found.",
+        },
+        { status: 404 }
+      );
+    }
+
+    /*
+     * ============================================================
+     * STATUS UPDATE
+     *
+     * This is intentionally handled BEFORE the normal edit
+     * validation.
+     *
+     * This allows the frontend to send:
+     *
+     * {
+     *   status: "cancelled"
+     * }
+     *
+     * without also sending full_name, plan, academic_year, etc.
+     * ============================================================
+     */
+
+    if ("status" in body) {
+      const requestedStatus = body.status;
+
+      if (
+        typeof requestedStatus !== "string" ||
+        !VALID_STATUSES.includes(
+          requestedStatus as RegistrationStatus
+        )
+      ) {
+        return NextResponse.json(
+          {
+            error: "Invalid registration status.",
+          },
+          { status: 400 }
+        );
+      }
+
+      /*
+       * For now, only pending registrations can have their
+       * status changed through this endpoint.
+       *
+       * This prevents accidentally modifying a confirmed
+       * registration/account.
+       */
+      if (existingRegistration.status !== "pending") {
+        return NextResponse.json(
+          {
+            error:
+              "Only pending registrations can have their status changed.",
+          },
+          { status: 409 }
+        );
+      }
+
+      /*
+       * We only want the cancellation action here.
+       *
+       * Confirming a registration should happen through the
+       * account-creation flow rather than manually changing
+       * the status.
+       */
+      if (requestedStatus !== "cancelled") {
+        return NextResponse.json(
+          {
+            error:
+              "The only supported status change from this endpoint is cancellation.",
+          },
+          { status: 400 }
+        );
+      }
+
+      const {
+        data: cancelledRegistration,
+        error: cancelError,
+      } = await supabaseAdmin
+        .from("registrations")
+        .update({
+          status: "cancelled",
+        })
+        .eq("id", id)
+        .eq("status", "pending")
+        .select(
+          `
+            id,
+            registration_code,
+            full_name,
+            university,
+            academic_year,
+            phone_number,
+            email,
+            plan,
+            base_price,
+            affiliate_code,
+            discount_percent,
+            discount_amount,
+            final_price,
+            status,
+            created_at,
+            paid_at,
+            paid_by,
+            profile_id
+          `
+        )
+        .single();
+
+      if (cancelError || !cancelledRegistration) {
+        console.error(
+          "Failed to cancel registration:",
+          cancelError?.message
+        );
+
+        return NextResponse.json(
+          {
+            error:
+              cancelError?.message ||
+              "Failed to cancel registration.",
+          },
+          { status: 500 }
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        registration: cancelledRegistration,
+      });
+    }
+
+    /*
+     * ============================================================
+     * NORMAL REGISTRATION EDIT
+     * ============================================================
+     */
 
     const {
       full_name,
@@ -94,6 +281,22 @@ export async function PATCH(
       affiliate_code,
       registration_code,
     } = body;
+
+    /*
+     * ------------------------------------------------------------
+     * Only pending registrations can be edited.
+     * ------------------------------------------------------------
+     */
+
+    if (existingRegistration.status !== "pending") {
+      return NextResponse.json(
+        {
+          error:
+            "Only pending registrations can be edited.",
+        },
+        { status: 409 }
+      );
+    }
 
     /*
      * ------------------------------------------------------------
@@ -144,70 +347,6 @@ export async function PATCH(
 
     /*
      * ------------------------------------------------------------
-     * Check registration exists
-     * ------------------------------------------------------------
-     */
-
-    const {
-      data: existingRegistration,
-      error: existingError,
-    } = await supabaseAdmin
-      .from("registrations")
-      .select(
-        `
-          id,
-          status
-        `
-      )
-      .eq("id", id)
-      .maybeSingle();
-
-    if (existingError) {
-      console.error(
-        "Failed to load registration:",
-        existingError.message
-      );
-
-      return NextResponse.json(
-        {
-          error: "Failed to load registration.",
-        },
-        { status: 500 }
-      );
-    }
-
-    if (!existingRegistration) {
-      return NextResponse.json(
-        {
-          error: "Registration not found.",
-        },
-        { status: 404 }
-      );
-    }
-
-    /*
-     * ------------------------------------------------------------
-     * Do not edit already-confirmed accounts
-     *
-     * For now, registration editing is intended to happen
-     * before account creation.
-     * ------------------------------------------------------------
-     */
-
-    if (
-      existingRegistration.status !== "pending"
-    ) {
-      return NextResponse.json(
-        {
-          error:
-            "Only pending registrations can be edited.",
-        },
-        { status: 409 }
-      );
-    }
-
-    /*
-     * ------------------------------------------------------------
      * Clean values
      * ------------------------------------------------------------
      */
@@ -240,9 +379,9 @@ export async function PATCH(
       registration_code.trim();
 
     /*
-     * ------------------------------------------------------------
-     * Update
-     * ------------------------------------------------------------
+     * ============================================================
+     * UPDATE REGISTRATION
+     * ============================================================
      */
 
     const {
