@@ -81,6 +81,12 @@ export default function RegistrationsPage() {
   const [creatingAccount, setCreatingAccount] =
     useState(false);
 
+  const [accountForm, setAccountForm] = useState({
+    username: "",
+    password: "",
+    display_name: "",
+  });
+
   const [editForm, setEditForm] = useState({
     full_name: "",
     university: "",
@@ -259,7 +265,13 @@ export default function RegistrationsPage() {
     setEditingRegistration(true);
   }
 
-
+  function generateUsername(name: string) {
+    return name
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, ".")
+      .replace(/^\.+|\.+$/g, "");
+  }
 
   async function saveRegistrationChanges() {
   if (!selectedRegistration) {
@@ -1186,6 +1198,18 @@ export default function RegistrationsPage() {
                       "pending" && (
                       <button
                         type="button"
+                        onClick={() => {
+                          setAccountForm({
+                            username: generateUsername(
+                              selectedRegistration.full_name
+                            ),
+                            password: "",
+                            display_name:
+                              selectedRegistration.full_name,
+                          });
+
+                          setCreatingAccount(true);
+                        }}
                         className="rounded-lg bg-white px-4 py-2.5 text-xs font-semibold text-black transition hover:bg-white/90"
                       >
                         Create Account
@@ -1198,6 +1222,198 @@ export default function RegistrationsPage() {
           </div>
         </div>
       )}
+      {creatingAccount && selectedRegistration && (
+  <div
+    className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+    onMouseDown={(event) => {
+      if (event.target === event.currentTarget) {
+        setCreatingAccount(false);
+      }
+    }}
+  >
+    <div className="w-full max-w-lg overflow-hidden rounded-2xl border border-white/[0.09] bg-[#111419] shadow-2xl shadow-black/40">
+      {/* Header */}
+
+      <div className="flex items-start justify-between border-b border-white/[0.06] px-5 py-5 sm:px-6">
+        <div>
+          <div className="mb-2 text-[10px] font-medium uppercase tracking-[0.14em] text-white/25">
+            Account Creation
+          </div>
+
+          <h2 className="text-lg font-semibold text-white/90">
+            Create MediQ Account
+          </h2>
+
+          <p className="mt-1 text-xs text-white/30">
+            {selectedRegistration.full_name}
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() =>
+            setCreatingAccount(false)
+          }
+          className="rounded-lg p-2 text-white/25 transition hover:bg-white/[0.05] hover:text-white"
+        >
+          <X className="h-5 w-5" />
+        </button>
+      </div>
+
+      {/* Body */}
+
+      <div className="space-y-5 px-5 py-5 sm:px-6">
+        {/* Username */}
+
+        <div>
+          <label className="mb-2 block text-[10px] font-medium uppercase tracking-[0.12em] text-white/25">
+            Username
+          </label>
+
+          <input
+            value={accountForm.username}
+            onChange={(event) =>
+              setAccountForm((current) => ({
+                ...current,
+                username:
+                  event.target.value
+                    .toLowerCase()
+                    .replace(
+                      /[^a-z0-9._-]/g,
+                      ""
+                    ),
+              }))
+            }
+            placeholder="username"
+            className="h-11 w-full rounded-xl border border-white/[0.07] bg-white/[0.025] px-3.5 text-sm text-white outline-none placeholder:text-white/20 transition focus:border-white/[0.14] focus:bg-white/[0.035]"
+          />
+
+          <p className="mt-1.5 text-[11px] text-white/20">
+            Login email will be{" "}
+            <span className="font-mono">
+              {accountForm.username ||
+                "username"}
+              @med.iq
+            </span>
+          </p>
+        </div>
+
+        {/* Password */}
+
+        <div>
+          <label className="mb-2 block text-[10px] font-medium uppercase tracking-[0.12em] text-white/25">
+            Password
+          </label>
+
+          <input
+            type="text"
+            value={accountForm.password}
+            onChange={(event) =>
+              setAccountForm((current) => ({
+                ...current,
+                password:
+                  event.target.value,
+              }))
+            }
+            placeholder="Enter temporary password"
+            className="h-11 w-full rounded-xl border border-white/[0.07] bg-white/[0.025] px-3.5 text-sm text-white outline-none placeholder:text-white/20 transition focus:border-white/[0.14] focus:bg-white/[0.035]"
+          />
+
+          <p className="mt-1.5 text-[11px] text-white/20">
+            This is the password the student will
+            use to log in.
+          </p>
+        </div>
+
+        {/* Display name */}
+
+        <div>
+          <label className="mb-2 block text-[10px] font-medium uppercase tracking-[0.12em] text-white/25">
+            Display name
+          </label>
+
+          <input
+            value={accountForm.display_name}
+            onChange={(event) =>
+              setAccountForm((current) => ({
+                ...current,
+                display_name:
+                  event.target.value,
+              }))
+            }
+            placeholder="Student's display name"
+            className="h-11 w-full rounded-xl border border-white/[0.07] bg-white/[0.025] px-3.5 text-sm text-white outline-none placeholder:text-white/20 transition focus:border-white/[0.14] focus:bg-white/[0.035]"
+          />
+        </div>
+
+        {/* Account summary */}
+
+        <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+          <div className="mb-3 text-[10px] font-medium uppercase tracking-[0.14em] text-white/25">
+            Account
+          </div>
+
+          <div className="space-y-2">
+            <PriceRow
+              label="Academic year"
+              value={getYearLabel(
+                selectedRegistration.academic_year
+              )}
+            />
+
+            <PriceRow
+              label="Plan"
+              value={
+                selectedRegistration.plan
+              }
+            />
+
+            <PriceRow
+              label="Registration"
+              value={
+                selectedRegistration.registration_code
+              }
+            />
+
+            <PriceRow
+              label="Amount"
+              value={formatPrice(
+                selectedRegistration.final_price
+              )}
+              strong
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Footer */}
+
+      <div className="flex items-center justify-end gap-2 border-t border-white/[0.06] px-5 py-4 sm:px-6">
+        <button
+          type="button"
+          onClick={() =>
+            setCreatingAccount(false)
+          }
+          className="rounded-lg border border-white/[0.07] bg-white/[0.025] px-4 py-2.5 text-xs font-medium text-white/45 transition hover:bg-white/[0.05] hover:text-white"
+        >
+          Back
+        </button>
+
+        <button
+          type="button"
+          disabled={
+            !accountForm.username.trim() ||
+            !accountForm.password ||
+            !accountForm.display_name.trim()
+          }
+          className="rounded-lg bg-white px-4 py-2.5 text-xs font-semibold text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          Create Account
+        </button>
+      </div>
+    </div>
+  </div>
+)}
     </main>
   );
 }
