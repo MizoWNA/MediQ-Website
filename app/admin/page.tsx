@@ -18,9 +18,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-
+import AdminHeader from "@/components/admin/admin-header";
 
 type Mentor = {
   id: string;
@@ -642,17 +640,6 @@ async function handleUpdateUser(
 
   /*
    * ================================================================
-   * LOGOUT
-   * ================================================================
-   */
-
-  async function handleLogout() {
-    await supabase.auth.signOut();
-    router.replace("/login");
-  }
-
-  /*
-   * ================================================================
    * LOADING
    * ================================================================
    */
@@ -687,7 +674,6 @@ async function handleUpdateUser(
   );
 
 
-  const pathname = usePathname();
 
   /*
    * ================================================================
@@ -722,85 +708,7 @@ async function handleUpdateUser(
             HEADER
         ============================================================ */}
 
-        <header className="border-b border-white/[0.07] pb-5">
-          <div className="flex items-center justify-between">
-            {/* Logo */}
-
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center">
-                <img
-                  src="/mediq.svg"
-                  alt="MediQ"
-                  className="h-9 w-9 object-contain"
-                />
-              </div>
-
-              <div>
-                <div className="text-sm font-semibold tracking-tight">
-                  MediQ
-                </div>
-
-                <div className="text-[11px] text-white/35">
-                  Administration
-                </div>
-              </div>
-            </div>
-
-            {/* Logout */}
-
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="rounded-lg border border-white/[0.07] bg-white/[0.025] px-3 py-2 text-xs text-white/40 transition hover:bg-white/[0.05] hover:text-white"
-            >
-              Log Out
-            </button>
-          </div>
-
-          {/* ==========================================================
-              ADMIN NAVIGATION
-          ========================================================== */}
-
-          <nav className="mt-5 flex min-h-12 items-stretch justify-center gap-2 rounded-xl border border-white/[0.06] bg-white/[0.015] p-1.5">
-            <Link
-              href="/admin"
-              className={`flex min-w-[120px] flex-1 items-center justify-center rounded-lg px-5 py-2.5 text-xs font-medium transition ${
-                pathname === "/admin"
-                  ? "bg-white/[0.08] text-white"
-                  : "text-white/35 hover:bg-white/[0.04] hover:text-white/70"
-              }`}
-            >
-              Users
-            </Link>
-
-            <Link
-              href="/admin/registrations"
-              className={`flex min-w-[120px] flex-1 items-center justify-center rounded-lg px-5 py-2.5 text-xs font-medium transition ${
-                pathname.startsWith("/admin/registrations")
-                  ? "bg-white/[0.08] text-white"
-                  : "text-white/35 hover:bg-white/[0.04] hover:text-white/70"
-              }`}
-            >
-              Registrations
-            </Link>
-
-            <button
-              type="button"
-              disabled
-              className="flex min-w-[120px] flex-1 items-center justify-center rounded-lg px-5 py-2.5 text-xs font-medium text-white/15"
-            >
-              Content
-            </button>
-
-            <button
-              type="button"
-              disabled
-              className="flex min-w-[120px] flex-1 items-center justify-center rounded-lg px-5 py-2.5 text-xs font-medium text-white/15"
-            >
-              Settings
-            </button>
-          </nav>
-        </header>
+        <AdminHeader />
 
         {/* ============================================================
             PAGE HEADING
