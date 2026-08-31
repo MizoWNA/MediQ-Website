@@ -1,8 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
 import {
   Search,
   RefreshCw,
@@ -20,6 +18,7 @@ import {
   CheckCircle2,
   Loader2,
 } from "lucide-react";
+
 import { supabase } from "@/lib/supabase";
 import AdminHeader from "@/components/admin/admin-header";
 
@@ -61,41 +60,52 @@ type Mentor = {
 };
 
 export default function RegistrationsPage() {
-  const pathname = usePathname();
-
   const [registrations, setRegistrations] = useState<Registration[]>([]);
+
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
   const [error, setError] = useState<string | null>(null);
 
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<StatusFilter>("pending");
-  const [page, setPage] = useState(1);
 
+  const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
 
   const [selectedRegistration, setSelectedRegistration] =
     useState<Registration | null>(null);
 
-  const [editingRegistration, setEditingRegistration] = useState(false);
-  const [savingRegistration, setSavingRegistration] = useState(false);
+  const [editingRegistration, setEditingRegistration] =
+    useState(false);
+
+  const [savingRegistration, setSavingRegistration] =
+    useState(false);
+
   const [editError, setEditError] = useState<string | null>(null);
 
   const [creatingAccount, setCreatingAccount] = useState(false);
-  const [creatingAccountRequest, setCreatingAccountRequest] = useState(false);
-  const [accountError, setAccountError] = useState<string | null>(null);
+  const [creatingAccountRequest, setCreatingAccountRequest] =
+    useState(false);
+
+  const [accountError, setAccountError] = useState<string | null>(
+    null
+  );
+
   const [accountCreated, setAccountCreated] = useState(false);
 
   const [mentors, setMentors] = useState<Mentor[]>([]);
   const [selectedMentorId, setSelectedMentorId] = useState("");
 
-  const [cancellingRegistration, setCancellingRegistration] = useState(false);
+  const [cancellingRegistration, setCancellingRegistration] =
+    useState(false);
 
   const [accountForm, setAccountForm] = useState({
     username: "",
     password: "",
     display_name: "",
+    exam_date: "",
   });
 
   const [editForm, setEditForm] = useState({
@@ -146,7 +156,9 @@ export default function RegistrationsPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data?.error || "Failed to load mentors.");
+        throw new Error(
+          data?.error || "Failed to load mentors."
+        );
       }
 
       setMentors(data.mentors ?? []);
@@ -217,7 +229,10 @@ export default function RegistrationsPage() {
         setTotal(result.total ?? 0);
         setTotalPages(result.total_pages ?? 1);
       } catch (err) {
-        console.error("Failed to fetch registrations:", err);
+        console.error(
+          "Failed to fetch registrations:",
+          err
+        );
 
         setError(
           err instanceof Error
@@ -246,6 +261,7 @@ export default function RegistrationsPage() {
     const username = accountForm.username.trim();
     const password = accountForm.password;
     const displayName = accountForm.display_name.trim();
+    const examDate = accountForm.exam_date || null;
 
     if (!username) {
       setAccountError("Please enter a username.");
@@ -290,6 +306,7 @@ export default function RegistrationsPage() {
             password,
             display_name: displayName,
             mentor_id: selectedMentorId || null,
+            exam_date: examDate,
           }),
         }
       );
@@ -298,22 +315,40 @@ export default function RegistrationsPage() {
 
       if (!response.ok) {
         throw new Error(
-          data?.error || "Failed to create the student account."
+          data?.error ||
+            "Failed to create the student account."
         );
       }
 
-      console.log("Account creation successful:", data);
+      console.log(
+        "Account creation successful:",
+        data
+      );
 
       setAccountCreated(true);
 
-      await new Promise((resolve) => setTimeout(resolve, 900));
+      await new Promise((resolve) =>
+        setTimeout(resolve, 900)
+      );
 
       setCreatingAccount(false);
       setSelectedRegistration(null);
 
+      setAccountForm({
+        username: "",
+        password: "",
+        display_name: "",
+        exam_date: "",
+      });
+
+      setSelectedMentorId("");
+
       await fetchRegistrations(true);
     } catch (err) {
-      console.error("Failed to create account:", err);
+      console.error(
+        "Failed to create account:",
+        err
+      );
 
       setAccountCreated(false);
 
@@ -396,7 +431,9 @@ export default function RegistrationsPage() {
    * ================================================================
    */
 
-  function startEditingRegistration(registration: Registration) {
+  function startEditingRegistration(
+    registration: Registration
+  ) {
     setEditForm({
       full_name: registration.full_name,
       university: registration.university ?? "",
@@ -404,86 +441,107 @@ export default function RegistrationsPage() {
       phone_number: registration.phone_number ?? "",
       email: registration.email ?? "",
       plan: registration.plan,
-      affiliate_code: registration.affiliate_code ?? "",
-      registration_code: registration.registration_code,
+      affiliate_code:
+        registration.affiliate_code ?? "",
+      registration_code:
+        registration.registration_code,
     });
 
     setEditError(null);
     setEditingRegistration(true);
   }
 
+  /*
+   * ================================================================
+   * CANCEL REGISTRATION
+   * ================================================================
+   */
+
   async function cancelRegistration() {
-  if (!selectedRegistration) {
-    return;
-  }
-
-  const confirmed = window.confirm(
-    `Cancel the registration for ${selectedRegistration.full_name}?\n\n` +
-      `Registration: ${selectedRegistration.registration_code}\n\n` +
-      `This will move it to the Cancelled list.`
-  );
-
-  if (!confirmed) {
-    return;
-  }
-
-  try {
-    setCancellingRegistration(true);
-
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    if (!session?.access_token) {
-      throw new Error(
-        "Your admin session has expired. Please log in again."
-      );
+    if (!selectedRegistration) {
+      return;
     }
 
-    const response = await fetch(
-      `/api/admin/registrations/${selectedRegistration.id}`,
-      {
-        method: "PATCH",
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          status: "cancelled",
-        }),
+    const confirmed = window.confirm(
+      `Cancel the registration for ${selectedRegistration.full_name}?\n\n` +
+        `Registration: ${selectedRegistration.registration_code}\n\n` +
+        `This will move it to the Cancelled list.`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setCancellingRegistration(true);
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session?.access_token) {
+        throw new Error(
+          "Your admin session has expired. Please log in again."
+        );
       }
-    );
 
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(
-        data?.error || "Failed to cancel registration."
+      const response = await fetch(
+        `/api/admin/registrations/${selectedRegistration.id}`,
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            status: "cancelled",
+          }),
+        }
       );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data?.error ||
+            "Failed to cancel registration."
+        );
+      }
+
+      setRegistrations((current) =>
+        current.filter(
+          (registration) =>
+            registration.id !==
+            selectedRegistration.id
+        )
+      );
+
+      setTotal((current) =>
+        Math.max(0, current - 1)
+      );
+
+      setSelectedRegistration(null);
+    } catch (err) {
+      console.error(
+        "Failed to cancel registration:",
+        err
+      );
+
+      window.alert(
+        err instanceof Error
+          ? err.message
+          : "Failed to cancel registration."
+      );
+    } finally {
+      setCancellingRegistration(false);
     }
-
-    // Remove it from the current list immediately.
-    setRegistrations((current) =>
-      current.filter(
-        (registration) =>
-          registration.id !== selectedRegistration.id
-      )
-    );
-
-    setTotal((current) => Math.max(0, current - 1));
-    setSelectedRegistration(null);
-  } catch (err) {
-    console.error("Failed to cancel registration:", err);
-
-    window.alert(
-      err instanceof Error
-        ? err.message
-        : "Failed to cancel registration."
-    );
-  } finally {
-    setCancellingRegistration(false);
   }
-}
+
+  /*
+   * ================================================================
+   * SAVE REGISTRATION CHANGES
+   * ================================================================
+   */
 
   async function saveRegistrationChanges() {
     if (!selectedRegistration) {
@@ -519,8 +577,10 @@ export default function RegistrationsPage() {
             phone_number: editForm.phone_number,
             email: editForm.email,
             plan: editForm.plan,
-            affiliate_code: editForm.affiliate_code,
-            registration_code: editForm.registration_code,
+            affiliate_code:
+              editForm.affiliate_code,
+            registration_code:
+              editForm.registration_code,
           }),
         }
       );
@@ -529,11 +589,13 @@ export default function RegistrationsPage() {
 
       if (!response.ok) {
         throw new Error(
-          data?.error || "Failed to save registration."
+          data?.error ||
+            "Failed to save registration."
         );
       }
 
-      const updated = data.registration as Registration;
+      const updated =
+        data.registration as Registration;
 
       setSelectedRegistration(updated);
 
@@ -547,7 +609,10 @@ export default function RegistrationsPage() {
 
       setEditingRegistration(false);
     } catch (err) {
-      console.error("Failed to save registration:", err);
+      console.error(
+        "Failed to save registration:",
+        err
+      );
 
       setEditError(
         err instanceof Error
@@ -565,11 +630,16 @@ export default function RegistrationsPage() {
    * ================================================================
    */
 
-  function openAccountCreation(registration: Registration) {
+  function openAccountCreation(
+    registration: Registration
+  ) {
     setAccountForm({
-      username: generateUsername(registration.full_name),
+      username: generateUsername(
+        registration.full_name
+      ),
       password: "",
       display_name: registration.full_name,
+      exam_date: "",
     });
 
     setSelectedMentorId("");
@@ -629,7 +699,8 @@ export default function RegistrationsPage() {
               </h1>
 
               <p className="mt-2 max-w-xl text-sm leading-6 text-white/40">
-                Review student registrations and create their MediQ accounts.
+                Review student registrations and create
+                their MediQ accounts.
               </p>
             </div>
 
@@ -644,7 +715,6 @@ export default function RegistrationsPage() {
                   refreshing ? "animate-spin" : ""
                 }`}
               />
-
               Refresh
             </button>
           </div>
@@ -671,7 +741,11 @@ export default function RegistrationsPage() {
 
           <div className="flex rounded-xl border border-white/[0.07] bg-white/[0.015] p-1">
             {(
-              ["pending", "confirmed", "cancelled"] as StatusFilter[]
+              [
+                "pending",
+                "confirmed",
+                "cancelled",
+              ] as StatusFilter[]
             ).map((item) => (
               <button
                 key={item}
@@ -760,7 +834,8 @@ export default function RegistrationsPage() {
                       </div>
 
                       <div className="mt-1 text-xs text-white/20">
-                        Try changing your search or status filter.
+                        Try changing your search or
+                        status filter.
                       </div>
                     </td>
                   </tr>
@@ -784,7 +859,9 @@ export default function RegistrationsPage() {
 
                           {registration.university && (
                             <>
-                              <span className="text-white/10">•</span>
+                              <span className="text-white/10">
+                                •
+                              </span>
 
                               <span className="max-w-[180px] truncate">
                                 {registration.university}
@@ -800,7 +877,8 @@ export default function RegistrationsPage() {
                         </div>
 
                         <div className="mt-1 text-[11px] text-white/20">
-                          {registration.phone_number || "No phone"}
+                          {registration.phone_number ||
+                            "No phone"}
                         </div>
                       </td>
 
@@ -810,7 +888,9 @@ export default function RegistrationsPage() {
                         </div>
 
                         <div className="mt-1 text-xs text-white/30">
-                          {formatPrice(registration.final_price)}
+                          {formatPrice(
+                            registration.final_price
+                          )}
                         </div>
                       </td>
 
@@ -828,7 +908,9 @@ export default function RegistrationsPage() {
 
                       <td className="px-5 py-4">
                         <div className="text-xs text-white/45">
-                          {formatDate(registration.created_at)}
+                          {formatDate(
+                            registration.created_at
+                          )}
                         </div>
                       </td>
 
@@ -836,7 +918,9 @@ export default function RegistrationsPage() {
                         <button
                           type="button"
                           onClick={() =>
-                            setSelectedRegistration(registration)
+                            setSelectedRegistration(
+                              registration
+                            )
                           }
                           className="rounded-lg border border-white/[0.07] bg-white/[0.025] px-3 py-2 text-xs font-medium text-white/50 transition hover:border-white/[0.12] hover:bg-white/[0.05] hover:text-white"
                         >
@@ -864,7 +948,8 @@ export default function RegistrationsPage() {
                 </div>
 
                 <div className="mt-1 text-xs text-white/20">
-                  Try changing your search or status filter.
+                  Try changing your search or status
+                  filter.
                 </div>
               </div>
             ) : (
@@ -873,7 +958,9 @@ export default function RegistrationsPage() {
                   key={registration.id}
                   type="button"
                   onClick={() =>
-                    setSelectedRegistration(registration)
+                    setSelectedRegistration(
+                      registration
+                    )
                   }
                   className="block w-full px-4 py-4 text-left transition hover:bg-white/[0.02]"
                 >
@@ -896,7 +983,9 @@ export default function RegistrationsPage() {
 
                     <div className="shrink-0 text-right">
                       <div className="text-sm text-white/65">
-                        {formatPrice(registration.final_price)}
+                        {formatPrice(
+                          registration.final_price
+                        )}
                       </div>
 
                       <div className="mt-1 text-[11px] text-white/25">
@@ -911,7 +1000,9 @@ export default function RegistrationsPage() {
                     </span>
 
                     <span className="text-[11px] text-white/25">
-                      {formatDate(registration.created_at)}
+                      {formatDate(
+                        registration.created_at
+                      )}
                     </span>
                   </div>
                 </button>
@@ -934,7 +1025,9 @@ export default function RegistrationsPage() {
                   type="button"
                   disabled={page <= 1}
                   onClick={() =>
-                    setPage((value) => Math.max(1, value - 1))
+                    setPage((value) =>
+                      Math.max(1, value - 1)
+                    )
                   }
                   className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/[0.06] text-white/35 transition hover:bg-white/[0.04] hover:text-white disabled:cursor-not-allowed disabled:opacity-20"
                 >
@@ -946,7 +1039,10 @@ export default function RegistrationsPage() {
                   disabled={page >= totalPages}
                   onClick={() =>
                     setPage((value) =>
-                      Math.min(totalPages, value + 1)
+                      Math.min(
+                        totalPages,
+                        value + 1
+                      )
                     )
                   }
                   className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/[0.06] text-white/35 transition hover:bg-white/[0.04] hover:text-white disabled:cursor-not-allowed disabled:opacity-20"
@@ -967,7 +1063,9 @@ export default function RegistrationsPage() {
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
           onMouseDown={(event) => {
-            if (event.target === event.currentTarget) {
+            if (
+              event.target === event.currentTarget
+            ) {
               setSelectedRegistration(null);
             }
           }}
@@ -989,13 +1087,17 @@ export default function RegistrationsPage() {
                 </h2>
 
                 <div className="mt-1 font-mono text-xs text-white/25">
-                  {selectedRegistration.registration_code}
+                  {
+                    selectedRegistration.registration_code
+                  }
                 </div>
               </div>
 
               <button
                 type="button"
-                onClick={() => setSelectedRegistration(null)}
+                onClick={() =>
+                  setSelectedRegistration(null)
+                }
                 className="rounded-lg p-2 text-white/25 transition hover:bg-white/[0.05] hover:text-white"
               >
                 <X className="h-5 w-5" />
@@ -1021,7 +1123,9 @@ export default function RegistrationsPage() {
 
                     <EditField
                       label="Registration code"
-                      value={editForm.registration_code}
+                      value={
+                        editForm.registration_code
+                      }
                       onChange={(value) =>
                         setEditForm((current) => ({
                           ...current,
@@ -1066,18 +1170,36 @@ export default function RegistrationsPage() {
 
                     <EditSelect
                       label="Academic year"
-                      value={String(editForm.academic_year)}
+                      value={String(
+                        editForm.academic_year
+                      )}
                       options={[
-                        { value: "1", label: "1st Year" },
-                        { value: "2", label: "2nd Year" },
-                        { value: "3", label: "3rd Year" },
-                        { value: "4", label: "4th Year" },
-                        { value: "5", label: "5th Year" },
+                        {
+                          value: "1",
+                          label: "1st Year",
+                        },
+                        {
+                          value: "2",
+                          label: "2nd Year",
+                        },
+                        {
+                          value: "3",
+                          label: "3rd Year",
+                        },
+                        {
+                          value: "4",
+                          label: "4th Year",
+                        },
+                        {
+                          value: "5",
+                          label: "5th Year",
+                        },
                       ]}
                       onChange={(value) =>
                         setEditForm((current) => ({
                           ...current,
-                          academic_year: Number(value),
+                          academic_year:
+                            Number(value),
                         }))
                       }
                     />
@@ -1095,7 +1217,9 @@ export default function RegistrationsPage() {
 
                     <EditField
                       label="Affiliate code"
-                      value={editForm.affiliate_code}
+                      value={
+                        editForm.affiliate_code
+                      }
                       onChange={(value) =>
                         setEditForm((current) => ({
                           ...current,
@@ -1107,13 +1231,19 @@ export default function RegistrationsPage() {
                 ) : (
                   <>
                     <InfoItem
-                      icon={<UserRound className="h-4 w-4" />}
+                      icon={
+                        <UserRound className="h-4 w-4" />
+                      }
                       label="Full name"
-                      value={selectedRegistration.full_name}
+                      value={
+                        selectedRegistration.full_name
+                      }
                     />
 
                     <InfoItem
-                      icon={<GraduationCap className="h-4 w-4" />}
+                      icon={
+                        <GraduationCap className="h-4 w-4" />
+                      }
                       label="Academic year"
                       value={getYearLabel(
                         selectedRegistration.academic_year
@@ -1121,29 +1251,42 @@ export default function RegistrationsPage() {
                     />
 
                     <InfoItem
-                      icon={<Building2 className="h-4 w-4" />}
+                      icon={
+                        <Building2 className="h-4 w-4" />
+                      }
                       label="University"
                       value={
-                        selectedRegistration.university || "—"
+                        selectedRegistration.university ||
+                        "—"
                       }
                     />
 
                     <InfoItem
-                      icon={<Phone className="h-4 w-4" />}
+                      icon={
+                        <Phone className="h-4 w-4" />
+                      }
                       label="Phone"
                       value={
-                        selectedRegistration.phone_number || "—"
+                        selectedRegistration.phone_number ||
+                        "—"
                       }
                     />
 
                     <InfoItem
-                      icon={<Mail className="h-4 w-4" />}
+                      icon={
+                        <Mail className="h-4 w-4" />
+                      }
                       label="Email"
-                      value={selectedRegistration.email || "—"}
+                      value={
+                        selectedRegistration.email ||
+                        "—"
+                      }
                     />
 
                     <InfoItem
-                      icon={<Tag className="h-4 w-4" />}
+                      icon={
+                        <Tag className="h-4 w-4" />
+                      }
                       label="Plan"
                       value={selectedRegistration.plan}
                     />
@@ -1172,7 +1315,8 @@ export default function RegistrationsPage() {
                     )}
                   />
 
-                  {selectedRegistration.discount_amount > 0 && (
+                  {selectedRegistration.discount_amount >
+                    0 && (
                     <PriceRow
                       label={`Discount${
                         selectedRegistration.discount_percent
@@ -1207,14 +1351,18 @@ export default function RegistrationsPage() {
                   </div>
 
                   <div className="mt-1 font-mono text-sm text-sky-200/70">
-                    {selectedRegistration.affiliate_code}
+                    {
+                      selectedRegistration.affiliate_code
+                    }
                   </div>
                 </div>
               )}
 
               <div className="mt-5 text-xs text-white/25">
                 Submitted{" "}
-                {formatDateTime(selectedRegistration.created_at)}
+                {formatDateTime(
+                  selectedRegistration.created_at
+                )}
               </div>
             </div>
 
@@ -1223,10 +1371,13 @@ export default function RegistrationsPage() {
             <div className="flex items-center justify-between border-t border-white/[0.06] px-5 py-4 sm:px-6">
               <div>
                 {!editingRegistration &&
-                  selectedRegistration.status === "pending" && (
+                  selectedRegistration.status ===
+                    "pending" && (
                     <button
                       type="button"
-                      disabled={cancellingRegistration}
+                      disabled={
+                        cancellingRegistration
+                      }
                       onClick={cancelRegistration}
                       className="rounded-lg border border-red-400/10 bg-red-400/[0.025] px-4 py-2.5 text-xs font-medium text-red-300/60 transition hover:border-red-400/20 hover:bg-red-400/[0.06] hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-40"
                     >
@@ -1275,7 +1426,8 @@ export default function RegistrationsPage() {
                       Close
                     </button>
 
-                    {selectedRegistration.status === "pending" && (
+                    {selectedRegistration.status ===
+                      "pending" && (
                       <button
                         type="button"
                         onClick={() =>
@@ -1333,7 +1485,9 @@ export default function RegistrationsPage() {
               <button
                 type="button"
                 disabled={creatingAccountRequest}
-                onClick={() => setCreatingAccount(false)}
+                onClick={() =>
+                  setCreatingAccount(false)
+                }
                 className="rounded-lg p-2 text-white/25 transition hover:bg-white/[0.05] hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
               >
                 <X className="h-5 w-5" />
@@ -1358,7 +1512,10 @@ export default function RegistrationsPage() {
                       ...current,
                       username: event.target.value
                         .toLowerCase()
-                        .replace(/[^a-z0-9._-]/g, ""),
+                        .replace(
+                          /[^a-z0-9._-]/g,
+                          ""
+                        ),
                     }))
                   }
                   placeholder="username"
@@ -1367,11 +1524,13 @@ export default function RegistrationsPage() {
 
                 <div className="mt-2 rounded-lg border border-sky-400/[0.08] bg-sky-400/[0.025] px-3 py-2">
                   <p className="text-[11px] leading-5 text-white/35">
-                    This will be the student's login email:
+                    This will be the student's login
+                    email:
                   </p>
 
                   <p className="mt-0.5 font-mono text-xs text-sky-300/70">
-                    {accountForm.username || "username"}
+                    {accountForm.username ||
+                      "username"}
 
                     <span className="text-sky-300/35">
                       @med.iq
@@ -1394,7 +1553,8 @@ export default function RegistrationsPage() {
                   onChange={(event) =>
                     setAccountForm((current) => ({
                       ...current,
-                      password: event.target.value,
+                      password:
+                        event.target.value,
                     }))
                   }
                   placeholder="Enter temporary password"
@@ -1402,7 +1562,8 @@ export default function RegistrationsPage() {
                 />
 
                 <p className="mt-1.5 text-[11px] text-white/20">
-                  This is the password the student will use to log in.
+                  This is the password the student will
+                  use to log in.
                 </p>
               </div>
 
@@ -1419,7 +1580,8 @@ export default function RegistrationsPage() {
                   onChange={(event) =>
                     setAccountForm((current) => ({
                       ...current,
-                      display_name: event.target.value,
+                      display_name:
+                        event.target.value,
                     }))
                   }
                   placeholder="Student's display name"
@@ -1438,7 +1600,9 @@ export default function RegistrationsPage() {
                   value={selectedMentorId}
                   disabled={creatingAccountRequest}
                   onChange={(event) =>
-                    setSelectedMentorId(event.target.value)
+                    setSelectedMentorId(
+                      event.target.value
+                    )
                   }
                   className="h-11 w-full rounded-xl border border-white/[0.07] bg-[#15181d] px-3.5 text-sm text-white/80 outline-none transition focus:border-white/[0.14] disabled:cursor-not-allowed disabled:opacity-50"
                 >
@@ -1447,7 +1611,10 @@ export default function RegistrationsPage() {
                   </option>
 
                   {mentors.map((mentor) => (
-                    <option key={mentor.id} value={mentor.id}>
+                    <option
+                      key={mentor.id}
+                      value={mentor.id}
+                    >
                       {mentor.display_name ||
                         mentor.username ||
                         "Unnamed mentor"}
@@ -1456,7 +1623,35 @@ export default function RegistrationsPage() {
                 </select>
 
                 <p className="mt-1.5 text-[11px] text-white/20">
-                  You can assign a mentor now or leave this unassigned.
+                  You can assign a mentor now or leave
+                  this unassigned.
+                </p>
+              </div>
+
+              {/* Exam date */}
+
+              <div>
+                <label className="mb-2 block text-[10px] font-medium uppercase tracking-[0.12em] text-white/25">
+                  Exam date
+                </label>
+
+                <input
+                  type="date"
+                  value={accountForm.exam_date}
+                  disabled={creatingAccountRequest}
+                  onChange={(event) =>
+                    setAccountForm((current) => ({
+                      ...current,
+                      exam_date:
+                        event.target.value,
+                    }))
+                  }
+                  className="h-11 w-full rounded-xl border border-white/[0.07] bg-[#15181d] px-3.5 text-sm text-white/80 outline-none transition focus:border-white/[0.14] disabled:cursor-not-allowed disabled:opacity-50"
+                />
+
+                <p className="mt-1.5 text-[11px] text-white/20">
+                  Optional. This can be added or changed
+                  later.
                 </p>
               </div>
 
@@ -1480,7 +1675,8 @@ export default function RegistrationsPage() {
                     </div>
 
                     <div className="mt-0.5 text-[11px] text-emerald-300/40">
-                      The student's MediQ account is ready.
+                      The student's MediQ account is
+                      ready.
                     </div>
                   </div>
                 </div>
@@ -1503,12 +1699,16 @@ export default function RegistrationsPage() {
 
                   <PriceRow
                     label="Plan"
-                    value={selectedRegistration.plan}
+                    value={
+                      selectedRegistration.plan
+                    }
                   />
 
                   <PriceRow
                     label="Registration"
-                    value={selectedRegistration.registration_code}
+                    value={
+                      selectedRegistration.registration_code
+                    }
                   />
 
                   <PriceRow
@@ -1528,7 +1728,9 @@ export default function RegistrationsPage() {
               <button
                 type="button"
                 disabled={creatingAccountRequest}
-                onClick={() => setCreatingAccount(false)}
+                onClick={() =>
+                  setCreatingAccount(false)
+                }
                 className="rounded-lg border border-white/[0.07] bg-white/[0.025] px-4 py-2.5 text-xs font-medium text-white/45 transition hover:bg-white/[0.05] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Back
@@ -1562,9 +1764,11 @@ export default function RegistrationsPage() {
   );
 }
 
-/* ================================================================
+/*
+ * ================================================================
  * SMALL UI COMPONENTS
- * ================================================================ */
+ * ================================================================
+ */
 
 function InfoItem({
   icon,
@@ -1604,7 +1808,9 @@ function PriceRow({
     <div className="flex items-center justify-between gap-4">
       <span
         className={`text-xs ${
-          muted ? "text-white/25" : "text-white/35"
+          muted
+            ? "text-white/25"
+            : "text-white/35"
         }`}
       >
         {label}
@@ -1645,7 +1851,9 @@ function EditField({
       <input
         type={type}
         value={value}
-        onChange={(event) => onChange(event.target.value)}
+        onChange={(event) =>
+          onChange(event.target.value)
+        }
         className="h-10 w-full rounded-lg border border-white/[0.08] bg-white/[0.025] px-3 text-sm text-white/80 outline-none transition placeholder:text-white/20 focus:border-white/[0.16] focus:bg-white/[0.04]"
       />
     </label>
@@ -1674,11 +1882,16 @@ function EditSelect({
 
       <select
         value={value}
-        onChange={(event) => onChange(event.target.value)}
+        onChange={(event) =>
+          onChange(event.target.value)
+        }
         className="h-10 w-full rounded-lg border border-white/[0.08] bg-[#15181d] px-3 text-sm text-white/80 outline-none transition focus:border-white/[0.16]"
       >
         {options.map((option) => (
-          <option key={option.value} value={option.value}>
+          <option
+            key={option.value}
+            value={option.value}
+          >
             {option.label}
           </option>
         ))}
