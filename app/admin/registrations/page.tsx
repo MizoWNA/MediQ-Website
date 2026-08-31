@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+
 import {
   Search,
   RefreshCw,
@@ -15,7 +16,10 @@ import {
   BadgeCheck,
   Clock3,
   Tag,
+  CheckCircle2,
+  Loader2,
 } from "lucide-react";
+
 import { supabase } from "@/lib/supabase";
 
 type Registration = {
@@ -49,48 +53,40 @@ type RegistrationResponse = {
 
 type StatusFilter = "pending" | "confirmed" | "cancelled";
 
-export default function RegistrationsPage() {
-  const [registrations, setRegistrations] = useState<
-    Registration[]
-  >([]);
+type Mentor = {
+  id: string;
+  username: string | null;
+  display_name: string | null;
+};
 
+export default function RegistrationsPage() {
+  const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [search, setSearch] = useState("");
-  const [status, setStatus] =
-    useState<StatusFilter>("pending");
-
+  const [status, setStatus] = useState<StatusFilter>("pending");
   const [page, setPage] = useState(1);
+
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
 
   const [selectedRegistration, setSelectedRegistration] =
     useState<Registration | null>(null);
 
-  const [editingRegistration, setEditingRegistration] =
-    useState(false);
+  const [editingRegistration, setEditingRegistration] = useState(false);
+  const [savingRegistration, setSavingRegistration] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
 
-  const [savingRegistration, setSavingRegistration] =
-    useState(false);
+  const [creatingAccount, setCreatingAccount] = useState(false);
+  const [creatingAccountRequest, setCreatingAccountRequest] = useState(false);
+  const [accountError, setAccountError] = useState<string | null>(null);
 
-  const [editError, setEditError] =
-    useState<string | null>(null);
+  const [accountCreated, setAccountCreated] = useState(false);
 
-  const [creatingAccount, setCreatingAccount] =
-    useState(false);
-
-  const [mentors, setMentors] = useState<
-    {
-      id: string;
-      username: string | null;
-      display_name: string | null;
-    }[]
-  >([]);
-
-  const [selectedMentorId, setSelectedMentorId] =
-    useState("");
+  const [mentors, setMentors] = useState<Mentor[]>([]);
+  const [selectedMentorId, setSelectedMentorId] = useState("");
 
   const [accountForm, setAccountForm] = useState({
     username: "",
@@ -109,16 +105,13 @@ export default function RegistrationsPage() {
     registration_code: "",
   });
 
-
-
   /*
    * ================================================================
-   * FETCH REGISTRATIONS
+   * FETCH MENTORS
    * ================================================================
    */
 
-  const fetchMentors = useCallback(
-  async () => {
+  const fetchMentors = useCallback(async () => {
     try {
       const {
         data: { session },
@@ -128,35 +121,30 @@ export default function RegistrationsPage() {
         return;
       }
 
-      const response = await fetch(
-        "/api/admin/mentors",
-        {
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-          },
-          cache: "no-store",
-        }
-      );
+      const response = await fetch("/api/admin/mentors", {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        cache: "no-store",
+      });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(
-          data?.error ||
-            "Failed to load mentors."
-        );
+        throw new Error(data?.error || "Failed to load mentors.");
       }
 
       setMentors(data.mentors ?? []);
     } catch (error) {
-      console.error(
-        "Failed to fetch mentors:",
-        error
-      );
+      console.error("Failed to fetch mentors:", error);
     }
-  },
-  []
-);
+  }, []);
+
+  /*
+   * ================================================================
+   * FETCH REGISTRATIONS
+   * ================================================================
+   */
 
   const fetchRegistrations = useCallback(
     async (showRefresh = false) => {
@@ -204,27 +192,17 @@ export default function RegistrationsPage() {
 
         if (!response.ok) {
           throw new Error(
-            data?.error ||
-              "Failed to load registrations."
+            data?.error || "Failed to load registrations."
           );
         }
 
-        const result =
-          data as RegistrationResponse;
+        const result = data as RegistrationResponse;
 
-        setRegistrations(
-          result.registrations ?? []
-        );
-
+        setRegistrations(result.registrations ?? []);
         setTotal(result.total ?? 0);
-        setTotalPages(
-          result.total_pages ?? 1
-        );
+        setTotalPages(result.total_pages ?? 1);
       } catch (err) {
-        console.error(
-          "Failed to fetch registrations:",
-          err
-        );
+        console.error("Failed to fetch registrations:", err);
 
         setError(
           err instanceof Error
@@ -238,6 +216,82 @@ export default function RegistrationsPage() {
     },
     [page, search, status]
   );
+
+  async function createAccount() {
+    setAccountError(null);
+    if (!selectedRegistration) {
+      return;
+    }
+
+    try {
+      setCreatingAccountRequest(true);
+      setAccountError(null);
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session?.access_token) {
+        throw new Error(
+          "Your admin session has expired. Please log in again."
+        );
+      }
+
+      const response = await fetch(
+        `/api/admin/registrations/${selectedRegistration.id}/create-account`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            username: accountForm.username.trim(),
+            password: accountForm.password,
+            display_name: accountForm.display_name.trim(),
+            mentor_id: selectedMentorId || null,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data?.error || "Failed to create account."
+        );
+      }
+
+    /*
+     * Account created successfully.
+     *
+     * Close the account creation modal and the registration
+     * review modal.
+     */
+    setCreatingAccount(false);
+    setSelectedRegistration(null);
+
+    /*
+     * Refresh the registrations list so the newly-confirmed
+     * registration immediately disappears from Pending.
+     */
+    await fetchRegistrations(true);
+  } catch (error) {
+    console.error(
+      "Failed to create MediQ account:",
+      error
+    );
+
+    setAccountError(
+      error instanceof Error
+        ? error.message
+        : "Failed to create account."
+    );
+  } finally {
+    setCreatingAccountRequest(false);
+  }
+}
+
 
   /*
    * ================================================================
@@ -260,27 +314,21 @@ export default function RegistrationsPage() {
    */
 
   function formatDate(date: string) {
-    return new Date(date).toLocaleDateString(
-      "en-GB",
-      {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      }
-    );
+    return new Date(date).toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
   }
 
   function formatDateTime(date: string) {
-    return new Date(date).toLocaleString(
-      "en-GB",
-      {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      }
-    );
+    return new Date(date).toLocaleString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   }
 
   function formatPrice(price: number) {
@@ -291,34 +339,12 @@ export default function RegistrationsPage() {
     if (year === 1) return "1st Year";
     if (year === 2) return "2nd Year";
     if (year === 3) return "3rd Year";
+
     return `${year}th Year`;
   }
 
   function statusLabel(value: StatusFilter) {
-    return (
-      value.charAt(0).toUpperCase() +
-      value.slice(1)
-    );
-  }
-
-  function startEditingRegistration(
-    registration: Registration
-  ) {
-    setEditForm({
-      full_name: registration.full_name,
-      university: registration.university ?? "",
-      academic_year: registration.academic_year,
-      phone_number: registration.phone_number ?? "",
-      email: registration.email ?? "",
-      plan: registration.plan,
-      affiliate_code:
-        registration.affiliate_code ?? "",
-      registration_code:
-        registration.registration_code,
-    });
-
-    setEditError(null);
-    setEditingRegistration(true);
+    return value.charAt(0).toUpperCase() + value.slice(1);
   }
 
   function generateUsername(name: string) {
@@ -329,100 +355,220 @@ export default function RegistrationsPage() {
       .replace(/^\.+|\.+$/g, "");
   }
 
-  async function saveRegistrationChanges() {
-  if (!selectedRegistration) {
-    return;
-  }
+  /*
+   * ================================================================
+   * EDIT REGISTRATION
+   * ================================================================
+   */
 
-  try {
-    setSavingRegistration(true);
+  function startEditingRegistration(registration: Registration) {
+    setEditForm({
+      full_name: registration.full_name,
+      university: registration.university ?? "",
+      academic_year: registration.academic_year,
+      phone_number: registration.phone_number ?? "",
+      email: registration.email ?? "",
+      plan: registration.plan,
+      affiliate_code: registration.affiliate_code ?? "",
+      registration_code: registration.registration_code,
+    });
+
     setEditError(null);
-
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    if (!session?.access_token) {
-      throw new Error(
-        "Your admin session has expired. Please log in again."
-      );
-    }
-
-    const response = await fetch(
-      `/api/admin/registrations/${selectedRegistration.id}`,
-      {
-        method: "PATCH",
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          full_name:
-            editForm.full_name,
-          university:
-            editForm.university,
-          academic_year:
-            editForm.academic_year,
-          phone_number:
-            editForm.phone_number,
-          email:
-            editForm.email,
-          plan:
-            editForm.plan,
-          affiliate_code:
-            editForm.affiliate_code,
-          registration_code:
-            editForm.registration_code,
-        }),
-      }
-    );
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(
-        data?.error ||
-          "Failed to save registration."
-      );
-    }
-
-    const updated =
-      data.registration as Registration;
-
-    /*
-     * Update the popup immediately.
-     */
-
-    setSelectedRegistration(updated);
-
-    /*
-     * Update the table immediately too.
-     */
-
-    setRegistrations((current) =>
-      current.map((registration) =>
-        registration.id === updated.id
-          ? updated
-          : registration
-      )
-    );
-
-    setEditingRegistration(false);
-  } catch (err) {
-    console.error(
-      "Failed to save registration:",
-      err
-    );
-
-    setEditError(
-      err instanceof Error
-        ? err.message
-        : "Failed to save registration."
-    );
-  } finally {
-    setSavingRegistration(false);
+    setEditingRegistration(true);
   }
-}
+
+  async function saveRegistrationChanges() {
+    if (!selectedRegistration) {
+      return;
+    }
+
+    try {
+      setSavingRegistration(true);
+      setEditError(null);
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session?.access_token) {
+        throw new Error(
+          "Your admin session has expired. Please log in again."
+        );
+      }
+
+      const response = await fetch(
+        `/api/admin/registrations/${selectedRegistration.id}`,
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            full_name: editForm.full_name,
+            university: editForm.university,
+            academic_year: editForm.academic_year,
+            phone_number: editForm.phone_number,
+            email: editForm.email,
+            plan: editForm.plan,
+            affiliate_code: editForm.affiliate_code,
+            registration_code: editForm.registration_code,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data?.error || "Failed to save registration."
+        );
+      }
+
+      const updated = data.registration as Registration;
+
+      setSelectedRegistration(updated);
+
+      setRegistrations((current) =>
+        current.map((registration) =>
+          registration.id === updated.id
+            ? updated
+            : registration
+        )
+      );
+
+      setEditingRegistration(false);
+    } catch (err) {
+      console.error("Failed to save registration:", err);
+
+      setEditError(
+        err instanceof Error
+          ? err.message
+          : "Failed to save registration."
+      );
+    } finally {
+      setSavingRegistration(false);
+    }
+  }
+
+  /*
+   * ================================================================
+   * OPEN ACCOUNT CREATION
+   * ================================================================
+   */
+
+  function openAccountCreation(registration: Registration) {
+    setAccountForm({
+      username: generateUsername(registration.full_name),
+      password: "",
+      display_name: registration.full_name,
+    });
+
+    setSelectedMentorId("");
+    setAccountError(null);
+    setAccountCreated(false);
+    setCreatingAccount(true);
+  }
+
+  /*
+   * ================================================================
+   * CREATE ACCOUNT
+   * ================================================================
+   */
+
+  async function createAccount() {
+    if (!selectedRegistration) {
+      return;
+    }
+
+    const username = accountForm.username.trim();
+    const password = accountForm.password;
+    const displayName = accountForm.display_name.trim();
+
+    if (!username) {
+      setAccountError("Please enter a username.");
+      return;
+    }
+
+    if (!password) {
+      setAccountError("Please enter a password.");
+      return;
+    }
+
+    if (!displayName) {
+      setAccountError("Please enter a display name.");
+      return;
+    }
+
+    try {
+      setCreatingAccountRequest(true);
+      setAccountError(null);
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session?.access_token) {
+        throw new Error(
+          "Your admin session has expired. Please log in again."
+        );
+      }
+
+      const response = await fetch(
+        `/api/admin/registrations/${selectedRegistration.id}/create-account`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            username,
+            password,
+            display_name: displayName,
+            mentor_id: selectedMentorId || null,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data?.error || "Failed to create the student account."
+        );
+      }
+
+      console.log("Account created:", data);
+
+      setAccountCreated(true);
+
+      /*
+       * Give the success state a moment so the admin can actually
+       * see that the operation succeeded.
+       */
+      await new Promise((resolve) => setTimeout(resolve, 900));
+
+      setCreatingAccount(false);
+      setSelectedRegistration(null);
+
+      /*
+       * Refresh the table so the registration status/profile_id
+       * immediately reflects the newly created account.
+       */
+      await fetchRegistrations(true);
+    } catch (err) {
+      console.error("Failed to create account:", err);
+
+      setAccountError(
+        err instanceof Error
+          ? err.message
+          : "Failed to create the student account."
+      );
+    } finally {
+      setCreatingAccountRequest(false);
+    }
+  }
 
   /*
    * ================================================================
@@ -507,26 +653,22 @@ export default function RegistrationsPage() {
               </h1>
 
               <p className="mt-2 max-w-xl text-sm leading-6 text-white/40">
-                Review student registrations and
-                create their MediQ accounts.
+                Review student registrations and create their MediQ accounts.
               </p>
             </div>
 
             <button
               type="button"
-              onClick={() =>
-                fetchRegistrations(true)
-              }
+              onClick={() => fetchRegistrations(true)}
               disabled={loading || refreshing}
               className="inline-flex items-center justify-center gap-2 rounded-lg border border-white/[0.07] bg-white/[0.025] px-3 py-2 text-xs text-white/50 transition hover:bg-white/[0.05] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
             >
               <RefreshCw
                 className={`h-3.5 w-3.5 ${
-                  refreshing
-                    ? "animate-spin"
-                    : ""
+                  refreshing ? "animate-spin" : ""
                 }`}
               />
+
               Refresh
             </button>
           </div>
@@ -557,11 +699,7 @@ export default function RegistrationsPage() {
 
           <div className="flex rounded-xl border border-white/[0.07] bg-white/[0.015] p-1">
             {(
-              [
-                "pending",
-                "confirmed",
-                "cancelled",
-              ] as StatusFilter[]
+              ["pending", "confirmed", "cancelled"] as StatusFilter[]
             ).map((item) => (
               <button
                 key={item}
@@ -639,8 +777,7 @@ export default function RegistrationsPage() {
                       Loading registrations...
                     </td>
                   </tr>
-                ) : registrations.length ===
-                  0 ? (
+                ) : registrations.length === 0 ? (
                   <tr>
                     <td
                       colSpan={6}
@@ -651,113 +788,89 @@ export default function RegistrationsPage() {
                       </div>
 
                       <div className="mt-1 text-xs text-white/20">
-                        Try changing your search
-                        or status filter.
+                        Try changing your search or status filter.
                       </div>
                     </td>
                   </tr>
                 ) : (
-                  registrations.map(
-                    (registration) => (
-                      <tr
-                        key={
-                          registration.id
-                        }
-                        className="border-b border-white/[0.04] last:border-0 transition hover:bg-white/[0.018]"
-                      >
-                        <td className="px-5 py-4">
-                          <div className="font-medium text-sm text-white/85">
-                            {
-                              registration.full_name
-                            }
-                          </div>
+                  registrations.map((registration) => (
+                    <tr
+                      key={registration.id}
+                      className="border-b border-white/[0.04] last:border-0 transition hover:bg-white/[0.018]"
+                    >
+                      <td className="px-5 py-4">
+                        <div className="font-medium text-sm text-white/85">
+                          {registration.full_name}
+                        </div>
 
-                          <div className="mt-1 flex items-center gap-2 text-xs text-white/30">
-                            <span>
-                              {getYearLabel(
-                                registration.academic_year
-                              )}
-                            </span>
+                        <div className="mt-1 flex items-center gap-2 text-xs text-white/30">
+                          <span>
+                            {getYearLabel(registration.academic_year)}
+                          </span>
 
-                            {registration.university && (
-                              <>
-                                <span className="text-white/10">
-                                  •
-                                </span>
+                          {registration.university && (
+                            <>
+                              <span className="text-white/10">•</span>
 
-                                <span className="max-w-[180px] truncate">
-                                  {
-                                    registration.university
-                                  }
-                                </span>
-                              </>
-                            )}
-                          </div>
-                        </td>
-
-                        <td className="px-5 py-4">
-                          <div className="font-mono text-xs text-white/50">
-                            {
-                              registration.registration_code
-                            }
-                          </div>
-
-                          <div className="mt-1 text-[11px] text-white/20">
-                            {registration.phone_number ||
-                              "No phone"}
-                          </div>
-                        </td>
-
-                        <td className="px-5 py-4">
-                          <div className="text-sm text-white/70">
-                            {registration.plan}
-                          </div>
-
-                          <div className="mt-1 text-xs text-white/30">
-                            {formatPrice(
-                              registration.final_price
-                            )}
-                          </div>
-                        </td>
-
-                        <td className="px-5 py-4">
-                          {registration.affiliate_code ? (
-                            <span className="inline-flex rounded-md border border-sky-400/10 bg-sky-400/[0.04] px-2 py-1 font-mono text-[11px] text-sky-300/60">
-                              {
-                                registration.affiliate_code
-                              }
-                            </span>
-                          ) : (
-                            <span className="text-xs text-white/20">
-                              —
-                            </span>
+                              <span className="max-w-[180px] truncate">
+                                {registration.university}
+                              </span>
+                            </>
                           )}
-                        </td>
+                        </div>
+                      </td>
 
-                        <td className="px-5 py-4">
-                          <div className="text-xs text-white/45">
-                            {formatDate(
-                              registration.created_at
-                            )}
-                          </div>
-                        </td>
+                      <td className="px-5 py-4">
+                        <div className="font-mono text-xs text-white/50">
+                          {registration.registration_code}
+                        </div>
 
-                        <td className="px-5 py-4 text-right">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setSelectedRegistration(
-                                registration
-                              )
-                            }
-                            className="rounded-lg border border-white/[0.07] bg-white/[0.025] px-3 py-2 text-xs font-medium text-white/50 transition hover:border-white/[0.12] hover:bg-white/[0.05] hover:text-white"
-                          >
-                            Review
-                          </button>
-                        </td>
-                      </tr>
-                    )
-                  )
+                        <div className="mt-1 text-[11px] text-white/20">
+                          {registration.phone_number || "No phone"}
+                        </div>
+                      </td>
+
+                      <td className="px-5 py-4">
+                        <div className="text-sm text-white/70">
+                          {registration.plan}
+                        </div>
+
+                        <div className="mt-1 text-xs text-white/30">
+                          {formatPrice(registration.final_price)}
+                        </div>
+                      </td>
+
+                      <td className="px-5 py-4">
+                        {registration.affiliate_code ? (
+                          <span className="inline-flex rounded-md border border-sky-400/10 bg-sky-400/[0.04] px-2 py-1 font-mono text-[11px] text-sky-300/60">
+                            {registration.affiliate_code}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-white/20">
+                            —
+                          </span>
+                        )}
+                      </td>
+
+                      <td className="px-5 py-4">
+                        <div className="text-xs text-white/45">
+                          {formatDate(registration.created_at)}
+                        </div>
+                      </td>
+
+                      <td className="px-5 py-4 text-right">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setSelectedRegistration(registration)
+                          }
+                          className="rounded-lg border border-white/[0.07] bg-white/[0.025] px-3 py-2 text-xs font-medium text-white/50 transition hover:border-white/[0.12] hover:bg-white/[0.05] hover:text-white"
+                        >
+                          Review
+                        </button>
+                      </td>
+                    </tr>
+                  ))
                 )}
               </tbody>
             </table>
@@ -770,80 +883,63 @@ export default function RegistrationsPage() {
               <div className="px-5 py-16 text-center text-sm text-white/25">
                 Loading registrations...
               </div>
-            ) : registrations.length ===
-              0 ? (
+            ) : registrations.length === 0 ? (
               <div className="px-5 py-16 text-center">
                 <div className="text-sm text-white/35">
                   No registrations found.
                 </div>
 
                 <div className="mt-1 text-xs text-white/20">
-                  Try changing your search or
-                  status filter.
+                  Try changing your search or status filter.
                 </div>
               </div>
             ) : (
-              registrations.map(
-                (registration) => (
-                  <button
-                    key={registration.id}
-                    type="button"
-                    onClick={() =>
-                      setSelectedRegistration(
-                        registration
-                      )
-                    }
-                    className="block w-full px-4 py-4 text-left transition hover:bg-white/[0.02]"
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="min-w-0">
-                        <div className="truncate text-sm font-medium text-white/85">
-                          {
-                            registration.full_name
-                          }
-                        </div>
-
-                        <div className="mt-1 text-xs text-white/30">
-                          {getYearLabel(
-                            registration.academic_year
-                          )}
-                          {registration.university
-                            ? ` · ${registration.university}`
-                            : ""}
-                        </div>
+              registrations.map((registration) => (
+                <button
+                  key={registration.id}
+                  type="button"
+                  onClick={() =>
+                    setSelectedRegistration(registration)
+                  }
+                  className="block w-full px-4 py-4 text-left transition hover:bg-white/[0.02]"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-medium text-white/85">
+                        {registration.full_name}
                       </div>
 
-                      <div className="shrink-0 text-right">
-                        <div className="text-sm text-white/65">
-                          {formatPrice(
-                            registration.final_price
-                          )}
-                        </div>
+                      <div className="mt-1 text-xs text-white/30">
+                        {getYearLabel(registration.academic_year)}
 
-                        <div className="mt-1 text-[11px] text-white/25">
-                          {
-                            registration.plan
-                          }
-                        </div>
+                        {registration.university
+                          ? ` · ${registration.university}`
+                          : ""}
                       </div>
                     </div>
 
-                    <div className="mt-3 flex items-center justify-between">
-                      <span className="font-mono text-[11px] text-white/25">
-                        {
-                          registration.registration_code
-                        }
-                      </span>
+                    <div className="shrink-0 text-right">
+                      <div className="text-sm text-white/65">
+                        {formatPrice(registration.final_price)}
+                      </div>
 
-                      <span className="text-[11px] text-white/25">
-                        {formatDate(
-                          registration.created_at
-                        )}
-                      </span>
+                      <div className="mt-1 text-[11px] text-white/25">
+                        {registration.plan}
+                      </div>
                     </div>
-                  </button>
-                )
-              )
+                  </div>
+
+                  <div className="mt-3 flex items-center justify-between">
+                    <span className="font-mono text-[11px] text-white/25">
+                      {registration.registration_code}
+                    </span>
+
+                    <span className="text-[11px] text-white/25">
+                      {formatDate(registration.created_at)}
+                    </span>
+                  </div>
+                </button>
+              ))
             )}
           </div>
 
@@ -851,52 +947,41 @@ export default function RegistrationsPage() {
               PAGINATION
           ======================================================== */}
 
-          {!loading &&
-            registrations.length > 0 && (
-              <div className="flex items-center justify-between border-t border-white/[0.06] px-4 py-3 sm:px-5">
-                <div className="text-xs text-white/25">
-                  {total === 0
-                    ? "No results"
-                    : `Page ${page} of ${totalPages} · ${total} total`}
-                </div>
-
-                <div className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    disabled={page <= 1}
-                    onClick={() =>
-                      setPage((value) =>
-                        Math.max(
-                          1,
-                          value - 1
-                        )
-                      )
-                    }
-                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/[0.06] text-white/35 transition hover:bg-white/[0.04] hover:text-white disabled:cursor-not-allowed disabled:opacity-20"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </button>
-
-                  <button
-                    type="button"
-                    disabled={
-                      page >= totalPages
-                    }
-                    onClick={() =>
-                      setPage((value) =>
-                        Math.min(
-                          totalPages,
-                          value + 1
-                        )
-                      )
-                    }
-                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/[0.06] text-white/35 transition hover:bg-white/[0.04] hover:text-white disabled:cursor-not-allowed disabled:opacity-20"
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </button>
-                </div>
+          {!loading && registrations.length > 0 && (
+            <div className="flex items-center justify-between border-t border-white/[0.06] px-4 py-3 sm:px-5">
+              <div className="text-xs text-white/25">
+                {total === 0
+                  ? "No results"
+                  : `Page ${page} of ${totalPages} · ${total} total`}
               </div>
-            )}
+
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  disabled={page <= 1}
+                  onClick={() =>
+                    setPage((value) => Math.max(1, value - 1))
+                  }
+                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/[0.06] text-white/35 transition hover:bg-white/[0.04] hover:text-white disabled:cursor-not-allowed disabled:opacity-20"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+
+                <button
+                  type="button"
+                  disabled={page >= totalPages}
+                  onClick={() =>
+                    setPage((value) =>
+                      Math.min(totalPages, value + 1)
+                    )
+                  }
+                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/[0.06] text-white/35 transition hover:bg-white/[0.04] hover:text-white disabled:cursor-not-allowed disabled:opacity-20"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          )}
         </section>
       </div>
 
@@ -908,9 +993,7 @@ export default function RegistrationsPage() {
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
           onMouseDown={(event) => {
-            if (
-              event.target === event.currentTarget
-            ) {
+            if (event.target === event.currentTarget) {
               setSelectedRegistration(null);
             }
           }}
@@ -932,17 +1015,13 @@ export default function RegistrationsPage() {
                 </h2>
 
                 <div className="mt-1 font-mono text-xs text-white/25">
-                  {
-                    selectedRegistration.registration_code
-                  }
+                  {selectedRegistration.registration_code}
                 </div>
               </div>
 
               <button
                 type="button"
-                onClick={() =>
-                  setSelectedRegistration(null)
-                }
+                onClick={() => setSelectedRegistration(null)}
                 className="rounded-lg p-2 text-white/25 transition hover:bg-white/[0.05] hover:text-white"
               >
                 <X className="h-5 w-5" />
@@ -1054,19 +1133,13 @@ export default function RegistrationsPage() {
                 ) : (
                   <>
                     <InfoItem
-                      icon={
-                        <UserRound className="h-4 w-4" />
-                      }
+                      icon={<UserRound className="h-4 w-4" />}
                       label="Full name"
-                      value={
-                        selectedRegistration.full_name
-                      }
+                      value={selectedRegistration.full_name}
                     />
 
                     <InfoItem
-                      icon={
-                        <GraduationCap className="h-4 w-4" />
-                      }
+                      icon={<GraduationCap className="h-4 w-4" />}
                       label="Academic year"
                       value={getYearLabel(
                         selectedRegistration.academic_year
@@ -1074,46 +1147,31 @@ export default function RegistrationsPage() {
                     />
 
                     <InfoItem
-                      icon={
-                        <Building2 className="h-4 w-4" />
-                      }
+                      icon={<Building2 className="h-4 w-4" />}
                       label="University"
                       value={
-                        selectedRegistration.university ||
-                        "—"
+                        selectedRegistration.university || "—"
                       }
                     />
 
                     <InfoItem
-                      icon={
-                        <Phone className="h-4 w-4" />
-                      }
+                      icon={<Phone className="h-4 w-4" />}
                       label="Phone"
                       value={
-                        selectedRegistration.phone_number ||
-                        "—"
+                        selectedRegistration.phone_number || "—"
                       }
                     />
 
                     <InfoItem
-                      icon={
-                        <Mail className="h-4 w-4" />
-                      }
+                      icon={<Mail className="h-4 w-4" />}
                       label="Email"
-                      value={
-                        selectedRegistration.email ||
-                        "—"
-                      }
+                      value={selectedRegistration.email || "—"}
                     />
 
                     <InfoItem
-                      icon={
-                        <Tag className="h-4 w-4" />
-                      }
+                      icon={<Tag className="h-4 w-4" />}
                       label="Plan"
-                      value={
-                        selectedRegistration.plan
-                      }
+                      value={selectedRegistration.plan}
                     />
                   </>
                 )}
@@ -1140,8 +1198,7 @@ export default function RegistrationsPage() {
                     )}
                   />
 
-                  {selectedRegistration.discount_amount >
-                    0 && (
+                  {selectedRegistration.discount_amount > 0 && (
                     <PriceRow
                       label={`Discount${
                         selectedRegistration.discount_percent
@@ -1176,18 +1233,14 @@ export default function RegistrationsPage() {
                   </div>
 
                   <div className="mt-1 font-mono text-sm text-sky-200/70">
-                    {
-                      selectedRegistration.affiliate_code
-                    }
+                    {selectedRegistration.affiliate_code}
                   </div>
                 </div>
               )}
 
               <div className="mt-5 text-xs text-white/25">
                 Submitted{" "}
-                {formatDateTime(
-                  selectedRegistration.created_at
-                )}
+                {formatDateTime(selectedRegistration.created_at)}
               </div>
             </div>
 
@@ -1196,8 +1249,7 @@ export default function RegistrationsPage() {
             <div className="flex items-center justify-between border-t border-white/[0.06] px-5 py-4 sm:px-6">
               <div>
                 {!editingRegistration &&
-                  selectedRegistration.status ===
-                    "pending" && (
+                  selectedRegistration.status === "pending" && (
                     <button
                       type="button"
                       onClick={() =>
@@ -1250,24 +1302,14 @@ export default function RegistrationsPage() {
                       Close
                     </button>
 
-                    {selectedRegistration.status ===
-                      "pending" && (
+                    {selectedRegistration.status === "pending" && (
                       <button
                         type="button"
-                        onClick={() => {
-                          setAccountForm({
-                            username: generateUsername(
-                              selectedRegistration.full_name
-                            ),
-                            password: "",
-                            display_name:
-                              selectedRegistration.full_name,
-                          });
-
-                          setSelectedMentorId("");
-
-                          setCreatingAccount(true);
-                        }}
+                        onClick={() =>
+                          openAccountCreation(
+                            selectedRegistration
+                          )
+                        }
                         className="rounded-lg bg-white px-4 py-2.5 text-xs font-semibold text-black transition hover:bg-white/90"
                       >
                         Create Account
@@ -1280,234 +1322,272 @@ export default function RegistrationsPage() {
           </div>
         </div>
       )}
+
+      {/* ============================================================
+          ACCOUNT CREATION POPUP
+      ============================================================ */}
+
       {creatingAccount && selectedRegistration && (
-  <div
-    className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
-    onMouseDown={(event) => {
-      if (event.target === event.currentTarget) {
-        setCreatingAccount(false);
-      }
-    }}
-  >
-    <div className="w-full max-w-lg overflow-hidden rounded-2xl border border-white/[0.09] bg-[#111419] shadow-2xl shadow-black/40">
-      {/* Header */}
-
-      <div className="flex items-start justify-between border-b border-white/[0.06] px-5 py-5 sm:px-6">
-        <div>
-          <div className="mb-2 text-[10px] font-medium uppercase tracking-[0.14em] text-white/25">
-            Account Creation
-          </div>
-
-          <h2 className="text-lg font-semibold text-white/90">
-            Create MediQ Account
-          </h2>
-
-          <p className="mt-1 text-xs text-white/30">
-            {selectedRegistration.full_name}
-          </p>
-        </div>
-
-        <button
-          type="button"
-          onClick={() =>
-            setCreatingAccount(false)
-          }
-          className="rounded-lg p-2 text-white/25 transition hover:bg-white/[0.05] hover:text-white"
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+          onMouseDown={(event) => {
+            if (
+              event.target === event.currentTarget &&
+              !creatingAccountRequest
+            ) {
+              setCreatingAccount(false);
+            }
+          }}
         >
-          <X className="h-5 w-5" />
-        </button>
-      </div>
+          <div className="w-full max-w-lg overflow-hidden rounded-2xl border border-white/[0.09] bg-[#111419] shadow-2xl shadow-black/40">
+            {/* Header */}
 
-      {/* Body */}
+            <div className="flex items-start justify-between border-b border-white/[0.06] px-5 py-5 sm:px-6">
+              <div>
+                <div className="mb-2 text-[10px] font-medium uppercase tracking-[0.14em] text-white/25">
+                  Account Creation
+                </div>
 
-      <div className="space-y-5 px-5 py-5 sm:px-6">
-        {/* Username */}
+                <h2 className="text-lg font-semibold text-white/90">
+                  Create MediQ Account
+                </h2>
 
-        <div>
-          <label className="mb-2 block text-[10px] font-medium uppercase tracking-[0.12em] text-white/25">
-            Username
-          </label>
+                <p className="mt-1 text-xs text-white/30">
+                  {selectedRegistration.full_name}
+                </p>
+              </div>
 
-          <input
-            value={accountForm.username}
-            onChange={(event) =>
-              setAccountForm((current) => ({
-                ...current,
-                username:
-                  event.target.value
-                    .toLowerCase()
-                    .replace(
-                      /[^a-z0-9._-]/g,
-                      ""
-                    ),
-              }))
-            }
-            placeholder="username"
-            className="h-11 w-full rounded-xl border border-white/[0.07] bg-white/[0.025] px-3.5 text-sm text-white outline-none placeholder:text-white/20 transition focus:border-white/[0.14] focus:bg-white/[0.035]"
-          />
-
-          <p className="mt-1.5 text-[11px] text-white/20">
-            Login email will be{" "}
-            <span className="font-mono">
-              {accountForm.username ||
-                "username"}
-              @med.iq
-            </span>
-          </p>
-        </div>
-
-        {/* Password */}
-
-        <div>
-          <label className="mb-2 block text-[10px] font-medium uppercase tracking-[0.12em] text-white/25">
-            Password
-          </label>
-
-          <input
-            type="text"
-            value={accountForm.password}
-            onChange={(event) =>
-              setAccountForm((current) => ({
-                ...current,
-                password:
-                  event.target.value,
-              }))
-            }
-            placeholder="Enter temporary password"
-            className="h-11 w-full rounded-xl border border-white/[0.07] bg-white/[0.025] px-3.5 text-sm text-white outline-none placeholder:text-white/20 transition focus:border-white/[0.14] focus:bg-white/[0.035]"
-          />
-
-          <p className="mt-1.5 text-[11px] text-white/20">
-            This is the password the student will
-            use to log in.
-          </p>
-        </div>
-
-        {/* Display name */}
-
-        <div>
-          <label className="mb-2 block text-[10px] font-medium uppercase tracking-[0.12em] text-white/25">
-            Display name
-          </label>
-
-          <input
-            value={accountForm.display_name}
-            onChange={(event) =>
-              setAccountForm((current) => ({
-                ...current,
-                display_name:
-                  event.target.value,
-              }))
-            }
-            placeholder="Student's display name"
-            className="h-11 w-full rounded-xl border border-white/[0.07] bg-white/[0.025] px-3.5 text-sm text-white outline-none placeholder:text-white/20 transition focus:border-white/[0.14] focus:bg-white/[0.035]"
-          />
-        </div>
-        
-        <div>
-          <label className="mb-2 block text-[10px] font-medium uppercase tracking-[0.12em] text-white/25">
-            Mentor
-          </label>
-
-          <select
-            value={selectedMentorId}
-            onChange={(event) =>
-              setSelectedMentorId(
-                event.target.value
-              )
-            }
-            className="h-11 w-full rounded-xl border border-white/[0.07] bg-[#15181d] px-3.5 text-sm text-white/80 outline-none transition focus:border-white/[0.14]"
-          >
-            <option value="">
-              No mentor assigned
-            </option>
-
-            {mentors.map((mentor) => (
-              <option
-                key={mentor.id}
-                value={mentor.id}
+              <button
+                type="button"
+                disabled={creatingAccountRequest}
+                onClick={() => setCreatingAccount(false)}
+                className="rounded-lg p-2 text-white/25 transition hover:bg-white/[0.05] hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
               >
-                {mentor.display_name ||
-                  mentor.username ||
-                  "Unnamed mentor"}
-              </option>
-            ))}
-          </select>
+                <X className="h-5 w-5" />
+              </button>
+            </div>
 
-          <p className="mt-1.5 text-[11px] text-white/20">
-            You can assign a mentor now or leave
-            this unassigned.
-          </p>
-        </div>
+            {/* Body */}
 
-        {/* Account summary */}
+            <div className="space-y-5 px-5 py-5 sm:px-6">
+              {/* Username */}
 
-        <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
-          <div className="mb-3 text-[10px] font-medium uppercase tracking-[0.14em] text-white/25">
-            Account
-          </div>
+              <div>
+                <label className="mb-2 block text-[10px] font-medium uppercase tracking-[0.12em] text-white/25">
+                  Username
+                </label>
 
-          <div className="space-y-2">
-            <PriceRow
-              label="Academic year"
-              value={getYearLabel(
-                selectedRegistration.academic_year
+                <input
+                  value={accountForm.username}
+                  disabled={creatingAccountRequest}
+                  onChange={(event) =>
+                    setAccountForm((current) => ({
+                      ...current,
+                      username: event.target.value
+                        .toLowerCase()
+                        .replace(/[^a-z0-9._-]/g, ""),
+                    }))
+                  }
+                  placeholder="username"
+                  className="h-11 w-full rounded-xl border border-white/[0.07] bg-white/[0.025] px-3.5 text-sm text-white outline-none placeholder:text-white/20 transition focus:border-white/[0.14] focus:bg-white/[0.035] disabled:cursor-not-allowed disabled:opacity-50"
+                />
+
+                <div className="mt-2 rounded-lg border border-sky-400/[0.08] bg-sky-400/[0.025] px-3 py-2">
+                  <p className="text-[11px] leading-5 text-white/35">
+                    This will be the student's login email:
+                  </p>
+
+                  <p className="mt-0.5 font-mono text-xs text-sky-300/70">
+                    {accountForm.username || "username"}
+                    <span className="text-sky-300/35">
+                      @med.iq
+                    </span>
+                  </p>
+                </div>
+              </div>
+
+              {/* Password */}
+
+              <div>
+                <label className="mb-2 block text-[10px] font-medium uppercase tracking-[0.12em] text-white/25">
+                  Password
+                </label>
+
+                <input
+                  type="text"
+                  value={accountForm.password}
+                  disabled={creatingAccountRequest}
+                  onChange={(event) =>
+                    setAccountForm((current) => ({
+                      ...current,
+                      password: event.target.value,
+                    }))
+                  }
+                  placeholder="Enter temporary password"
+                  className="h-11 w-full rounded-xl border border-white/[0.07] bg-white/[0.025] px-3.5 text-sm text-white outline-none placeholder:text-white/20 transition focus:border-white/[0.14] focus:bg-white/[0.035] disabled:cursor-not-allowed disabled:opacity-50"
+                />
+
+                <p className="mt-1.5 text-[11px] text-white/20">
+                  This is the password the student will use to log in.
+                </p>
+              </div>
+
+              {/* Display name */}
+
+              <div>
+                <label className="mb-2 block text-[10px] font-medium uppercase tracking-[0.12em] text-white/25">
+                  Display name
+                </label>
+
+                <input
+                  value={accountForm.display_name}
+                  disabled={creatingAccountRequest}
+                  onChange={(event) =>
+                    setAccountForm((current) => ({
+                      ...current,
+                      display_name: event.target.value,
+                    }))
+                  }
+                  placeholder="Student's display name"
+                  className="h-11 w-full rounded-xl border border-white/[0.07] bg-white/[0.025] px-3.5 text-sm text-white outline-none placeholder:text-white/20 transition focus:border-white/[0.14] focus:bg-white/[0.035] disabled:cursor-not-allowed disabled:opacity-50"
+                />
+              </div>
+
+              {/* Mentor */}
+
+              <div>
+                <label className="mb-2 block text-[10px] font-medium uppercase tracking-[0.12em] text-white/25">
+                  Mentor
+                </label>
+
+                <select
+                  value={selectedMentorId}
+                  disabled={creatingAccountRequest}
+                  onChange={(event) =>
+                    setSelectedMentorId(event.target.value)
+                  }
+                  className="h-11 w-full rounded-xl border border-white/[0.07] bg-[#15181d] px-3.5 text-sm text-white/80 outline-none transition focus:border-white/[0.14] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <option value="">No mentor assigned</option>
+
+                  {mentors.map((mentor) => (
+                    <option key={mentor.id} value={mentor.id}>
+                      {mentor.display_name ||
+                        mentor.username ||
+                        "Unnamed mentor"}
+                    </option>
+                  ))}
+                </select>
+
+                <p className="mt-1.5 text-[11px] text-white/20">
+                  You can assign a mentor now or leave this unassigned.
+                </p>
+              </div>
+
+              {/* Error */}
+
+              {accountError && (
+                <div className="rounded-xl border border-red-400/10 bg-red-400/[0.04] px-4 py-3 text-xs leading-5 text-red-300/80">
+                  {accountError}
+                </div>
               )}
-            />
 
-            <PriceRow
-              label="Plan"
-              value={
-                selectedRegistration.plan
-              }
-            />
+              {/* Success */}
 
-            <PriceRow
-              label="Registration"
-              value={
-                selectedRegistration.registration_code
-              }
-            />
+              {accountCreated && (
+                <div className="flex items-center gap-3 rounded-xl border border-emerald-400/10 bg-emerald-400/[0.04] px-4 py-3">
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-300/70" />
 
-            <PriceRow
-              label="Amount"
-              value={formatPrice(
-                selectedRegistration.final_price
+                  <div>
+                    <div className="text-xs font-medium text-emerald-200/80">
+                      Account created successfully
+                    </div>
+
+                    <div className="mt-0.5 text-[11px] text-emerald-300/40">
+                      The student's MediQ account is ready.
+                    </div>
+                  </div>
+                </div>
               )}
-              strong
-            />
+
+              {/* Account summary */}
+              {accountError && (
+                <div className="rounded-xl border border-red-400/10 bg-red-400/[0.04] px-4 py-3 text-xs text-red-300/80">
+                  {accountError}
+                </div>
+              )}
+              <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+                <div className="mb-3 text-[10px] font-medium uppercase tracking-[0.14em] text-white/25">
+                  Account
+                </div>
+
+                <div className="space-y-2">
+                  <PriceRow
+                    label="Academic year"
+                    value={getYearLabel(
+                      selectedRegistration.academic_year
+                    )}
+                  />
+
+                  <PriceRow
+                    label="Plan"
+                    value={selectedRegistration.plan}
+                  />
+
+                  <PriceRow
+                    label="Registration"
+                    value={
+                      selectedRegistration.registration_code
+                    }
+                  />
+
+                  <PriceRow
+                    label="Amount"
+                    value={formatPrice(
+                      selectedRegistration.final_price
+                    )}
+                    strong
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+
+            <div className="flex items-center justify-end gap-2 border-t border-white/[0.06] px-5 py-4 sm:px-6">
+              <button
+                type="button"
+                disabled={creatingAccountRequest}
+                onClick={() => setCreatingAccount(false)}
+                className="rounded-lg border border-white/[0.07] bg-white/[0.025] px-4 py-2.5 text-xs font-medium text-white/45 transition hover:bg-white/[0.05] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Back
+              </button>
+
+              <button
+                type="button"
+                disabled={
+                  creatingAccountRequest ||
+                  !accountForm.username.trim() ||
+                  !accountForm.password ||
+                  !accountForm.display_name.trim()
+                }
+                onClick={createAccount}
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-white px-4 py-2.5 text-xs font-semibold text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {creatingAccountRequest ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Creating account...
+                  </>
+                ) : (
+                  "Create Account"
+                )}
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-
-      {/* Footer */}
-
-      <div className="flex items-center justify-end gap-2 border-t border-white/[0.06] px-5 py-4 sm:px-6">
-        <button
-          type="button"
-          onClick={() =>
-            setCreatingAccount(false)
-          }
-          className="rounded-lg border border-white/[0.07] bg-white/[0.025] px-4 py-2.5 text-xs font-medium text-white/45 transition hover:bg-white/[0.05] hover:text-white"
-        >
-          Back
-        </button>
-
-        <button
-          type="button"
-          disabled={
-            !accountForm.username.trim() ||
-            !accountForm.password ||
-            !accountForm.display_name.trim()
-          }
-          className="rounded-lg bg-white px-4 py-2.5 text-xs font-semibold text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          Create Account
-        </button>
-      </div>
-    </div>
-  </div>
-)}
+      )}
     </main>
   );
 }
@@ -1556,9 +1636,7 @@ function PriceRow({
     <div className="flex items-center justify-between gap-4">
       <span
         className={`text-xs ${
-          muted
-            ? "text-white/25"
-            : "text-white/35"
+          muted ? "text-white/25" : "text-white/35"
         }`}
       >
         {label}
