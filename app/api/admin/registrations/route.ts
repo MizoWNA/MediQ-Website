@@ -660,27 +660,22 @@ export async function POST(
       .insert({
         id: newUserId,
 
-        username:
-          cleanUsername,
+        username: cleanUsername,
+        display_name: cleanDisplayName,
 
-        display_name:
-          cleanDisplayName,
+        phone_number: cleanPhoneNumber,a
+        university: registration.university,
 
         role: "student",
 
-        year:
-          registration.academic_year,
+        year: registration.academic_year,
 
-        start_date:
-          startDateString,
-
-        end_date:
-          endDate,
+        start_date: startDateString,
+        end_date: endDate,
 
         mentor_id: null,
 
         first_time: true,
-
         status: "active",
 
         registration_code:
@@ -691,8 +686,7 @@ export async function POST(
           cleanAffiliateCode ||
           registration.affiliate_code,
 
-        plan:
-          registration.plan,
+        plan: registration.plan,
       });
 
     /*

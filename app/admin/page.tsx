@@ -18,6 +18,9 @@ import {
   XCircle,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+
 
 type Mentor = {
   id: string;
@@ -683,6 +686,9 @@ async function handleUpdateUser(
     totalUsers
   );
 
+
+  const pathname = usePathname();
+
   /*
    * ================================================================
    * PAGE
@@ -756,17 +762,32 @@ async function handleUpdateUser(
           ========================================================== */}
 
           <nav className="mt-5 flex min-h-12 items-stretch justify-center gap-2 rounded-xl border border-white/[0.06] bg-white/[0.015] p-1.5">
-            <button
-              type="button"
-              className="flex min-w-[120px] flex-1 items-center justify-center rounded-lg bg-white/[0.08] px-5 py-2.5 text-xs font-medium text-white transition"
+            <Link
+              href="/admin"
+              className={`flex min-w-[120px] flex-1 items-center justify-center rounded-lg px-5 py-2.5 text-xs font-medium transition ${
+                pathname === "/admin"
+                  ? "bg-white/[0.08] text-white"
+                  : "text-white/35 hover:bg-white/[0.04] hover:text-white/70"
+              }`}
             >
               Users
-            </button>
+            </Link>
+
+            <Link
+              href="/admin/registrations"
+              className={`flex min-w-[120px] flex-1 items-center justify-center rounded-lg px-5 py-2.5 text-xs font-medium transition ${
+                pathname.startsWith("/admin/registrations")
+                  ? "bg-white/[0.08] text-white"
+                  : "text-white/35 hover:bg-white/[0.04] hover:text-white/70"
+              }`}
+            >
+              Registrations
+            </Link>
 
             <button
               type="button"
               disabled
-              className="flex min-w-[120px] flex-1 items-center justify-center rounded-lg px-5 py-2.5 text-xs font-medium text-white/20"
+              className="flex min-w-[120px] flex-1 items-center justify-center rounded-lg px-5 py-2.5 text-xs font-medium text-white/15"
             >
               Content
             </button>
@@ -774,15 +795,7 @@ async function handleUpdateUser(
             <button
               type="button"
               disabled
-              className="flex min-w-[120px] flex-1 items-center justify-center rounded-lg px-5 py-2.5 text-xs font-medium text-white/20"
-            >
-              Mentorship
-            </button>
-
-            <button
-              type="button"
-              disabled
-              className="flex min-w-[120px] flex-1 items-center justify-center rounded-lg px-5 py-2.5 text-xs font-medium text-white/20"
+              className="flex min-w-[120px] flex-1 items-center justify-center rounded-lg px-5 py-2.5 text-xs font-medium text-white/15"
             >
               Settings
             </button>
