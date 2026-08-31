@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   Search,
   RefreshCw,
@@ -19,6 +21,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import AdminHeader from "@/components/admin/admin-header";
 
 type Registration = {
   id: string;
@@ -58,6 +61,8 @@ type Mentor = {
 };
 
 export default function RegistrationsPage() {
+  const pathname = usePathname();
+
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -102,9 +107,22 @@ export default function RegistrationsPage() {
     registration_code: "",
   });
 
-  /* ================================================================
+  /*
+   * ================================================================
+   * LOGOUT
+   * ================================================================
+   */
+
+  async function handleLogout() {
+    await supabase.auth.signOut();
+    window.location.href = "/login";
+  }
+
+  /*
+   * ================================================================
    * FETCH MENTORS
-   * ================================================================ */
+   * ================================================================
+   */
 
   const fetchMentors = useCallback(async () => {
     try {
@@ -135,9 +153,11 @@ export default function RegistrationsPage() {
     }
   }, []);
 
-  /* ================================================================
+  /*
+   * ================================================================
    * FETCH REGISTRATIONS
-   * ================================================================ */
+   * ================================================================
+   */
 
   const fetchRegistrations = useCallback(
     async (showRefresh = false) => {
@@ -210,9 +230,11 @@ export default function RegistrationsPage() {
     [page, search, status]
   );
 
-  /* ================================================================
+  /*
+   * ================================================================
    * CREATE ACCOUNT
-   * ================================================================ */
+   * ================================================================
+   */
 
   async function createAccount() {
     if (!selectedRegistration) {
@@ -282,20 +304,11 @@ export default function RegistrationsPage() {
 
       setAccountCreated(true);
 
-      /*
-       * Let the success message actually be visible.
-       */
       await new Promise((resolve) => setTimeout(resolve, 900));
 
       setCreatingAccount(false);
       setSelectedRegistration(null);
 
-      /*
-       * Refresh the registration list.
-       *
-       * The backend should have changed the registration from
-       * pending -> confirmed and populated profile_id.
-       */
       await fetchRegistrations(true);
     } catch (err) {
       console.error("Failed to create account:", err);
@@ -312,9 +325,11 @@ export default function RegistrationsPage() {
     }
   }
 
-  /* ================================================================
+  /*
+   * ================================================================
    * LOAD DATA
-   * ================================================================ */
+   * ================================================================
+   */
 
   useEffect(() => {
     fetchRegistrations();
@@ -324,9 +339,11 @@ export default function RegistrationsPage() {
     fetchMentors();
   }, [fetchMentors]);
 
-  /* ================================================================
+  /*
+   * ================================================================
    * HELPERS
-   * ================================================================ */
+   * ================================================================
+   */
 
   function formatDate(date: string) {
     return new Date(date).toLocaleDateString("en-GB", {
@@ -355,6 +372,7 @@ export default function RegistrationsPage() {
     if (year === 2) return "2nd Year";
     if (year === 3) return "3rd Year";
     if (year === 4) return "4th Year";
+
     return `${year}th Year`;
   }
 
@@ -370,9 +388,11 @@ export default function RegistrationsPage() {
       .replace(/^\.+|\.+$/g, "");
   }
 
-  /* ================================================================
+  /*
+   * ================================================================
    * EDIT REGISTRATION
-   * ================================================================ */
+   * ================================================================
+   */
 
   function startEditingRegistration(registration: Registration) {
     setEditForm({
@@ -464,9 +484,11 @@ export default function RegistrationsPage() {
     }
   }
 
-  /* ================================================================
+  /*
+   * ================================================================
    * OPEN ACCOUNT CREATION
-   * ================================================================ */
+   * ================================================================
+   */
 
   function openAccountCreation(registration: Registration) {
     setAccountForm({
@@ -481,13 +503,18 @@ export default function RegistrationsPage() {
     setCreatingAccount(true);
   }
 
-  /* ================================================================
+  /*
+   * ================================================================
    * PAGE
-   * ================================================================ */
+   * ================================================================
+   */
 
   return (
     <main className="min-h-screen bg-[#0b0d10] text-white">
-      {/* Background */}
+      {/* ============================================================
+          BACKGROUND
+      ============================================================ */}
+
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
         <div className="absolute left-[20%] top-[10%] h-[500px] w-[500px] rounded-full bg-[#1f71a1]/[0.045] blur-[130px]" />
 
@@ -504,39 +531,16 @@ export default function RegistrationsPage() {
       </div>
 
       <div className="relative z-10 mx-auto min-h-screen max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        {/* Header */}
-        <header className="border-b border-white/[0.07] pb-5">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center">
-                <img
-                  src="/mediq.svg"
-                  alt="MediQ"
-                  className="h-9 w-9 object-contain"
-                />
-              </div>
+        {/* ============================================================
+            HEADER
+        ============================================================ */}
 
-              <div>
-                <div className="text-sm font-semibold tracking-tight">
-                  MediQ
-                </div>
+        <AdminHeader />
 
-                <div className="text-[11px] text-white/35">
-                  Administration
-                </div>
-              </div>
-            </div>
-          </div>
+        {/* ============================================================
+            PAGE HEADING
+        ============================================================ */}
 
-          {/* Navigation */}
-          <nav className="mt-5 flex min-h-12 items-stretch justify-center gap-2 rounded-xl border border-white/[0.06] bg-white/[0.015] p-1.5">
-            <div className="flex flex-1 items-center justify-center rounded-lg bg-white/[0.08] px-5 py-2.5 text-xs font-medium text-white">
-              Registrations
-            </div>
-          </nav>
-        </header>
-
-        {/* Heading */}
         <div className="mb-7 mt-8">
           <div className="mb-3 flex items-center gap-2 text-[10px] font-medium uppercase tracking-[0.16em] text-white/30">
             <BadgeCheck className="h-3.5 w-3.5" />
@@ -565,12 +569,16 @@ export default function RegistrationsPage() {
                   refreshing ? "animate-spin" : ""
                 }`}
               />
+
               Refresh
             </button>
           </div>
         </div>
 
-        {/* Controls */}
+        {/* ============================================================
+            CONTROLS
+        ============================================================ */}
+
         <div className="mb-5 flex flex-col gap-3 sm:flex-row">
           <div className="relative flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/25" />
@@ -609,16 +617,23 @@ export default function RegistrationsPage() {
           </div>
         </div>
 
-        {/* Error */}
+        {/* ============================================================
+            ERROR
+        ============================================================ */}
+
         {error && (
           <div className="mb-5 rounded-xl border border-red-400/10 bg-red-400/[0.04] px-4 py-3 text-sm text-red-300/80">
             {error}
           </div>
         )}
 
-        {/* Results */}
+        {/* ============================================================
+            RESULTS
+        ============================================================ */}
+
         <section className="overflow-hidden rounded-2xl border border-white/[0.07] bg-white/[0.015]">
           {/* Desktop */}
+
           <div className="hidden overflow-x-auto md:block">
             <table className="w-full">
               <thead>
@@ -761,6 +776,7 @@ export default function RegistrationsPage() {
           </div>
 
           {/* Mobile */}
+
           <div className="divide-y divide-white/[0.05] md:hidden">
             {loading ? (
               <div className="px-5 py-16 text-center text-sm text-white/25">
@@ -796,6 +812,7 @@ export default function RegistrationsPage() {
                         {getYearLabel(
                           registration.academic_year
                         )}
+
                         {registration.university
                           ? ` · ${registration.university}`
                           : ""}
@@ -828,6 +845,7 @@ export default function RegistrationsPage() {
           </div>
 
           {/* Pagination */}
+
           {!loading && registrations.length > 0 && (
             <div className="flex items-center justify-between border-t border-white/[0.06] px-4 py-3 sm:px-5">
               <div className="text-xs text-white/25">
@@ -881,6 +899,7 @@ export default function RegistrationsPage() {
         >
           <div className="w-full max-w-2xl overflow-hidden rounded-2xl border border-white/[0.09] bg-[#111419] shadow-2xl shadow-black/40">
             {/* Header */}
+
             <div className="flex items-start justify-between border-b border-white/[0.06] px-5 py-5 sm:px-6">
               <div>
                 <div className="mb-2 flex items-center gap-2 text-[10px] font-medium uppercase tracking-[0.14em] text-white/25">
@@ -909,6 +928,7 @@ export default function RegistrationsPage() {
             </div>
 
             {/* Body */}
+
             <div className="max-h-[70vh] overflow-y-auto px-5 py-5 sm:px-6">
               <div className="grid gap-3 sm:grid-cols-2">
                 {editingRegistration ? (
@@ -1063,6 +1083,7 @@ export default function RegistrationsPage() {
               )}
 
               {/* Payment */}
+
               <div className="mt-5 rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
                 <div className="mb-3 text-[10px] font-medium uppercase tracking-[0.14em] text-white/25">
                   Payment
@@ -1103,6 +1124,7 @@ export default function RegistrationsPage() {
               </div>
 
               {/* Affiliate */}
+
               {selectedRegistration.affiliate_code && (
                 <div className="mt-3 rounded-xl border border-sky-400/10 bg-sky-400/[0.025] p-4">
                   <div className="text-[10px] font-medium uppercase tracking-[0.14em] text-sky-300/40">
@@ -1122,6 +1144,7 @@ export default function RegistrationsPage() {
             </div>
 
             {/* Footer */}
+
             <div className="flex items-center justify-between border-t border-white/[0.06] px-5 py-4 sm:px-6">
               <div>
                 {!editingRegistration &&
@@ -1217,6 +1240,7 @@ export default function RegistrationsPage() {
         >
           <div className="w-full max-w-lg overflow-hidden rounded-2xl border border-white/[0.09] bg-[#111419] shadow-2xl shadow-black/40">
             {/* Header */}
+
             <div className="flex items-start justify-between border-b border-white/[0.06] px-5 py-5 sm:px-6">
               <div>
                 <div className="mb-2 text-[10px] font-medium uppercase tracking-[0.14em] text-white/25">
@@ -1243,8 +1267,10 @@ export default function RegistrationsPage() {
             </div>
 
             {/* Body */}
+
             <div className="space-y-5 px-5 py-5 sm:px-6">
               {/* Username */}
+
               <div>
                 <label className="mb-2 block text-[10px] font-medium uppercase tracking-[0.12em] text-white/25">
                   Username
@@ -1272,6 +1298,7 @@ export default function RegistrationsPage() {
 
                   <p className="mt-0.5 font-mono text-xs text-sky-300/70">
                     {accountForm.username || "username"}
+
                     <span className="text-sky-300/35">
                       @med.iq
                     </span>
@@ -1280,6 +1307,7 @@ export default function RegistrationsPage() {
               </div>
 
               {/* Password */}
+
               <div>
                 <label className="mb-2 block text-[10px] font-medium uppercase tracking-[0.12em] text-white/25">
                   Password
@@ -1305,6 +1333,7 @@ export default function RegistrationsPage() {
               </div>
 
               {/* Display name */}
+
               <div>
                 <label className="mb-2 block text-[10px] font-medium uppercase tracking-[0.12em] text-white/25">
                   Display name
@@ -1325,6 +1354,7 @@ export default function RegistrationsPage() {
               </div>
 
               {/* Mentor */}
+
               <div>
                 <label className="mb-2 block text-[10px] font-medium uppercase tracking-[0.12em] text-white/25">
                   Mentor
@@ -1357,6 +1387,7 @@ export default function RegistrationsPage() {
               </div>
 
               {/* Error */}
+
               {accountError && (
                 <div className="rounded-xl border border-red-400/10 bg-red-400/[0.04] px-4 py-3 text-xs leading-5 text-red-300/80">
                   {accountError}
@@ -1364,6 +1395,7 @@ export default function RegistrationsPage() {
               )}
 
               {/* Success */}
+
               {accountCreated && (
                 <div className="flex items-center gap-3 rounded-xl border border-emerald-400/10 bg-emerald-400/[0.04] px-4 py-3">
                   <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-300/70" />
@@ -1381,6 +1413,7 @@ export default function RegistrationsPage() {
               )}
 
               {/* Account summary */}
+
               <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
                 <div className="mb-3 text-[10px] font-medium uppercase tracking-[0.14em] text-white/25">
                   Account
@@ -1401,9 +1434,7 @@ export default function RegistrationsPage() {
 
                   <PriceRow
                     label="Registration"
-                    value={
-                      selectedRegistration.registration_code
-                    }
+                    value={selectedRegistration.registration_code}
                   />
 
                   <PriceRow
@@ -1418,6 +1449,7 @@ export default function RegistrationsPage() {
             </div>
 
             {/* Footer */}
+
             <div className="flex items-center justify-end gap-2 border-t border-white/[0.06] px-5 py-4 sm:px-6">
               <button
                 type="button"
@@ -1539,9 +1571,7 @@ function EditField({
       <input
         type={type}
         value={value}
-        onChange={(event) =>
-          onChange(event.target.value)
-        }
+        onChange={(event) => onChange(event.target.value)}
         className="h-10 w-full rounded-lg border border-white/[0.08] bg-white/[0.025] px-3 text-sm text-white/80 outline-none transition placeholder:text-white/20 focus:border-white/[0.16] focus:bg-white/[0.04]"
       />
     </label>
@@ -1570,16 +1600,11 @@ function EditSelect({
 
       <select
         value={value}
-        onChange={(event) =>
-          onChange(event.target.value)
-        }
+        onChange={(event) => onChange(event.target.value)}
         className="h-10 w-full rounded-lg border border-white/[0.08] bg-[#15181d] px-3 text-sm text-white/80 outline-none transition focus:border-white/[0.16]"
       >
         {options.map((option) => (
-          <option
-            key={option.value}
-            value={option.value}
-          >
+          <option key={option.value} value={option.value}>
             {option.label}
           </option>
         ))}

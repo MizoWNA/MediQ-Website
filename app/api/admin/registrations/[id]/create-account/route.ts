@@ -609,70 +609,7 @@ export async function POST(
  * ================================================================
  */
 
-const { data: linkTarget, error: linkTargetError } =
-  await supabaseAdmin
-    .from("registrations")
-    .select("id, profile_id, status")
-    .eq("id", registrationId)
-    .maybeSingle();
-
-if (linkTargetError) {
-  console.error("Failed to re-fetch registration before linking:", {
-    message: linkTargetError.message,
-    details: linkTargetError.details,
-    hint: linkTargetError.hint,
-    code: linkTargetError.code,
-  });
-
-  await supabaseAdmin.auth.admin.deleteUser(createdUserId);
-  createdUserId = null;
-
-  return NextResponse.json(
-    {
-      error: "Failed to verify the registration before linking.",
-    },
-    { status: 500 }
-  );
-}
-
-if (!linkTarget) {
-  console.error(
-    "Registration disappeared before linking:",
-    registrationId
-  );
-
-  await supabaseAdmin.auth.admin.deleteUser(createdUserId);
-  createdUserId = null;
-
-  return NextResponse.json(
-    {
-      error: "Registration was not found before linking.",
-    },
-    { status: 404 }
-  );
-}
-
-if (linkTarget.profile_id) {
-  console.error(
-    "Registration already has a profile:",
-    linkTarget
-  );
-
-  await supabaseAdmin.auth.admin.deleteUser(createdUserId);
-  createdUserId = null;
-
-  return NextResponse.json(
-    {
-      error:
-        "This registration already has a MediQ account.",
-    },
-    { status: 409 }
-  );
-}
-
-const {
-  error: linkError,
-} = await supabaseAdmin
+const { error: linkError } = await supabaseAdmin
   .from("registrations")
   .update({
     profile_id: createdUserId,
@@ -708,24 +645,22 @@ if (linkError) {
 }
 
 /*
- * Verify that the update actually happened.
+ * Verify the registration was actually linked.
  */
 
-const {
-  data: updatedRegistration,
-  error: verifyLinkError,
-} = await supabaseAdmin
-  .from("registrations")
-  .select("*")
-  .eq("id", registrationId)
-  .maybeSingle();
+const { data: updatedRegistration, error: verifyError } =
+  await supabaseAdmin
+    .from("registrations")
+    .select("*")
+    .eq("id", registrationId)
+    .maybeSingle();
 
-if (verifyLinkError) {
-  console.error("Failed to verify registration link:", {
-    message: verifyLinkError.message,
-    details: verifyLinkError.details,
-    hint: verifyLinkError.hint,
-    code: verifyLinkError.code,
+if (verifyError) {
+  console.error("FAILED TO VERIFY REGISTRATION LINK:", {
+    message: verifyError.message,
+    details: verifyError.details,
+    hint: verifyError.hint,
+    code: verifyError.code,
   });
 
   await supabaseAdmin.auth.admin.deleteUser(createdUserId);
@@ -734,7 +669,7 @@ if (verifyLinkError) {
   return NextResponse.json(
     {
       error:
-        "The registration was updated, but the result could not be verified.",
+        "The registration was updated, but the link could not be verified.",
     },
     { status: 500 }
   );
@@ -752,14 +687,14 @@ if (!updatedRegistration) {
   return NextResponse.json(
     {
       error:
-        "The registration could not be verified after linking.",
+        "The registration could not be found after linking.",
     },
     { status: 500 }
   );
 }
 
 if (updatedRegistration.profile_id !== createdUserId) {
-  console.error("Registration profile_id mismatch:", {
+  console.error("REGISTRATION PROFILE ID MISMATCH:", {
     expected: createdUserId,
     actual: updatedRegistration.profile_id,
   });
@@ -770,7 +705,7 @@ if (updatedRegistration.profile_id !== createdUserId) {
   return NextResponse.json(
     {
       error:
-        "The registration was updated incorrectly. The account was rolled back.",
+        "The registration was updated with an incorrect profile.",
     },
     { status: 500 }
   );
