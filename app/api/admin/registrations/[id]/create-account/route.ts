@@ -157,6 +157,12 @@ export async function POST(
         ? body.mentor_id.trim()
         : null;
 
+    const examDate =
+      typeof body.exam_date === "string" &&
+      body.exam_date.trim()
+        ? body.exam_date.trim()
+        : null;
+
     /*
      * ================================================================
      * VALIDATION
@@ -531,6 +537,9 @@ export async function POST(
 
           affiliate_code:
             registration.affiliate_code,
+          
+          exam_date: examDate,
+
 
           plan: registration.plan,
 

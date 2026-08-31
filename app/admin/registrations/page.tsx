@@ -90,12 +90,15 @@ export default function RegistrationsPage() {
   const [mentors, setMentors] = useState<Mentor[]>([]);
   const [selectedMentorId, setSelectedMentorId] = useState("");
 
+  const [examDate, setExamDate] = useState("");
+
   const [cancellingRegistration, setCancellingRegistration] = useState(false);
 
   const [accountForm, setAccountForm] = useState({
     username: "",
     password: "",
     display_name: "",
+    exam_date: "",
   });
 
   const [editForm, setEditForm] = useState({
@@ -290,6 +293,7 @@ export default function RegistrationsPage() {
             password,
             display_name: displayName,
             mentor_id: selectedMentorId || null,
+            exam_date: examDate || null,
           }),
         }
       );
@@ -1459,7 +1463,31 @@ export default function RegistrationsPage() {
                   You can assign a mentor now or leave this unassigned.
                 </p>
               </div>
+                  {/* Exam date */}
 
+                  <div>
+                    <label className="mb-2 block text-[10px] font-medium uppercase tracking-[0.12em] text-white/25">
+                      Exam date
+                    </label>
+
+                    <input
+                      type="date"
+                      value={accountForm.exam_date}
+                      disabled={creatingAccountRequest}
+                      onChange={(event) =>
+                        setAccountForm((current) => ({
+                          ...current,
+                          exam_date: event.target.value,
+                        }))
+                      }
+                      className="h-11 w-full rounded-xl border border-white/[0.07] bg-[#15181d] px-3.5 text-sm text-white/80 outline-none transition focus:border-white/[0.14] disabled:cursor-not-allowed disabled:opacity-50"
+                    />
+
+                    <p className="mt-1.5 text-[11px] text-white/20">
+                      Optional. This can be added or changed later.
+                    </p>
+                  </div>
+                  
               {/* Error */}
 
               {accountError && (
