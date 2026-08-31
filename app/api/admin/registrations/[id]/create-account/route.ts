@@ -18,9 +18,18 @@ type RouteContext = {
 
 function calculateEndDate(
   startDate: Date,
+  academicYear: number,
   planName: string
 ): Date | null {
-  const registrationPlan = REGISTRATION_PLANS[planName];
+  const plansForYear = REGISTRATION_PLANS[academicYear];
+
+  if (!plansForYear) {
+    return null;
+  }
+
+  const registrationPlan = plansForYear.find(
+    (plan) => plan.name === planName
+  );
 
   if (!registrationPlan) {
     return null;
@@ -381,6 +390,7 @@ export async function POST(
 
     const endDate = calculateEndDate(
       startDate,
+      registration.academic_year,
       registration.plan
     );
 
