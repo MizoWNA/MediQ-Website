@@ -69,6 +69,31 @@ export default function RegistrationsPage() {
   const [selectedRegistration, setSelectedRegistration] =
     useState<Registration | null>(null);
 
+  const [editingRegistration, setEditingRegistration] =
+    useState(false);
+
+  const [savingRegistration, setSavingRegistration] =
+    useState(false);
+
+  const [editError, setEditError] =
+    useState<string | null>(null);
+
+  const [creatingAccount, setCreatingAccount] =
+    useState(false);
+
+  const [editForm, setEditForm] = useState({
+    full_name: "",
+    university: "",
+    academic_year: 1,
+    phone_number: "",
+    email: "",
+    plan: "",
+    affiliate_code: "",
+    registration_code: "",
+  });
+
+
+
   /*
    * ================================================================
    * FETCH REGISTRATIONS
@@ -213,6 +238,123 @@ export default function RegistrationsPage() {
       value.slice(1)
     );
   }
+
+  function startEditingRegistration(
+    registration: Registration
+  ) {
+    setEditForm({
+      full_name: registration.full_name,
+      university: registration.university ?? "",
+      academic_year: registration.academic_year,
+      phone_number: registration.phone_number ?? "",
+      email: registration.email ?? "",
+      plan: registration.plan,
+      affiliate_code:
+        registration.affiliate_code ?? "",
+      registration_code:
+        registration.registration_code,
+    });
+
+    setEditError(null);
+    setEditingRegistration(true);
+  }
+
+
+
+  async function saveRegistrationChanges() {
+  if (!selectedRegistration) {
+    return;
+  }
+
+  try {
+    setSavingRegistration(true);
+    setEditError(null);
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session?.access_token) {
+      throw new Error(
+        "Your admin session has expired. Please log in again."
+      );
+    }
+
+    const response = await fetch(
+      `/api/admin/registrations/${selectedRegistration.id}`,
+      {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          full_name:
+            editForm.full_name,
+          university:
+            editForm.university,
+          academic_year:
+            editForm.academic_year,
+          phone_number:
+            editForm.phone_number,
+          email:
+            editForm.email,
+          plan:
+            editForm.plan,
+          affiliate_code:
+            editForm.affiliate_code,
+          registration_code:
+            editForm.registration_code,
+        }),
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data?.error ||
+          "Failed to save registration."
+      );
+    }
+
+    const updated =
+      data.registration as Registration;
+
+    /*
+     * Update the popup immediately.
+     */
+
+    setSelectedRegistration(updated);
+
+    /*
+     * Update the table immediately too.
+     */
+
+    setRegistrations((current) =>
+      current.map((registration) =>
+        registration.id === updated.id
+          ? updated
+          : registration
+      )
+    );
+
+    setEditingRegistration(false);
+  } catch (err) {
+    console.error(
+      "Failed to save registration:",
+      err
+    );
+
+    setEditError(
+      err instanceof Error
+        ? err.message
+        : "Failed to save registration."
+    );
+  } finally {
+    setSavingRegistration(false);
+  }
+}
 
   /*
    * ================================================================
@@ -716,9 +858,9 @@ export default function RegistrationsPage() {
                 </div>
 
                 <h2 className="text-lg font-semibold text-white/90">
-                  {
-                    selectedRegistration.full_name
-                  }
+                  {editingRegistration
+                    ? "Edit Registration"
+                    : selectedRegistration.full_name}
                 </h2>
 
                 <div className="mt-1 font-mono text-xs text-white/25">
@@ -743,69 +885,177 @@ export default function RegistrationsPage() {
 
             <div className="max-h-[70vh] overflow-y-auto px-5 py-5 sm:px-6">
               <div className="grid gap-3 sm:grid-cols-2">
-                <InfoItem
-                  icon={
-                    <UserRound className="h-4 w-4" />
-                  }
-                  label="Full name"
-                  value={
-                    selectedRegistration.full_name
-                  }
-                />
+                {editingRegistration ? (
+                  <>
+                    <EditField
+                      label="Full name"
+                      value={editForm.full_name}
+                      onChange={(value) =>
+                        setEditForm((current) => ({
+                          ...current,
+                          full_name: value,
+                        }))
+                      }
+                    />
 
-                <InfoItem
-                  icon={
-                    <GraduationCap className="h-4 w-4" />
-                  }
-                  label="Academic year"
-                  value={getYearLabel(
-                    selectedRegistration.academic_year
-                  )}
-                />
+                    <EditField
+                      label="Registration code"
+                      value={editForm.registration_code}
+                      onChange={(value) =>
+                        setEditForm((current) => ({
+                          ...current,
+                          registration_code: value,
+                        }))
+                      }
+                    />
 
-                <InfoItem
-                  icon={
-                    <Building2 className="h-4 w-4" />
-                  }
-                  label="University"
-                  value={
-                    selectedRegistration.university ||
-                    "—"
-                  }
-                />
+                    <EditField
+                      label="University"
+                      value={editForm.university}
+                      onChange={(value) =>
+                        setEditForm((current) => ({
+                          ...current,
+                          university: value,
+                        }))
+                      }
+                    />
 
-                <InfoItem
-                  icon={
-                    <Phone className="h-4 w-4" />
-                  }
-                  label="Phone"
-                  value={
-                    selectedRegistration.phone_number ||
-                    "—"
-                  }
-                />
+                    <EditField
+                      label="Phone"
+                      value={editForm.phone_number}
+                      onChange={(value) =>
+                        setEditForm((current) => ({
+                          ...current,
+                          phone_number: value,
+                        }))
+                      }
+                    />
 
-                <InfoItem
-                  icon={
-                    <Mail className="h-4 w-4" />
-                  }
-                  label="Email"
-                  value={
-                    selectedRegistration.email ||
-                    "—"
-                  }
-                />
+                    <EditField
+                      label="Email"
+                      type="email"
+                      value={editForm.email}
+                      onChange={(value) =>
+                        setEditForm((current) => ({
+                          ...current,
+                          email: value,
+                        }))
+                      }
+                    />
 
-                <InfoItem
-                  icon={
-                    <Tag className="h-4 w-4" />
-                  }
-                  label="Plan"
-                  value={
-                    selectedRegistration.plan
-                  }
-                />
+                    <EditSelect
+                      label="Academic year"
+                      value={String(editForm.academic_year)}
+                      options={[
+                        { value: "1", label: "1st Year" },
+                        { value: "2", label: "2nd Year" },
+                        { value: "3", label: "3rd Year" },
+                        { value: "4", label: "4th Year" },
+                        { value: "5", label: "5th Year" },
+                      ]}
+                      onChange={(value) =>
+                        setEditForm((current) => ({
+                          ...current,
+                          academic_year: Number(value),
+                        }))
+                      }
+                    />
+
+                    <EditField
+                      label="Plan"
+                      value={editForm.plan}
+                      onChange={(value) =>
+                        setEditForm((current) => ({
+                          ...current,
+                          plan: value,
+                        }))
+                      }
+                    />
+
+                    <EditField
+                      label="Affiliate code"
+                      value={editForm.affiliate_code}
+                      onChange={(value) =>
+                        setEditForm((current) => ({
+                          ...current,
+                          affiliate_code: value,
+                        }))
+                      }
+                    />
+                  </>
+                ) : (
+                  <>
+                    <InfoItem
+                      icon={
+                        <UserRound className="h-4 w-4" />
+                      }
+                      label="Full name"
+                      value={
+                        selectedRegistration.full_name
+                      }
+                    />
+
+                    <InfoItem
+                      icon={
+                        <GraduationCap className="h-4 w-4" />
+                      }
+                      label="Academic year"
+                      value={getYearLabel(
+                        selectedRegistration.academic_year
+                      )}
+                    />
+
+                    <InfoItem
+                      icon={
+                        <Building2 className="h-4 w-4" />
+                      }
+                      label="University"
+                      value={
+                        selectedRegistration.university ||
+                        "—"
+                      }
+                    />
+
+                    <InfoItem
+                      icon={
+                        <Phone className="h-4 w-4" />
+                      }
+                      label="Phone"
+                      value={
+                        selectedRegistration.phone_number ||
+                        "—"
+                      }
+                    />
+
+                    <InfoItem
+                      icon={
+                        <Mail className="h-4 w-4" />
+                      }
+                      label="Email"
+                      value={
+                        selectedRegistration.email ||
+                        "—"
+                      }
+                    />
+
+                    <InfoItem
+                      icon={
+                        <Tag className="h-4 w-4" />
+                      }
+                      label="Plan"
+                      value={
+                        selectedRegistration.plan
+                      }
+                    />
+                  </>
+                )}
               </div>
+
+              {editError && (
+                <div className="mt-4 rounded-xl border border-red-400/10 bg-red-400/[0.04] px-4 py-3 text-xs text-red-300/80">
+                  {editError}
+                </div>
+              )}
 
               {/* Financial information */}
 
@@ -875,26 +1125,75 @@ export default function RegistrationsPage() {
 
             {/* Popup footer */}
 
-            <div className="flex items-center justify-end gap-2 border-t border-white/[0.06] px-5 py-4 sm:px-6">
-              <button
-                type="button"
-                onClick={() =>
-                  setSelectedRegistration(null)
-                }
-                className="rounded-lg border border-white/[0.07] bg-white/[0.025] px-4 py-2.5 text-xs font-medium text-white/45 transition hover:bg-white/[0.05] hover:text-white"
-              >
-                Close
-              </button>
+            <div className="flex items-center justify-between border-t border-white/[0.06] px-5 py-4 sm:px-6">
+              <div>
+                {!editingRegistration &&
+                  selectedRegistration.status ===
+                    "pending" && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        startEditingRegistration(
+                          selectedRegistration
+                        )
+                      }
+                      className="rounded-lg border border-white/[0.07] bg-white/[0.025] px-4 py-2.5 text-xs font-medium text-white/45 transition hover:bg-white/[0.05] hover:text-white"
+                    >
+                      Edit
+                    </button>
+                  )}
+              </div>
 
-              {selectedRegistration.status ===
-                "pending" && (
-                <button
-                  type="button"
-                  className="rounded-lg bg-white px-4 py-2.5 text-xs font-semibold text-black transition hover:bg-white/90"
-                >
-                  Create Account
-                </button>
-              )}
+              <div className="flex items-center gap-2">
+                {editingRegistration ? (
+                  <>
+                    <button
+                      type="button"
+                      disabled={savingRegistration}
+                      onClick={() => {
+                        setEditingRegistration(false);
+                        setEditError(null);
+                      }}
+                      className="rounded-lg border border-white/[0.07] bg-white/[0.025] px-4 py-2.5 text-xs font-medium text-white/45 transition hover:bg-white/[0.05] hover:text-white disabled:opacity-40"
+                    >
+                      Cancel
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={savingRegistration}
+                      onClick={saveRegistrationChanges}
+                      className="rounded-lg bg-white px-4 py-2.5 text-xs font-semibold text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {savingRegistration
+                        ? "Saving..."
+                        : "Save Changes"}
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setSelectedRegistration(null)
+                      }
+                      className="rounded-lg border border-white/[0.07] bg-white/[0.025] px-4 py-2.5 text-xs font-medium text-white/45 transition hover:bg-white/[0.05] hover:text-white"
+                    >
+                      Close
+                    </button>
+
+                    {selectedRegistration.status ===
+                      "pending" && (
+                      <button
+                        type="button"
+                        className="rounded-lg bg-white px-4 py-2.5 text-xs font-semibold text-black transition hover:bg-white/90"
+                      >
+                        Create Account
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -967,5 +1266,74 @@ function PriceRow({
         {value}
       </span>
     </div>
+  );
+}
+
+function EditField({
+  label,
+  value,
+  onChange,
+  type = "text",
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  type?: string;
+}) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.12em] text-white/25">
+        {label}
+      </span>
+
+      <input
+        type={type}
+        value={value}
+        onChange={(event) =>
+          onChange(event.target.value)
+        }
+        className="h-10 w-full rounded-lg border border-white/[0.08] bg-white/[0.025] px-3 text-sm text-white/80 outline-none transition placeholder:text-white/20 focus:border-white/[0.16] focus:bg-white/[0.04]"
+      />
+    </label>
+  );
+}
+
+function EditSelect({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: {
+    value: string;
+    label: string;
+  }[];
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.12em] text-white/25">
+        {label}
+      </span>
+
+      <select
+        value={value}
+        onChange={(event) =>
+          onChange(event.target.value)
+        }
+        className="h-10 w-full rounded-lg border border-white/[0.08] bg-[#15181d] px-3 text-sm text-white/80 outline-none transition focus:border-white/[0.16]"
+      >
+        {options.map((option) => (
+          <option
+            key={option.value}
+            value={option.value}
+          >
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }
