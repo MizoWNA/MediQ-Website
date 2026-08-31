@@ -81,6 +81,17 @@ export default function RegistrationsPage() {
   const [creatingAccount, setCreatingAccount] =
     useState(false);
 
+  const [mentors, setMentors] = useState<
+    {
+      id: string;
+      username: string | null;
+      display_name: string | null;
+    }[]
+  >([]);
+
+  const [selectedMentorId, setSelectedMentorId] =
+    useState("");
+
   const [accountForm, setAccountForm] = useState({
     username: "",
     password: "",
@@ -105,6 +116,47 @@ export default function RegistrationsPage() {
    * FETCH REGISTRATIONS
    * ================================================================
    */
+
+  const fetchMentors = useCallback(
+  async () => {
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session?.access_token) {
+        return;
+      }
+
+      const response = await fetch(
+        "/api/admin/mentors",
+        {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          cache: "no-store",
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data?.error ||
+            "Failed to load mentors."
+        );
+      }
+
+      setMentors(data.mentors ?? []);
+    } catch (error) {
+      console.error(
+        "Failed to fetch mentors:",
+        error
+      );
+    }
+  },
+  []
+);
 
   const fetchRegistrations = useCallback(
     async (showRefresh = false) => {
@@ -196,6 +248,10 @@ export default function RegistrationsPage() {
   useEffect(() => {
     fetchRegistrations();
   }, [fetchRegistrations]);
+
+  useEffect(() => {
+    fetchMentors();
+  }, [fetchMentors]);
 
   /*
    * ================================================================
@@ -1208,6 +1264,8 @@ export default function RegistrationsPage() {
                               selectedRegistration.full_name,
                           });
 
+                          setSelectedMentorId("");
+
                           setCreatingAccount(true);
                         }}
                         className="rounded-lg bg-white px-4 py-2.5 text-xs font-semibold text-black transition hover:bg-white/90"
@@ -1344,6 +1402,42 @@ export default function RegistrationsPage() {
             placeholder="Student's display name"
             className="h-11 w-full rounded-xl border border-white/[0.07] bg-white/[0.025] px-3.5 text-sm text-white outline-none placeholder:text-white/20 transition focus:border-white/[0.14] focus:bg-white/[0.035]"
           />
+        </div>
+        
+        <div>
+          <label className="mb-2 block text-[10px] font-medium uppercase tracking-[0.12em] text-white/25">
+            Mentor
+          </label>
+
+          <select
+            value={selectedMentorId}
+            onChange={(event) =>
+              setSelectedMentorId(
+                event.target.value
+              )
+            }
+            className="h-11 w-full rounded-xl border border-white/[0.07] bg-[#15181d] px-3.5 text-sm text-white/80 outline-none transition focus:border-white/[0.14]"
+          >
+            <option value="">
+              No mentor assigned
+            </option>
+
+            {mentors.map((mentor) => (
+              <option
+                key={mentor.id}
+                value={mentor.id}
+              >
+                {mentor.display_name ||
+                  mentor.username ||
+                  "Unnamed mentor"}
+              </option>
+            ))}
+          </select>
+
+          <p className="mt-1.5 text-[11px] text-white/20">
+            You can assign a mentor now or leave
+            this unassigned.
+          </p>
         </div>
 
         {/* Account summary */}
