@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-admin";
-import {
-  REGISTRATION_PLANS,
-  type RegistrationPlan,
-} from "@/lib/registration-plans";
+import { REGISTRATION_PLANS } from "@/lib/registration-plans";
 
 const MEDIQ_DOMAIN = "@med.iq";
 
@@ -12,6 +9,12 @@ type RouteContext = {
     id: string;
   }>;
 };
+
+/*
+ * ================================================================
+ * CALCULATE SUBSCRIPTION END DATE
+ * ================================================================
+ */
 
 function calculateEndDate(
   startDate: Date,
@@ -46,19 +49,6 @@ function calculateEndDate(
   }
 
   return null;
-}
-
-  /*
-   * Plan duration is expected to be stored in days.
-   *
-   * If your registration-plan file uses a different field name,
-   * adjust this one line accordingly.
-   */
-  endDate.setDate(
-    endDate.getDate() + registrationPlan.durationDays
-  );
-
-  return endDate;
 }
 
 export async function POST(
@@ -385,12 +375,6 @@ export async function POST(
      * ================================================================
      * CALCULATE SUBSCRIPTION DATES
      * ================================================================
-     *
-     * Start date:
-     *     The moment the account is created.
-     *
-     * End date:
-     *     Determined automatically from the selected registration plan.
      */
 
     const startDate = new Date();
@@ -409,10 +393,6 @@ export async function POST(
         { status: 400 }
       );
     }
-
-    /*
-     * Store dates as ISO strings for Supabase/Postgres.
-     */
 
     const startDateISO =
       startDate.toISOString();
@@ -473,6 +453,9 @@ export async function POST(
      * ================================================================
      * CHECK AUTH EMAIL
      * ================================================================
+     *
+     * Supabase's admin listUsers API is paginated.
+     * We check the first page here, matching the existing implementation.
      */
 
     const {
@@ -649,26 +632,14 @@ export async function POST(
             plan:
               registration.plan,
 
-            /*
-             * Subscription dates
-             */
-
             start_date:
               startDateISO,
 
             end_date:
               endDateISO,
 
-            /*
-             * Academic tracking
-             */
-
             exam_date:
               examDate,
-
-            /*
-             * Registration information
-             */
 
             phone_number:
               registration.phone_number,
@@ -715,10 +686,6 @@ export async function POST(
         "Failed to create/configure profile:",
         profileError?.message
       );
-
-      /*
-       * Roll back Auth user.
-       */
 
       await supabaseAdmin
         .from("profiles")
@@ -771,6 +738,11 @@ export async function POST(
           createdUserId,
         }
       );
+
+      await supabaseAdmin
+        .from("profiles")
+        .delete()
+        .eq("id", createdUserId);
 
       await supabaseAdmin.auth.admin.deleteUser(
         createdUserId
@@ -829,6 +801,11 @@ export async function POST(
         }
       );
 
+      await supabaseAdmin
+        .from("profiles")
+        .delete()
+        .eq("id", createdUserId);
+
       await supabaseAdmin.auth.admin.deleteUser(
         createdUserId
       );
@@ -849,6 +826,11 @@ export async function POST(
         "Registration disappeared after linking:",
         registrationId
       );
+
+      await supabaseAdmin
+        .from("profiles")
+        .delete()
+        .eq("id", createdUserId);
 
       await supabaseAdmin.auth.admin.deleteUser(
         createdUserId
@@ -878,6 +860,11 @@ export async function POST(
             updatedRegistration.profile_id,
         }
       );
+
+      await supabaseAdmin
+        .from("profiles")
+        .delete()
+        .eq("id", createdUserId);
 
       await supabaseAdmin.auth.admin.deleteUser(
         createdUserId
