@@ -26,16 +26,22 @@ export async function POST(
 
     if (!authorization?.startsWith("Bearer ")) {
       return NextResponse.json(
-        { error: "Missing authorization token." },
+        {
+          error: "Missing authorization token.",
+        },
         { status: 401 }
       );
     }
 
-    const accessToken = authorization.slice("Bearer ".length).trim();
+    const accessToken = authorization
+      .slice("Bearer ".length)
+      .trim();
 
     if (!accessToken) {
       return NextResponse.json(
-        { error: "Missing authorization token." },
+        {
+          error: "Missing authorization token.",
+        },
         { status: 401 }
       );
     }
@@ -47,21 +53,27 @@ export async function POST(
 
     if (authError || !requestingUser) {
       return NextResponse.json(
-        { error: "Invalid or expired admin session." },
+        {
+          error: "Invalid or expired admin session.",
+        },
         { status: 401 }
       );
     }
 
     /*
-     * Check that the authenticated user is actually an admin.
+     * ================================================================
+     * VERIFY ADMIN
+     * ================================================================
      */
 
-    const { data: adminProfile, error: adminProfileError } =
-      await supabaseAdmin
-        .from("profiles")
-        .select("id, role")
-        .eq("id", requestingUser.id)
-        .maybeSingle();
+    const {
+      data: adminProfile,
+      error: adminProfileError,
+    } = await supabaseAdmin
+      .from("profiles")
+      .select("id, role")
+      .eq("id", requestingUser.id)
+      .maybeSingle();
 
     if (adminProfileError) {
       console.error(
@@ -70,14 +82,20 @@ export async function POST(
       );
 
       return NextResponse.json(
-        { error: "Failed to verify administrator permissions." },
+        {
+          error:
+            "Failed to verify administrator permissions.",
+        },
         { status: 500 }
       );
     }
 
     if (!adminProfile || adminProfile.role !== "admin") {
       return NextResponse.json(
-        { error: "You do not have permission to create accounts." },
+        {
+          error:
+            "You do not have permission to create accounts.",
+        },
         { status: 403 }
       );
     }
@@ -92,7 +110,9 @@ export async function POST(
 
     if (!registrationId) {
       return NextResponse.json(
-        { error: "Missing registration ID." },
+        {
+          error: "Missing registration ID.",
+        },
         { status: 400 }
       );
     }
@@ -103,7 +123,18 @@ export async function POST(
      * ================================================================
      */
 
-    const body = await request.json();
+    let body: Record<string, unknown>;
+
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json(
+        {
+          error: "Invalid request body.",
+        },
+        { status: 400 }
+      );
+    }
 
     const username =
       typeof body.username === "string"
@@ -134,7 +165,9 @@ export async function POST(
 
     if (!username) {
       return NextResponse.json(
-        { error: "Username is required." },
+        {
+          error: "Username is required.",
+        },
         { status: 400 }
       );
     }
@@ -152,7 +185,8 @@ export async function POST(
     if (username.length < 3 || username.length > 40) {
       return NextResponse.json(
         {
-          error: "Username must be between 3 and 40 characters.",
+          error:
+            "Username must be between 3 and 40 characters.",
         },
         { status: 400 }
       );
@@ -160,7 +194,9 @@ export async function POST(
 
     if (!password) {
       return NextResponse.json(
-        { error: "Password is required." },
+        {
+          error: "Password is required.",
+        },
         { status: 400 }
       );
     }
@@ -168,7 +204,8 @@ export async function POST(
     if (password.length < 6) {
       return NextResponse.json(
         {
-          error: "Password must be at least 6 characters long.",
+          error:
+            "Password must be at least 6 characters long.",
         },
         { status: 400 }
       );
@@ -176,7 +213,9 @@ export async function POST(
 
     if (!displayName) {
       return NextResponse.json(
-        { error: "Display name is required." },
+        {
+          error: "Display name is required.",
+        },
         { status: 400 }
       );
     }
@@ -187,26 +226,29 @@ export async function POST(
      * ================================================================
      */
 
-    const { data: registration, error: registrationError } =
-      await supabaseAdmin
-        .from("registrations")
-        .select(
-          `
-            id,
-            registration_code,
-            full_name,
-            university,
-            academic_year,
-            phone_number,
-            email,
-            plan,
-            final_price,
-            status,
-            profile_id
-          `
-        )
-        .eq("id", registrationId)
-        .maybeSingle();
+    const {
+      data: registration,
+      error: registrationError,
+    } = await supabaseAdmin
+      .from("registrations")
+      .select(
+        `
+          id,
+          registration_code,
+          full_name,
+          university,
+          academic_year,
+          phone_number,
+          email,
+          plan,
+          affiliate_code,
+          final_price,
+          status,
+          profile_id
+        `
+      )
+      .eq("id", registrationId)
+      .maybeSingle();
 
     if (registrationError) {
       console.error(
@@ -215,21 +257,26 @@ export async function POST(
       );
 
       return NextResponse.json(
-        { error: "Failed to load registration." },
+        {
+          error: "Failed to load registration.",
+        },
         { status: 500 }
       );
     }
 
     if (!registration) {
       return NextResponse.json(
-        { error: "Registration not found." },
+        {
+          error: "Registration not found.",
+        },
         { status: 404 }
       );
     }
 
     /*
-     * Don't allow a second account to be created for the same
-     * registration.
+     * ================================================================
+     * REGISTRATION VALIDATION
+     * ================================================================
      */
 
     if (registration.profile_id) {
@@ -254,27 +301,30 @@ export async function POST(
 
     /*
      * ================================================================
-     * CHECK USERNAME
+     * AUTH EMAIL
      * ================================================================
      *
-     * We use username@med.iq as the actual Supabase Auth email.
+     * The username becomes the student's actual Supabase Auth email:
+     *
+     *     username@med.iq
      */
 
     const email = `${username}${MEDIQ_DOMAIN}`;
 
     /*
-     * Check the profiles table first.
-     *
-     * This gives us a cleaner error than letting the Auth API
-     * complain about an already-used username.
+     * ================================================================
+     * CHECK USERNAME IN PROFILES
+     * ================================================================
      */
 
-    const { data: existingProfile, error: existingProfileError } =
-      await supabaseAdmin
-        .from("profiles")
-        .select("id, username")
-        .eq("username", username)
-        .maybeSingle();
+    const {
+      data: existingProfile,
+      error: existingProfileError,
+    } = await supabaseAdmin
+      .from("profiles")
+      .select("id, username")
+      .eq("username", username)
+      .maybeSingle();
 
     if (existingProfileError) {
       console.error(
@@ -283,7 +333,10 @@ export async function POST(
       );
 
       return NextResponse.json(
-        { error: "Failed to check username availability." },
+        {
+          error:
+            "Failed to check username availability.",
+        },
         { status: 500 }
       );
     }
@@ -299,17 +352,68 @@ export async function POST(
 
     /*
      * ================================================================
+     * CHECK AUTH EMAIL
+     * ================================================================
+     *
+     * The profile check above normally catches this, but checking
+     * Auth as well protects against orphaned Auth users or a profile
+     * that somehow doesn't contain the username.
+     */
+
+    const {
+      data: existingAuthUser,
+      error: existingAuthUserError,
+    } = await supabaseAdmin.auth.admin.listUsers({
+      page: 1,
+      perPage: 1000,
+    });
+
+    if (existingAuthUserError) {
+      console.error(
+        "Failed to check existing Auth users:",
+        existingAuthUserError.message
+      );
+
+      return NextResponse.json(
+        {
+          error:
+            "Failed to check account availability.",
+        },
+        { status: 500 }
+      );
+    }
+
+    const authEmailAlreadyExists =
+      existingAuthUser.users.some(
+        (user) =>
+          user.email?.toLowerCase() === email.toLowerCase()
+      );
+
+    if (authEmailAlreadyExists) {
+      return NextResponse.json(
+        {
+          error:
+            `The login "${email}" is already in use.`,
+        },
+        { status: 409 }
+      );
+    }
+
+    /*
+     * ================================================================
      * VALIDATE MENTOR
      * ================================================================
      */
 
     if (mentorId) {
-      const { data: mentor, error: mentorError } =
-        await supabaseAdmin
-          .from("profiles")
-          .select("id, role")
-          .eq("id", mentorId)
-          .maybeSingle();
+      const {
+        data: mentor,
+        error: mentorError,
+      } = await supabaseAdmin
+        .from("profiles")
+        .select("id, role")
+        .eq("id", mentorId)
+        .maybeSingle();
 
       if (mentorError) {
         console.error(
@@ -318,14 +422,19 @@ export async function POST(
         );
 
         return NextResponse.json(
-          { error: "Failed to validate selected mentor." },
+          {
+            error:
+              "Failed to validate selected mentor.",
+          },
           { status: 500 }
         );
       }
 
       if (!mentor) {
         return NextResponse.json(
-          { error: "Selected mentor was not found." },
+          {
+            error: "Selected mentor was not found.",
+          },
           { status: 400 }
         );
       }
@@ -350,23 +459,20 @@ export async function POST(
     const {
       data: authData,
       error: createUserError,
-    } = await supabaseAdmin.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
+    } =
+      await supabaseAdmin.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
 
-      user_metadata: {
-        full_name: displayName,
-      },
+        user_metadata: {
+          full_name: displayName,
+        },
 
-      /*
-       * Role belongs in app_metadata because the user should not
-       * be able to modify their own authorization-related metadata.
-       */
-      app_metadata: {
-        role: "student",
-      },
-    });
+        app_metadata: {
+          role: "student",
+        },
+      });
 
     if (createUserError || !authData.user) {
       console.error(
@@ -388,111 +494,175 @@ export async function POST(
 
     /*
      * ================================================================
-     * UPDATE PROFILE
+     * CREATE / CONFIGURE PROFILE
      * ================================================================
      *
-     * This assumes your existing auth -> profiles trigger creates
-     * the profile row when the Auth user is created.
+     * IMPORTANT:
+     *
+     * We do NOT assume an auth.users -> profiles trigger exists.
+     *
+     * If a trigger already created the profile, upsert() updates it.
+     *
+     * If no trigger exists, upsert() creates it.
+     *
+     * This makes account creation work either way.
      */
 
-    const { data: updatedProfile, error: profileError } =
-      await supabaseAdmin
-        .from("profiles")
-        .update({
+    const {
+      data: profile,
+      error: profileError,
+    } = await supabaseAdmin
+      .from("profiles")
+      .upsert(
+        {
+          id: createdUserId,
+
           username,
           display_name: displayName,
+
           role: "student",
+
+          year: registration.academic_year,
+
           mentor_id: mentorId,
-        })
-        .eq("id", createdUserId)
-        .select(
-          "id, username, display_name, role, mentor_id"
-        )
-        .maybeSingle();
 
-    if (profileError) {
+          registration_code:
+            registration.registration_code,
+
+          affiliate_code:
+            registration.affiliate_code,
+
+          plan: registration.plan,
+
+          phone_number:
+            registration.phone_number,
+
+          university:
+            registration.university,
+
+          status: "active",
+
+          first_time: true,
+        },
+        {
+          onConflict: "id",
+        }
+      )
+      .select(
+        `
+          id,
+          username,
+          display_name,
+          role,
+          year,
+          mentor_id,
+          registration_code,
+          affiliate_code,
+          plan,
+          phone_number,
+          university,
+          status,
+          first_time,
+          created_at
+        `
+      )
+      .single();
+
+    if (profileError || !profile) {
       console.error(
-        "Failed to update created profile:",
-        profileError.message
+        "Failed to create/configure profile:",
+        profileError?.message
       );
 
       /*
-       * Roll back the Auth account so we don't leave behind a
-       * broken account that isn't linked to the registration.
+       * Roll back Auth user.
+       *
+       * profiles.id references auth.users(id), so deleting the Auth
+       * user will also remove the profile if the FK is configured
+       * with CASCADE. Otherwise we explicitly attempt to remove it.
        */
 
-      await supabaseAdmin.auth.admin.deleteUser(createdUserId);
-
-      createdUserId = null;
-
-      return NextResponse.json(
-        {
-          error:
-            "Account was created, but its profile could not be configured. The account was rolled back.",
-        },
-        { status: 500 }
-      );
-    }
-
-    if (!updatedProfile) {
-      console.error(
-        "Profile row was not found after Auth user creation."
-      );
-
-      await supabaseAdmin.auth.admin.deleteUser(createdUserId);
-
-      createdUserId = null;
-
-      return NextResponse.json(
-        {
-          error:
-            "The account was created, but no profile was generated. The account was rolled back.",
-        },
-        { status: 500 }
-      );
-    }
-
-    /*
-     * ================================================================
-     * LINK ACCOUNT TO REGISTRATION
-     * ================================================================
-     */
-
-    const { data: updatedRegistration, error: linkError } =
       await supabaseAdmin
-        .from("registrations")
-        .update({
-          profile_id: createdUserId,
-          status: "confirmed",
-        })
-        .eq("id", registrationId)
-        .is("profile_id", null)
-        .select()
-        .maybeSingle();
+        .from("profiles")
+        .delete()
+        .eq("id", createdUserId);
 
-    if (linkError || !updatedRegistration) {
-      console.error(
-        "Failed to link registration to profile:",
-        linkError?.message
+      await supabaseAdmin.auth.admin.deleteUser(
+        createdUserId
       );
-
-      /*
-       * Roll everything back if the registration couldn't be linked.
-       */
-
-      await supabaseAdmin.auth.admin.deleteUser(createdUserId);
 
       createdUserId = null;
 
       return NextResponse.json(
         {
           error:
-            "The account was created, but the registration could not be linked. The account was rolled back.",
+            "The account was created, but its profile could not be generated. The account was rolled back.",
+          details: profileError?.message || undefined,
         },
         { status: 500 }
       );
     }
 
+/*
+ * ================================================================
+ * LINK PROFILE TO REGISTRATION
+ * ================================================================
+ */
+
+const { data: updatedRegistration, error: linkError } =
+  await supabaseAdmin
+    .from("registrations")
+    .update({
+      profile_id: createdUserId,
+      status: "confirmed",
+    })
+    .eq("id", registrationId)
+    .is("profile_id", null)
+    .select("*")
+    .maybeSingle();
+
+if (linkError) {
+  console.error("REGISTRATION LINK ERROR:", {
+    message: linkError.message,
+    details: linkError.details,
+    hint: linkError.hint,
+    code: linkError.code,
+  });
+
+  await supabaseAdmin.auth.admin.deleteUser(createdUserId);
+  createdUserId = null;
+
+  return NextResponse.json(
+    {
+      error: "Failed to link the account to the registration.",
+      details: linkError.message,
+      code: linkError.code,
+      hint: linkError.hint,
+    },
+    { status: 500 }
+  );
+}
+
+if (!updatedRegistration) {
+  console.error(
+    "REGISTRATION LINK ERROR: Update matched zero rows.",
+    {
+      registrationId,
+      createdUserId,
+    }
+  );
+
+  await supabaseAdmin.auth.admin.deleteUser(createdUserId);
+  createdUserId = null;
+
+  return NextResponse.json(
+    {
+      error:
+        "The registration could not be linked because the registration was not found or was already linked.",
+    },
+    { status: 409 }
+  );
+}
     /*
      * ================================================================
      * SUCCESS
@@ -503,7 +673,8 @@ export async function POST(
       {
         success: true,
 
-        message: "MediQ account created successfully.",
+        message:
+          "MediQ account created successfully.",
 
         account: {
           id: createdUserId,
@@ -512,6 +683,8 @@ export async function POST(
           display_name: displayName,
           mentor_id: mentorId,
         },
+
+        profile,
 
         registration: updatedRegistration,
       },
@@ -524,19 +697,32 @@ export async function POST(
     );
 
     /*
-     * Last-resort cleanup if an unexpected error happened after
-     * Auth user creation.
+     * ================================================================
+     * LAST-RESORT CLEANUP
+     * ================================================================
      */
 
     if (createdUserId) {
       try {
+        await supabaseAdmin
+          .from("profiles")
+          .delete()
+          .eq("id", createdUserId);
+      } catch (profileCleanupError) {
+        console.error(
+          "Failed to clean up partially created profile:",
+          profileCleanupError
+        );
+      }
+
+      try {
         await supabaseAdmin.auth.admin.deleteUser(
           createdUserId
         );
-      } catch (cleanupError) {
+      } catch (authCleanupError) {
         console.error(
           "Failed to clean up partially created Auth user:",
-          cleanupError
+          authCleanupError
         );
       }
     }
