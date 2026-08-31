@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-
 import {
   Search,
   RefreshCw,
@@ -19,7 +18,6 @@ import {
   CheckCircle2,
   Loader2,
 } from "lucide-react";
-
 import { supabase } from "@/lib/supabase";
 
 type Registration = {
@@ -82,7 +80,6 @@ export default function RegistrationsPage() {
   const [creatingAccount, setCreatingAccount] = useState(false);
   const [creatingAccountRequest, setCreatingAccountRequest] = useState(false);
   const [accountError, setAccountError] = useState<string | null>(null);
-
   const [accountCreated, setAccountCreated] = useState(false);
 
   const [mentors, setMentors] = useState<Mentor[]>([]);
@@ -105,11 +102,9 @@ export default function RegistrationsPage() {
     registration_code: "",
   });
 
-  /*
-   * ================================================================
+  /* ================================================================
    * FETCH MENTORS
-   * ================================================================
-   */
+   * ================================================================ */
 
   const fetchMentors = useCallback(async () => {
     try {
@@ -140,11 +135,9 @@ export default function RegistrationsPage() {
     }
   }, []);
 
-  /*
-   * ================================================================
+  /* ================================================================
    * FETCH REGISTRATIONS
-   * ================================================================
-   */
+   * ================================================================ */
 
   const fetchRegistrations = useCallback(
     async (showRefresh = false) => {
@@ -217,15 +210,38 @@ export default function RegistrationsPage() {
     [page, search, status]
   );
 
+  /* ================================================================
+   * CREATE ACCOUNT
+   * ================================================================ */
+
   async function createAccount() {
-    setAccountError(null);
     if (!selectedRegistration) {
+      return;
+    }
+
+    const username = accountForm.username.trim();
+    const password = accountForm.password;
+    const displayName = accountForm.display_name.trim();
+
+    if (!username) {
+      setAccountError("Please enter a username.");
+      return;
+    }
+
+    if (!password) {
+      setAccountError("Please enter a password.");
+      return;
+    }
+
+    if (!displayName) {
+      setAccountError("Please enter a display name.");
       return;
     }
 
     try {
       setCreatingAccountRequest(true);
       setAccountError(null);
+      setAccountCreated(false);
 
       const {
         data: { session },
@@ -246,9 +262,9 @@ export default function RegistrationsPage() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            username: accountForm.username.trim(),
-            password: accountForm.password,
-            display_name: accountForm.display_name.trim(),
+            username,
+            password,
+            display_name: displayName,
             mentor_id: selectedMentorId || null,
           }),
         }
@@ -258,46 +274,47 @@ export default function RegistrationsPage() {
 
       if (!response.ok) {
         throw new Error(
-          data?.error || "Failed to create account."
+          data?.error || "Failed to create the student account."
         );
       }
 
-    /*
-     * Account created successfully.
-     *
-     * Close the account creation modal and the registration
-     * review modal.
-     */
-    setCreatingAccount(false);
-    setSelectedRegistration(null);
+      console.log("Account creation successful:", data);
 
-    /*
-     * Refresh the registrations list so the newly-confirmed
-     * registration immediately disappears from Pending.
-     */
-    await fetchRegistrations(true);
-  } catch (error) {
-    console.error(
-      "Failed to create MediQ account:",
-      error
-    );
+      setAccountCreated(true);
 
-    setAccountError(
-      error instanceof Error
-        ? error.message
-        : "Failed to create account."
-    );
-  } finally {
-    setCreatingAccountRequest(false);
+      /*
+       * Let the success message actually be visible.
+       */
+      await new Promise((resolve) => setTimeout(resolve, 900));
+
+      setCreatingAccount(false);
+      setSelectedRegistration(null);
+
+      /*
+       * Refresh the registration list.
+       *
+       * The backend should have changed the registration from
+       * pending -> confirmed and populated profile_id.
+       */
+      await fetchRegistrations(true);
+    } catch (err) {
+      console.error("Failed to create account:", err);
+
+      setAccountCreated(false);
+
+      setAccountError(
+        err instanceof Error
+          ? err.message
+          : "Failed to create the student account."
+      );
+    } finally {
+      setCreatingAccountRequest(false);
+    }
   }
-}
 
-
-  /*
-   * ================================================================
+  /* ================================================================
    * LOAD DATA
-   * ================================================================
-   */
+   * ================================================================ */
 
   useEffect(() => {
     fetchRegistrations();
@@ -307,11 +324,9 @@ export default function RegistrationsPage() {
     fetchMentors();
   }, [fetchMentors]);
 
-  /*
-   * ================================================================
+  /* ================================================================
    * HELPERS
-   * ================================================================
-   */
+   * ================================================================ */
 
   function formatDate(date: string) {
     return new Date(date).toLocaleDateString("en-GB", {
@@ -339,7 +354,7 @@ export default function RegistrationsPage() {
     if (year === 1) return "1st Year";
     if (year === 2) return "2nd Year";
     if (year === 3) return "3rd Year";
-
+    if (year === 4) return "4th Year";
     return `${year}th Year`;
   }
 
@@ -355,11 +370,9 @@ export default function RegistrationsPage() {
       .replace(/^\.+|\.+$/g, "");
   }
 
-  /*
-   * ================================================================
+  /* ================================================================
    * EDIT REGISTRATION
-   * ================================================================
-   */
+   * ================================================================ */
 
   function startEditingRegistration(registration: Registration) {
     setEditForm({
@@ -451,11 +464,9 @@ export default function RegistrationsPage() {
     }
   }
 
-  /*
-   * ================================================================
+  /* ================================================================
    * OPEN ACCOUNT CREATION
-   * ================================================================
-   */
+   * ================================================================ */
 
   function openAccountCreation(registration: Registration) {
     setAccountForm({
@@ -470,118 +481,13 @@ export default function RegistrationsPage() {
     setCreatingAccount(true);
   }
 
-  /*
-   * ================================================================
-   * CREATE ACCOUNT
-   * ================================================================
-   */
-
-  async function createAccount() {
-    if (!selectedRegistration) {
-      return;
-    }
-
-    const username = accountForm.username.trim();
-    const password = accountForm.password;
-    const displayName = accountForm.display_name.trim();
-
-    if (!username) {
-      setAccountError("Please enter a username.");
-      return;
-    }
-
-    if (!password) {
-      setAccountError("Please enter a password.");
-      return;
-    }
-
-    if (!displayName) {
-      setAccountError("Please enter a display name.");
-      return;
-    }
-
-    try {
-      setCreatingAccountRequest(true);
-      setAccountError(null);
-
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (!session?.access_token) {
-        throw new Error(
-          "Your admin session has expired. Please log in again."
-        );
-      }
-
-      const response = await fetch(
-        `/api/admin/registrations/${selectedRegistration.id}/create-account`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            username,
-            password,
-            display_name: displayName,
-            mentor_id: selectedMentorId || null,
-          }),
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          data?.error || "Failed to create the student account."
-        );
-      }
-
-      console.log("Account created:", data);
-
-      setAccountCreated(true);
-
-      /*
-       * Give the success state a moment so the admin can actually
-       * see that the operation succeeded.
-       */
-      await new Promise((resolve) => setTimeout(resolve, 900));
-
-      setCreatingAccount(false);
-      setSelectedRegistration(null);
-
-      /*
-       * Refresh the table so the registration status/profile_id
-       * immediately reflects the newly created account.
-       */
-      await fetchRegistrations(true);
-    } catch (err) {
-      console.error("Failed to create account:", err);
-
-      setAccountError(
-        err instanceof Error
-          ? err.message
-          : "Failed to create the student account."
-      );
-    } finally {
-      setCreatingAccountRequest(false);
-    }
-  }
-
-  /*
-   * ================================================================
+  /* ================================================================
    * PAGE
-   * ================================================================
-   */
+   * ================================================================ */
 
   return (
     <main className="min-h-screen bg-[#0b0d10] text-white">
-      {/* ============================================================
-          BACKGROUND
-      ============================================================ */}
-
+      {/* Background */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
         <div className="absolute left-[20%] top-[10%] h-[500px] w-[500px] rounded-full bg-[#1f71a1]/[0.045] blur-[130px]" />
 
@@ -598,10 +504,7 @@ export default function RegistrationsPage() {
       </div>
 
       <div className="relative z-10 mx-auto min-h-screen max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        {/* ==========================================================
-            HEADER
-        ========================================================== */}
-
+        {/* Header */}
         <header className="border-b border-white/[0.07] pb-5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -625,10 +528,7 @@ export default function RegistrationsPage() {
             </div>
           </div>
 
-          {/* ========================================================
-              PAGE NAVIGATION
-          ======================================================== */}
-
+          {/* Navigation */}
           <nav className="mt-5 flex min-h-12 items-stretch justify-center gap-2 rounded-xl border border-white/[0.06] bg-white/[0.015] p-1.5">
             <div className="flex flex-1 items-center justify-center rounded-lg bg-white/[0.08] px-5 py-2.5 text-xs font-medium text-white">
               Registrations
@@ -636,10 +536,7 @@ export default function RegistrationsPage() {
           </nav>
         </header>
 
-        {/* ==========================================================
-            PAGE HEADING
-        ========================================================== */}
-
+        {/* Heading */}
         <div className="mb-7 mt-8">
           <div className="mb-3 flex items-center gap-2 text-[10px] font-medium uppercase tracking-[0.16em] text-white/30">
             <BadgeCheck className="h-3.5 w-3.5" />
@@ -668,19 +565,13 @@ export default function RegistrationsPage() {
                   refreshing ? "animate-spin" : ""
                 }`}
               />
-
               Refresh
             </button>
           </div>
         </div>
 
-        {/* ==========================================================
-            CONTROLS
-        ========================================================== */}
-
+        {/* Controls */}
         <div className="mb-5 flex flex-col gap-3 sm:flex-row">
-          {/* Search */}
-
           <div className="relative flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/25" />
 
@@ -694,8 +585,6 @@ export default function RegistrationsPage() {
               className="h-11 w-full rounded-xl border border-white/[0.07] bg-white/[0.025] pl-10 pr-4 text-sm text-white outline-none placeholder:text-white/20 transition focus:border-white/[0.14] focus:bg-white/[0.035]"
             />
           </div>
-
-          {/* Status */}
 
           <div className="flex rounded-xl border border-white/[0.07] bg-white/[0.015] p-1">
             {(
@@ -720,23 +609,16 @@ export default function RegistrationsPage() {
           </div>
         </div>
 
-        {/* ==========================================================
-            ERROR
-        ========================================================== */}
-
+        {/* Error */}
         {error && (
           <div className="mb-5 rounded-xl border border-red-400/10 bg-red-400/[0.04] px-4 py-3 text-sm text-red-300/80">
             {error}
           </div>
         )}
 
-        {/* ==========================================================
-            RESULTS
-        ========================================================== */}
-
+        {/* Results */}
         <section className="overflow-hidden rounded-2xl border border-white/[0.07] bg-white/[0.015]">
-          {/* Desktop table */}
-
+          {/* Desktop */}
           <div className="hidden overflow-x-auto md:block">
             <table className="w-full">
               <thead>
@@ -799,13 +681,15 @@ export default function RegistrationsPage() {
                       className="border-b border-white/[0.04] last:border-0 transition hover:bg-white/[0.018]"
                     >
                       <td className="px-5 py-4">
-                        <div className="font-medium text-sm text-white/85">
+                        <div className="text-sm font-medium text-white/85">
                           {registration.full_name}
                         </div>
 
                         <div className="mt-1 flex items-center gap-2 text-xs text-white/30">
                           <span>
-                            {getYearLabel(registration.academic_year)}
+                            {getYearLabel(
+                              registration.academic_year
+                            )}
                           </span>
 
                           {registration.university && (
@@ -876,8 +760,7 @@ export default function RegistrationsPage() {
             </table>
           </div>
 
-          {/* Mobile cards */}
-
+          {/* Mobile */}
           <div className="divide-y divide-white/[0.05] md:hidden">
             {loading ? (
               <div className="px-5 py-16 text-center text-sm text-white/25">
@@ -910,8 +793,9 @@ export default function RegistrationsPage() {
                       </div>
 
                       <div className="mt-1 text-xs text-white/30">
-                        {getYearLabel(registration.academic_year)}
-
+                        {getYearLabel(
+                          registration.academic_year
+                        )}
                         {registration.university
                           ? ` · ${registration.university}`
                           : ""}
@@ -943,10 +827,7 @@ export default function RegistrationsPage() {
             )}
           </div>
 
-          {/* ========================================================
-              PAGINATION
-          ======================================================== */}
-
+          {/* Pagination */}
           {!loading && registrations.length > 0 && (
             <div className="flex items-center justify-between border-t border-white/[0.06] px-4 py-3 sm:px-5">
               <div className="text-xs text-white/25">
@@ -999,8 +880,7 @@ export default function RegistrationsPage() {
           }}
         >
           <div className="w-full max-w-2xl overflow-hidden rounded-2xl border border-white/[0.09] bg-[#111419] shadow-2xl shadow-black/40">
-            {/* Popup header */}
-
+            {/* Header */}
             <div className="flex items-start justify-between border-b border-white/[0.06] px-5 py-5 sm:px-6">
               <div>
                 <div className="mb-2 flex items-center gap-2 text-[10px] font-medium uppercase tracking-[0.14em] text-white/25">
@@ -1028,8 +908,7 @@ export default function RegistrationsPage() {
               </button>
             </div>
 
-            {/* Popup body */}
-
+            {/* Body */}
             <div className="max-h-[70vh] overflow-y-auto px-5 py-5 sm:px-6">
               <div className="grid gap-3 sm:grid-cols-2">
                 {editingRegistration ? (
@@ -1183,8 +1062,7 @@ export default function RegistrationsPage() {
                 </div>
               )}
 
-              {/* Financial information */}
-
+              {/* Payment */}
               <div className="mt-5 rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
                 <div className="mb-3 text-[10px] font-medium uppercase tracking-[0.14em] text-white/25">
                   Payment
@@ -1225,7 +1103,6 @@ export default function RegistrationsPage() {
               </div>
 
               {/* Affiliate */}
-
               {selectedRegistration.affiliate_code && (
                 <div className="mt-3 rounded-xl border border-sky-400/10 bg-sky-400/[0.025] p-4">
                   <div className="text-[10px] font-medium uppercase tracking-[0.14em] text-sky-300/40">
@@ -1244,8 +1121,7 @@ export default function RegistrationsPage() {
               </div>
             </div>
 
-            {/* Popup footer */}
-
+            {/* Footer */}
             <div className="flex items-center justify-between border-t border-white/[0.06] px-5 py-4 sm:px-6">
               <div>
                 {!editingRegistration &&
@@ -1341,7 +1217,6 @@ export default function RegistrationsPage() {
         >
           <div className="w-full max-w-lg overflow-hidden rounded-2xl border border-white/[0.09] bg-[#111419] shadow-2xl shadow-black/40">
             {/* Header */}
-
             <div className="flex items-start justify-between border-b border-white/[0.06] px-5 py-5 sm:px-6">
               <div>
                 <div className="mb-2 text-[10px] font-medium uppercase tracking-[0.14em] text-white/25">
@@ -1368,10 +1243,8 @@ export default function RegistrationsPage() {
             </div>
 
             {/* Body */}
-
             <div className="space-y-5 px-5 py-5 sm:px-6">
               {/* Username */}
-
               <div>
                 <label className="mb-2 block text-[10px] font-medium uppercase tracking-[0.12em] text-white/25">
                   Username
@@ -1407,7 +1280,6 @@ export default function RegistrationsPage() {
               </div>
 
               {/* Password */}
-
               <div>
                 <label className="mb-2 block text-[10px] font-medium uppercase tracking-[0.12em] text-white/25">
                   Password
@@ -1433,7 +1305,6 @@ export default function RegistrationsPage() {
               </div>
 
               {/* Display name */}
-
               <div>
                 <label className="mb-2 block text-[10px] font-medium uppercase tracking-[0.12em] text-white/25">
                   Display name
@@ -1454,7 +1325,6 @@ export default function RegistrationsPage() {
               </div>
 
               {/* Mentor */}
-
               <div>
                 <label className="mb-2 block text-[10px] font-medium uppercase tracking-[0.12em] text-white/25">
                   Mentor
@@ -1468,7 +1338,9 @@ export default function RegistrationsPage() {
                   }
                   className="h-11 w-full rounded-xl border border-white/[0.07] bg-[#15181d] px-3.5 text-sm text-white/80 outline-none transition focus:border-white/[0.14] disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  <option value="">No mentor assigned</option>
+                  <option value="">
+                    No mentor assigned
+                  </option>
 
                   {mentors.map((mentor) => (
                     <option key={mentor.id} value={mentor.id}>
@@ -1485,7 +1357,6 @@ export default function RegistrationsPage() {
               </div>
 
               {/* Error */}
-
               {accountError && (
                 <div className="rounded-xl border border-red-400/10 bg-red-400/[0.04] px-4 py-3 text-xs leading-5 text-red-300/80">
                   {accountError}
@@ -1493,7 +1364,6 @@ export default function RegistrationsPage() {
               )}
 
               {/* Success */}
-
               {accountCreated && (
                 <div className="flex items-center gap-3 rounded-xl border border-emerald-400/10 bg-emerald-400/[0.04] px-4 py-3">
                   <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-300/70" />
@@ -1511,11 +1381,6 @@ export default function RegistrationsPage() {
               )}
 
               {/* Account summary */}
-              {accountError && (
-                <div className="rounded-xl border border-red-400/10 bg-red-400/[0.04] px-4 py-3 text-xs text-red-300/80">
-                  {accountError}
-                </div>
-              )}
               <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
                 <div className="mb-3 text-[10px] font-medium uppercase tracking-[0.14em] text-white/25">
                   Account
@@ -1553,7 +1418,6 @@ export default function RegistrationsPage() {
             </div>
 
             {/* Footer */}
-
             <div className="flex items-center justify-end gap-2 border-t border-white/[0.06] px-5 py-4 sm:px-6">
               <button
                 type="button"
@@ -1592,11 +1456,9 @@ export default function RegistrationsPage() {
   );
 }
 
-/*
- * ================================================================
+/* ================================================================
  * SMALL UI COMPONENTS
- * ================================================================
- */
+ * ================================================================ */
 
 function InfoItem({
   icon,
