@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import {
+  REGISTRATION_PLANS,
+  type RegistrationPlan,
+} from "@/lib/registration-plans";
 
 const MEDIQ_DOMAIN = "@med.iq";
 
@@ -8,6 +12,54 @@ type RouteContext = {
     id: string;
   }>;
 };
+
+function calculateEndDate(
+  startDate: Date,
+  planName: string
+): Date | null {
+  const registrationPlan = REGISTRATION_PLANS[planName];
+
+  if (!registrationPlan) {
+    return null;
+  }
+
+  const endDate = new Date(startDate);
+
+  if (registrationPlan.ending.type === "offset") {
+    endDate.setDate(
+      endDate.getDate() + registrationPlan.ending.days
+    );
+
+    return endDate;
+  }
+
+  if (registrationPlan.ending.type === "date") {
+    const fixedDate = new Date(
+      `${registrationPlan.ending.date}T23:59:59.999`
+    );
+
+    if (Number.isNaN(fixedDate.getTime())) {
+      return null;
+    }
+
+    return fixedDate;
+  }
+
+  return null;
+}
+
+  /*
+   * Plan duration is expected to be stored in days.
+   *
+   * If your registration-plan file uses a different field name,
+   * adjust this one line accordingly.
+   */
+  endDate.setDate(
+    endDate.getDate() + registrationPlan.durationDays
+  );
+
+  return endDate;
+}
 
 export async function POST(
   request: NextRequest,
@@ -22,7 +74,8 @@ export async function POST(
      * ================================================================
      */
 
-    const authorization = request.headers.get("authorization");
+    const authorization =
+      request.headers.get("authorization");
 
     if (!authorization?.startsWith("Bearer ")) {
       return NextResponse.json(
@@ -90,7 +143,10 @@ export async function POST(
       );
     }
 
-    if (!adminProfile || adminProfile.role !== "admin") {
+    if (
+      !adminProfile ||
+      adminProfile.role !== "admin"
+    ) {
       return NextResponse.json(
         {
           error:
@@ -188,7 +244,10 @@ export async function POST(
       );
     }
 
-    if (username.length < 3 || username.length > 40) {
+    if (
+      username.length < 3 ||
+      username.length > 40
+    ) {
       return NextResponse.json(
         {
           error:
@@ -224,6 +283,23 @@ export async function POST(
         },
         { status: 400 }
       );
+    }
+
+    /*
+     * Validate exam date if supplied.
+     */
+
+    if (examDate) {
+      const parsedExamDate = new Date(examDate);
+
+      if (Number.isNaN(parsedExamDate.getTime())) {
+        return NextResponse.json(
+          {
+            error: "Invalid exam date.",
+          },
+          { status: 400 }
+        );
+      }
     }
 
     /*
@@ -307,15 +383,51 @@ export async function POST(
 
     /*
      * ================================================================
-     * AUTH EMAIL
+     * CALCULATE SUBSCRIPTION DATES
      * ================================================================
      *
-     * The username becomes the student's actual Supabase Auth email:
+     * Start date:
+     *     The moment the account is created.
      *
-     *     username@med.iq
+     * End date:
+     *     Determined automatically from the selected registration plan.
      */
 
-    const email = `${username}${MEDIQ_DOMAIN}`;
+    const startDate = new Date();
+
+    const endDate = calculateEndDate(
+      startDate,
+      registration.plan
+    );
+
+    if (!endDate) {
+      return NextResponse.json(
+        {
+          error:
+            `Unable to determine the duration for plan "${registration.plan}".`,
+        },
+        { status: 400 }
+      );
+    }
+
+    /*
+     * Store dates as ISO strings for Supabase/Postgres.
+     */
+
+    const startDateISO =
+      startDate.toISOString();
+
+    const endDateISO =
+      endDate.toISOString();
+
+    /*
+     * ================================================================
+     * AUTH EMAIL
+     * ================================================================
+     */
+
+    const email =
+      `${username}${MEDIQ_DOMAIN}`;
 
     /*
      * ================================================================
@@ -350,7 +462,8 @@ export async function POST(
     if (existingProfile) {
       return NextResponse.json(
         {
-          error: `The username "${username}" is already in use.`,
+          error:
+            `The username "${username}" is already in use.`,
         },
         { status: 409 }
       );
@@ -360,19 +473,16 @@ export async function POST(
      * ================================================================
      * CHECK AUTH EMAIL
      * ================================================================
-     *
-     * The profile check above normally catches this, but checking
-     * Auth as well protects against orphaned Auth users or a profile
-     * that somehow doesn't contain the username.
      */
 
     const {
       data: existingAuthUser,
       error: existingAuthUserError,
-    } = await supabaseAdmin.auth.admin.listUsers({
-      page: 1,
-      perPage: 1000,
-    });
+    } =
+      await supabaseAdmin.auth.admin.listUsers({
+        page: 1,
+        perPage: 1000,
+      });
 
     if (existingAuthUserError) {
       console.error(
@@ -392,7 +502,8 @@ export async function POST(
     const authEmailAlreadyExists =
       existingAuthUser.users.some(
         (user) =>
-          user.email?.toLowerCase() === email.toLowerCase()
+          user.email?.toLowerCase() ===
+          email.toLowerCase()
       );
 
     if (authEmailAlreadyExists) {
@@ -439,7 +550,8 @@ export async function POST(
       if (!mentor) {
         return NextResponse.json(
           {
-            error: "Selected mentor was not found.",
+            error:
+              "Selected mentor was not found.",
           },
           { status: 400 }
         );
@@ -480,7 +592,10 @@ export async function POST(
         },
       });
 
-    if (createUserError || !authData.user) {
+    if (
+      createUserError ||
+      !authData.user
+    ) {
       console.error(
         "Failed to create Auth user:",
         createUserError?.message
@@ -496,88 +611,106 @@ export async function POST(
       );
     }
 
-    createdUserId = authData.user.id;
+    createdUserId =
+      authData.user.id;
 
     /*
      * ================================================================
      * CREATE / CONFIGURE PROFILE
      * ================================================================
-     *
-     * IMPORTANT:
-     *
-     * We do NOT assume an auth.users -> profiles trigger exists.
-     *
-     * If a trigger already created the profile, upsert() updates it.
-     *
-     * If no trigger exists, upsert() creates it.
-     *
-     * This makes account creation work either way.
      */
 
     const {
       data: profile,
       error: profileError,
-    } = await supabaseAdmin
-      .from("profiles")
-      .upsert(
-        {
-          id: createdUserId,
+    } =
+      await supabaseAdmin
+        .from("profiles")
+        .upsert(
+          {
+            id: createdUserId,
 
-          username,
-          display_name: displayName,
+            username,
+            display_name: displayName,
 
-          role: "student",
+            role: "student",
 
-          year: registration.academic_year,
+            year:
+              registration.academic_year,
 
-          mentor_id: mentorId,
+            mentor_id: mentorId,
 
-          registration_code:
-            registration.registration_code,
+            registration_code:
+              registration.registration_code,
 
-          affiliate_code:
-            registration.affiliate_code,
-          
-          exam_date: examDate,
+            affiliate_code:
+              registration.affiliate_code,
 
+            plan:
+              registration.plan,
 
-          plan: registration.plan,
+            /*
+             * Subscription dates
+             */
 
-          phone_number:
-            registration.phone_number,
+            start_date:
+              startDateISO,
 
-          university:
-            registration.university,
+            end_date:
+              endDateISO,
 
-          status: "active",
+            /*
+             * Academic tracking
+             */
 
-          first_time: true,
-        },
-        {
-          onConflict: "id",
-        }
-      )
-      .select(
-        `
-          id,
-          username,
-          display_name,
-          role,
-          year,
-          mentor_id,
-          registration_code,
-          affiliate_code,
-          plan,
-          phone_number,
-          university,
-          status,
-          first_time,
-          created_at
-        `
-      )
-      .single();
+            exam_date:
+              examDate,
 
-    if (profileError || !profile) {
+            /*
+             * Registration information
+             */
+
+            phone_number:
+              registration.phone_number,
+
+            university:
+              registration.university,
+
+            status: "active",
+
+            first_time: true,
+          },
+          {
+            onConflict: "id",
+          }
+        )
+        .select(
+          `
+            id,
+            username,
+            display_name,
+            role,
+            year,
+            mentor_id,
+            registration_code,
+            affiliate_code,
+            plan,
+            start_date,
+            end_date,
+            exam_date,
+            phone_number,
+            university,
+            status,
+            first_time,
+            created_at
+          `
+        )
+        .single();
+
+    if (
+      profileError ||
+      !profile
+    ) {
       console.error(
         "Failed to create/configure profile:",
         profileError?.message
@@ -585,10 +718,6 @@ export async function POST(
 
       /*
        * Roll back Auth user.
-       *
-       * profiles.id references auth.users(id), so deleting the Auth
-       * user will also remove the profile if the FK is configured
-       * with CASCADE. Otherwise we explicitly attempt to remove it.
        */
 
       await supabaseAdmin
@@ -606,119 +735,165 @@ export async function POST(
         {
           error:
             "The account was created, but its profile could not be generated. The account was rolled back.",
-          details: profileError?.message || undefined,
+          details:
+            profileError?.message ||
+            undefined,
         },
         { status: 500 }
       );
     }
 
-/*
- * ================================================================
- * LINK ACCOUNT TO REGISTRATION
- * ================================================================
- */
+    /*
+     * ================================================================
+     * LINK ACCOUNT TO REGISTRATION
+     * ================================================================
+     */
 
-const { error: linkError } = await supabaseAdmin
-  .from("registrations")
-  .update({
-    profile_id: createdUserId,
-    status: "confirmed",
-  })
-  .eq("id", registrationId);
+    const {
+      error: linkError,
+    } = await supabaseAdmin
+      .from("registrations")
+      .update({
+        profile_id: createdUserId,
+        status: "confirmed",
+      })
+      .eq("id", registrationId);
 
-if (linkError) {
-  console.error("FAILED TO LINK REGISTRATION:", {
-    message: linkError.message,
-    details: linkError.details,
-    hint: linkError.hint,
-    code: linkError.code,
-    registrationId,
-    createdUserId,
-  });
+    if (linkError) {
+      console.error(
+        "FAILED TO LINK REGISTRATION:",
+        {
+          message: linkError.message,
+          details: linkError.details,
+          hint: linkError.hint,
+          code: linkError.code,
+          registrationId,
+          createdUserId,
+        }
+      );
 
-  await supabaseAdmin.auth.admin.deleteUser(createdUserId);
-  createdUserId = null;
+      await supabaseAdmin.auth.admin.deleteUser(
+        createdUserId
+      );
 
-  return NextResponse.json(
-    {
-      error: "Failed to link the account to the registration.",
-      details: {
-        message: linkError.message,
-        details: linkError.details,
-        hint: linkError.hint,
-        code: linkError.code,
-      },
-    },
-    { status: 500 }
-  );
-}
+      createdUserId = null;
 
-/*
- * Verify the registration was actually linked.
- */
+      return NextResponse.json(
+        {
+          error:
+            "Failed to link the account to the registration.",
 
-const { data: updatedRegistration, error: verifyError } =
-  await supabaseAdmin
-    .from("registrations")
-    .select("*")
-    .eq("id", registrationId)
-    .maybeSingle();
+          details: {
+            message:
+              linkError.message,
+            details:
+              linkError.details,
+            hint:
+              linkError.hint,
+            code:
+              linkError.code,
+          },
+        },
+        { status: 500 }
+      );
+    }
 
-if (verifyError) {
-  console.error("FAILED TO VERIFY REGISTRATION LINK:", {
-    message: verifyError.message,
-    details: verifyError.details,
-    hint: verifyError.hint,
-    code: verifyError.code,
-  });
+    /*
+     * ================================================================
+     * VERIFY REGISTRATION LINK
+     * ================================================================
+     */
 
-  await supabaseAdmin.auth.admin.deleteUser(createdUserId);
-  createdUserId = null;
+    const {
+      data: updatedRegistration,
+      error: verifyError,
+    } =
+      await supabaseAdmin
+        .from("registrations")
+        .select("*")
+        .eq("id", registrationId)
+        .maybeSingle();
 
-  return NextResponse.json(
-    {
-      error:
-        "The registration was updated, but the link could not be verified.",
-    },
-    { status: 500 }
-  );
-}
+    if (verifyError) {
+      console.error(
+        "FAILED TO VERIFY REGISTRATION LINK:",
+        {
+          message:
+            verifyError.message,
+          details:
+            verifyError.details,
+          hint:
+            verifyError.hint,
+          code:
+            verifyError.code,
+        }
+      );
 
-if (!updatedRegistration) {
-  console.error(
-    "Registration disappeared after linking:",
-    registrationId
-  );
+      await supabaseAdmin.auth.admin.deleteUser(
+        createdUserId
+      );
 
-  await supabaseAdmin.auth.admin.deleteUser(createdUserId);
-  createdUserId = null;
+      createdUserId = null;
 
-  return NextResponse.json(
-    {
-      error:
-        "The registration could not be found after linking.",
-    },
-    { status: 500 }
-  );
-}
+      return NextResponse.json(
+        {
+          error:
+            "The registration was updated, but the link could not be verified.",
+        },
+        { status: 500 }
+      );
+    }
 
-if (updatedRegistration.profile_id !== createdUserId) {
-  console.error("REGISTRATION PROFILE ID MISMATCH:", {
-    expected: createdUserId,
-    actual: updatedRegistration.profile_id,
-  });
+    if (!updatedRegistration) {
+      console.error(
+        "Registration disappeared after linking:",
+        registrationId
+      );
 
-  await supabaseAdmin.auth.admin.deleteUser(createdUserId);
-  createdUserId = null;
+      await supabaseAdmin.auth.admin.deleteUser(
+        createdUserId
+      );
 
-  return NextResponse.json(
-    {
-      error:
-        "The registration was updated with an incorrect profile.",
-    },
-    { status: 500 }
-  );
-}
+      createdUserId = null;
+
+      return NextResponse.json(
+        {
+          error:
+            "The registration could not be found after linking.",
+        },
+        { status: 500 }
+      );
+    }
+
+    if (
+      updatedRegistration.profile_id !==
+      createdUserId
+    ) {
+      console.error(
+        "REGISTRATION PROFILE ID MISMATCH:",
+        {
+          expected:
+            createdUserId,
+          actual:
+            updatedRegistration.profile_id,
+        }
+      );
+
+      await supabaseAdmin.auth.admin.deleteUser(
+        createdUserId
+      );
+
+      createdUserId = null;
+
+      return NextResponse.json(
+        {
+          error:
+            "The registration was updated with an incorrect profile.",
+        },
+        { status: 500 }
+      );
+    }
+
     /*
      * ================================================================
      * SUCCESS
@@ -736,13 +911,16 @@ if (updatedRegistration.profile_id !== createdUserId) {
           id: createdUserId,
           email,
           username,
-          display_name: displayName,
-          mentor_id: mentorId,
+          display_name:
+            displayName,
+          mentor_id:
+            mentorId,
         },
 
         profile,
 
-        registration: updatedRegistration,
+        registration:
+          updatedRegistration,
       },
       { status: 201 }
     );
@@ -764,7 +942,9 @@ if (updatedRegistration.profile_id !== createdUserId) {
           .from("profiles")
           .delete()
           .eq("id", createdUserId);
-      } catch (profileCleanupError) {
+      } catch (
+        profileCleanupError
+      ) {
         console.error(
           "Failed to clean up partially created profile:",
           profileCleanupError
@@ -775,7 +955,9 @@ if (updatedRegistration.profile_id !== createdUserId) {
         await supabaseAdmin.auth.admin.deleteUser(
           createdUserId
         );
-      } catch (authCleanupError) {
+      } catch (
+        authCleanupError
+      ) {
         console.error(
           "Failed to clean up partially created Auth user:",
           authCleanupError
