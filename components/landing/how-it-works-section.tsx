@@ -18,13 +18,6 @@ const steps = [
     image: "/media/step-2.png",
     link: "https://www.instagram.com/p/DcWtyzJMU_N/",
   },
-  {
-    number: "III",
-    title: "???",
-    description: "Once we actually work on something new, it'll go here. Until then, stay tuned!",
-    image: "/media/step-3.png",
-    link: "#",
-  },
 ];
 
 export function HowItWorksSection() {
