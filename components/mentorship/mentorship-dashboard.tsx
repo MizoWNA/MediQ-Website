@@ -17,6 +17,7 @@ import {
   TargetIcon,
   X,
   Save,
+  Quote,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
@@ -24,58 +25,6 @@ import { useRouter } from "next/navigation";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { DashboardCalendar } from "@/components/dashboard/DashboardCalendar";
-import { DashboardLeaderboard } from "@/components/dashboard/DashboardLeaderboard";
-import type { LeaderboardEntry } from "@/components/dashboard/DashboardLeaderboard";
-
-/*
- * ================================================================
- * TEMP LEADERBOARD DATA
- * ================================================================
- */
-
-const mockLeaderboard: LeaderboardEntry[] = [
-  {
-    id: "1",
-    name: "Ahmed Mohamed",
-    score: 94,
-    completedTasks: 23,
-    totalTasks: 24,
-    completionPercentage: 96,
-  },
-  {
-    id: "2",
-    name: "Sara Ahmed",
-    score: 91,
-    completedTasks: 20,
-    totalTasks: 22,
-    completionPercentage: 91,
-  },
-  {
-    id: "3",
-    name: "You",
-    score: 87,
-    completedTasks: 18,
-    totalTasks: 21,
-    completionPercentage: 86,
-    isCurrentUser: true,
-  },
-  {
-    id: "4",
-    name: "Omar Hassan",
-    score: 84,
-    completedTasks: 19,
-    totalTasks: 24,
-    completionPercentage: 79,
-  },
-  {
-    id: "5",
-    name: "Youssef Ali",
-    score: 81,
-    completedTasks: 16,
-    totalTasks: 21,
-    completionPercentage: 76,
-  },
-];
 
 /*
  * ================================================================
@@ -117,6 +66,11 @@ type Objective = {
   id: string;
   text: string;
   completed: boolean;
+};
+
+type QuoteOfTheDay = {
+  q: string;
+  a: string;
 };
 
 /*
@@ -289,6 +243,12 @@ export function MentorshipDashboard() {
   const [sidebarCollapsed, setSidebarCollapsed] =
     useState(false);
 
+  const [quoteOfTheDay, setQuoteOfTheDay] =
+    useState<QuoteOfTheDay | null>(null);
+
+  const [quoteLoading, setQuoteLoading] =
+    useState(true);
+
   /*
    * ================================================================
    * MCQ MODAL
@@ -318,6 +278,85 @@ export function MentorshipDashboard() {
 
     setToday(currentDate);
     setWeekStart(getSunday(currentDate));
+  }, []);
+
+  /*
+   * ================================================================
+   * QUOTE OF THE DAY
+   * ================================================================
+   *
+   * ZenQuotes provides a dedicated /today endpoint. The free API
+   * requires attribution and is rate-limited, so we only request it
+   * once when the dashboard mounts and keep a local fallback.
+   */
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadQuoteOfTheDay() {
+      try {
+        const response = await fetch(
+          "https://zenquotes.io/api/today",
+          {
+            method: "GET",
+            cache: "no-store",
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(
+            `Quote request failed with status ${response.status}.`
+          );
+        }
+
+        const data = await response.json();
+
+        const quote = Array.isArray(data)
+          ? data[0]
+          : null;
+
+        if (
+          !quote ||
+          typeof quote.q !== "string" ||
+          typeof quote.a !== "string"
+        ) {
+          throw new Error("Invalid quote response.");
+        }
+
+        if (!cancelled) {
+          setQuoteOfTheDay({
+            q: quote.q,
+            a: quote.a,
+          });
+        }
+      } catch (error) {
+        console.error(
+          "Quote of the day loading error:",
+          error
+        );
+
+        /*
+         * Keep the dashboard useful if ZenQuotes is temporarily
+         * unavailable or the browser blocks the free API request.
+         */
+        if (!cancelled) {
+          setQuoteOfTheDay({
+            q: "The important thing is not to stop questioning.",
+            a: "Albert Einstein",
+          });
+        }
+      } finally {
+        if (!cancelled) {
+          setQuoteLoading(false);
+        }
+      }
+    }
+
+    loadQuoteOfTheDay();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   /*
@@ -1815,7 +1854,7 @@ export function MentorshipDashboard() {
         <div className="space-y-5 p-4 sm:p-6">
 
           {/* ======================================================
-              OBJECTIVES + LEADERBOARD
+              OBJECTIVES + QUOTE
           ====================================================== */}
 
           <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
@@ -1893,13 +1932,69 @@ export function MentorshipDashboard() {
               )}
             </section>
 
-            {/* LEADERBOARD */}
+            {/* QUOTE OF THE DAY */}
 
-            <DashboardLeaderboard
-              entries={
-                mockLeaderboard
-              }
-            />
+            <section className="relative overflow-hidden rounded-2xl border border-white/[0.07] bg-[#15181d]">
+
+              <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-white/[0.025] blur-2xl" />
+
+              <div className="relative flex h-full flex-col">
+
+                <div className="flex items-center gap-3 border-b border-white/[0.07] px-4 py-4 sm:px-5">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/[0.06]">
+                    <Quote className="h-4 w-4 text-white/70" />
+                  </div>
+
+                  <div>
+                    <h2 className="text-sm font-semibold">
+                      Quote of the Day
+                    </h2>
+
+                    <p className="mt-0.5 text-xs text-white/35">
+                      A little something for today
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex flex-1 flex-col justify-center px-5 py-6 sm:px-6">
+
+                  {quoteLoading ? (
+                    <div className="space-y-3">
+                      <div className="h-3 w-4/5 animate-pulse rounded-full bg-white/[0.06]" />
+                      <div className="h-3 w-full animate-pulse rounded-full bg-white/[0.06]" />
+                      <div className="h-3 w-3/5 animate-pulse rounded-full bg-white/[0.06]" />
+                      <div className="mt-5 h-2.5 w-24 animate-pulse rounded-full bg-white/[0.05]" />
+                    </div>
+                  ) : quoteOfTheDay ? (
+                    <>
+                      <Quote className="mb-4 h-5 w-5 text-white/15" />
+
+                      <blockquote className="text-sm font-medium leading-6 text-white/70">
+                        “{quoteOfTheDay.q}”
+                      </blockquote>
+
+                      <div className="mt-4 text-xs font-medium text-white/35">
+                        — {quoteOfTheDay.a}
+                      </div>
+                    </>
+                  ) : null}
+
+                  <div className="mt-6 text-[9px] text-white/20">
+                    Hand crafted quotes for you by{" "}
+                    <a
+                      href="https://zenquotes.io/"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="transition hover:text-white/40"
+                    >
+                      MediQ Team
+                    </a>
+                  </div>
+
+                </div>
+              </div>
+            </section>
+
           </div>
 
           {/* ======================================================

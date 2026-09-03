@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import type { KeyboardEvent, ReactNode } from "react";
 import {
   CheckCircle2,
   Circle,
@@ -41,12 +41,6 @@ type DashboardTaskCardProps = {
   children?: ReactNode;
 };
 
-/*
- * ================================================================
- * MCQ HELPERS
- * ================================================================
- */
-
 function isMcqTask(task: DashboardTask) {
   const type = (
     task.type_name ??
@@ -81,12 +75,6 @@ function getProgress(task: DashboardTask) {
   );
 }
 
-/*
- * ================================================================
- * TASK CARD
- * ================================================================
- */
-
 export function DashboardTaskCard({
   task,
   onToggle,
@@ -94,10 +82,6 @@ export function DashboardTaskCard({
   children,
 }: DashboardTaskCardProps) {
   const mcq = isMcqTask(task);
-
-  /*
-   * Display values
-   */
 
   const subjectName =
     task.subject_display_name ??
@@ -110,20 +94,10 @@ export function DashboardTaskCard({
     task.type ??
     null;
 
-  /*
-   * Subject color
-   */
-
   const subjectColor =
     task.subject_color || "#94a3b8";
 
   const progress = getProgress(task);
-
-  /*
-   * ================================================================
-   * CARD COLORS
-   * ================================================================
-   */
 
   const cardBackground = task.completed
     ? "rgba(255, 255, 255, 0.015)"
@@ -137,27 +111,12 @@ export function DashboardTaskCard({
     ? "rgba(255, 255, 255, 0.025)"
     : `color-mix(in srgb, ${subjectColor} 14%, transparent)`;
 
-  /*
-   * ================================================================
-   * CARD CLICK
-   * ================================================================
-   *
-   * MCQ and normal tasks both use the same parent callback.
-   *
-   * The important distinction is that the card itself NEVER directly
-   * changes completion state. The dashboard's onToggle handler decides
-   * what an MCQ means versus a normal task.
-   *
-   * This keeps the card compatible with both student and mentor
-   * dashboards.
-   */
-
   function handleCardClick() {
     onToggle(task);
   }
 
   function handleCardKeyDown(
-    event: React.KeyboardEvent<HTMLDivElement>
+    event: KeyboardEvent<HTMLDivElement>
   ) {
     if (
       event.key === "Enter" ||
@@ -168,19 +127,13 @@ export function DashboardTaskCard({
     }
   }
 
-  /*
-   * ================================================================
-   * RENDER
-   * ================================================================
-   */
-
   return (
     <div
       role="button"
       tabIndex={0}
       onClick={handleCardClick}
       onKeyDown={handleCardKeyDown}
-      className={`group relative cursor-pointer select-none rounded-xl border transition-all duration-200 ${
+      className={`group relative overflow-visible cursor-pointer select-none rounded-xl border transition-all duration-200 ${
         mobile ? "p-3.5" : "p-3"
       }`}
       style={{
@@ -203,10 +156,7 @@ export function DashboardTaskCard({
             : `Complete ${task.name}`
       }
     >
-      {/* ==========================================================
-          SUBJECT ACCENT
-          ========================================================== */}
-
+      {/* Subject accent */}
       <div
         className="pointer-events-none absolute inset-y-0 left-0 w-[2px] overflow-hidden rounded-l-xl"
         style={{
@@ -216,23 +166,21 @@ export function DashboardTaskCard({
         }}
       />
 
-      {/* ==========================================================
-          MENTOR ACTIONS
-          ==========================================================
-
-          Rendered exactly once.
-
-          This wrapper:
-          - sits above the card content
-          - prevents clicks from reaching the card
-          - prevents the card's keyboard handler from firing
-          - allows the dropdown itself to escape the card's clipping
-            context because the card no longer uses overflow-hidden
-      */}
-
+      {/* Edit / action button */}
       {children && (
         <div
-          className="absolute right-1.5 top-1.5 z-50"
+          className="
+            pointer-events-auto
+            absolute
+            right-1.5
+            top-1.5
+            z-[60]
+            flex
+            min-h-8
+            min-w-8
+            items-center
+            justify-center
+          "
           onClick={(event) => {
             event.stopPropagation();
           }}
@@ -250,15 +198,8 @@ export function DashboardTaskCard({
         </div>
       )}
 
-      {/* ==========================================================
-          MAIN ROW
-          ========================================================== */}
-
-      <div className="flex min-w-0 items-start gap-2.5">
-        {/* ========================================================
-            LEFT INDICATOR
-            ======================================================== */}
-
+      {/* Main content */}
+      <div className="flex min-w-0 items-start gap-2.5 pr-9">
         <div className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center">
           {mcq ? (
             <span
@@ -276,13 +217,8 @@ export function DashboardTaskCard({
           )}
         </div>
 
-        {/* ========================================================
-            CONTENT
-            ======================================================== */}
-
         <div className="min-w-0 flex-1">
-          {/* Metadata */}
-
+          {/* Subject + type */}
           <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
             {subjectName && (
               <span
@@ -311,7 +247,6 @@ export function DashboardTaskCard({
           </div>
 
           {/* Task name */}
-
           <div
             className={`mt-1.5 min-w-0 text-xs font-medium leading-4 ${
               task.completed
@@ -322,14 +257,9 @@ export function DashboardTaskCard({
             {task.name}
           </div>
 
-          {/* ======================================================
-              MCQ PROGRESS
-              ====================================================== */}
-
+          {/* MCQ progress */}
           {mcq && (
             <div className="mt-3">
-              {/* Progress header */}
-
               <div className="flex items-center justify-between gap-3">
                 <div className="flex min-w-0 items-center gap-1.5 text-[10px] text-white/35">
                   <Target className="h-3 w-3 shrink-0" />
@@ -345,8 +275,6 @@ export function DashboardTaskCard({
                 </span>
               </div>
 
-              {/* Progress bar */}
-
               <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/[0.07]">
                 <div
                   className="h-full rounded-full transition-all"
@@ -356,8 +284,6 @@ export function DashboardTaskCard({
                   }}
                 />
               </div>
-
-              {/* Requirement */}
 
               <div className="mt-1.5 flex items-center justify-between gap-3">
                 <span className="text-[9px] text-white/20">
