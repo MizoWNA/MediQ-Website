@@ -13,17 +13,10 @@ const steps = [
   },
   {
     number: "II",
-    title: "Media Project 2",
-    description: "C'mon Team, we should have more variety in our media productions.",
+    title: "Who are we?",
+    description: "Want to learn more about us and what we do? Follow us on instagram!",
     image: "/media/step-2.png",
-    link: "#",
-  },
-  {
-    number: "III",
-    title: "Media Project 3",
-    description: "Once we actually work on something new, it'll go here. Until then, I'm just a pretty placeholder!",
-    image: "/media/step-3.png",
-    link: "#",
+    link: "https://www.instagram.com/p/DcWtyzJMU_N/",
   },
 ];
 

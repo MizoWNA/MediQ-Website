@@ -149,7 +149,7 @@ export function InfrastructureSection() {
                     color: "var(--mediq-blue)",
                   }}
                 >
-                  8
+                  10
                 </div>
 
                 <div className="text-sm text-muted-foreground">
@@ -166,7 +166,7 @@ export function InfrastructureSection() {
                     color: "var(--mediq-green)",
                   }}
                 >
-                  100
+                  100+
                 </div>
 
                 <div className="text-sm text-muted-foreground">
