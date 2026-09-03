@@ -41,6 +41,9 @@ type DashboardTaskCardProps = {
   children?: ReactNode;
 };
 
+/*
+ * MCQ helpers
+ */
 function isMcqTask(task: DashboardTask) {
   const type = (
     task.type_name ??
@@ -75,6 +78,9 @@ function getProgress(task: DashboardTask) {
   );
 }
 
+/*
+ * Task card
+ */
 export function DashboardTaskCard({
   task,
   onToggle,
@@ -133,8 +139,10 @@ export function DashboardTaskCard({
       tabIndex={0}
       onClick={handleCardClick}
       onKeyDown={handleCardKeyDown}
-      className={`group relative overflow-visible cursor-pointer select-none rounded-xl border transition-all duration-200 ${
-        mobile ? "p-3.5" : "p-3"
+      className={`group relative cursor-pointer select-none overflow-visible rounded-xl border transition-all duration-200 ${
+        mobile
+          ? "p-3.5 pr-14"
+          : "p-3 pr-14"
       }`}
       style={{
         backgroundColor: cardBackground,
@@ -156,7 +164,9 @@ export function DashboardTaskCard({
             : `Complete ${task.name}`
       }
     >
-      {/* Subject accent */}
+      {/* ============================================================
+          LEFT ACCENT
+          ============================================================ */}
       <div
         className="pointer-events-none absolute inset-y-0 left-0 w-[2px] overflow-hidden rounded-l-xl"
         style={{
@@ -166,20 +176,30 @@ export function DashboardTaskCard({
         }}
       />
 
-      {/* Edit / action button */}
+      {/* ============================================================
+          EDIT / MENU AREA
+
+          Always visible on every device.
+
+          The entire top-right area is reserved for the menu.
+          ============================================================ */}
       {children && (
         <div
           className="
-            pointer-events-auto
             absolute
-            right-1.5
-            top-1.5
-            z-[60]
+            right-0
+            top-0
+            z-[100]
             flex
-            min-h-8
-            min-w-8
-            items-center
-            justify-center
+            h-14
+            w-14
+            items-start
+            justify-end
+            rounded-tr-xl
+            rounded-bl-2xl
+            p-1.5
+            pointer-events-auto
+            touch-manipulation
           "
           onClick={(event) => {
             event.stopPropagation();
@@ -190,16 +210,58 @@ export function DashboardTaskCard({
           onPointerDown={(event) => {
             event.stopPropagation();
           }}
+          onPointerUp={(event) => {
+            event.stopPropagation();
+          }}
+          onTouchStart={(event) => {
+            event.stopPropagation();
+          }}
           onKeyDown={(event) => {
             event.stopPropagation();
           }}
         >
-          {children}
+          <div
+            className="
+              flex
+              h-11
+              w-11
+              shrink-0
+              items-center
+              justify-center
+              rounded-lg
+              text-white/65
+              transition-colors
+              hover:bg-white/[0.06]
+              hover:text-white/90
+              active:bg-white/[0.1]
+              active:text-white
+
+              [&_button]:!flex
+              [&_button]:!h-11
+              [&_button]:!w-11
+              [&_button]:!min-h-11
+              [&_button]:!min-w-11
+              [&_button]:!items-center
+              [&_button]:!justify-center
+              [&_button]:!rounded-lg
+              [&_button]:!p-0
+              [&_button]:!opacity-100
+              [&_button]:!text-white/70
+
+              [&_button_svg]:!h-4
+              [&_button_svg]:!w-4
+            "
+          >
+            {children}
+          </div>
         </div>
       )}
 
-      {/* Main content */}
-      <div className="flex min-w-0 items-start gap-2.5 pr-9">
+      {/* ============================================================
+          CARD CONTENT
+          ============================================================ */}
+      <div className="flex min-w-0 items-start gap-2.5">
+        {/* Completion / MCQ indicator */}
         <div className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center">
           {mcq ? (
             <span
@@ -217,34 +279,35 @@ export function DashboardTaskCard({
           )}
         </div>
 
+        {/* Main content */}
         <div className="min-w-0 flex-1">
-          {/* Subject + type */}
-          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-            {subjectName && (
-              <span
-                className="text-[10px] font-semibold uppercase tracking-wide"
-                style={{
-                  color: task.completed
-                    ? "rgba(255,255,255,0.25)"
-                    : subjectColor,
-                }}
-              >
-                {subjectName}
-              </span>
-            )}
+          {/* ========================================================
+              SUBJECT
+              ======================================================== */}
+          {subjectName && (
+            <div
+              className="text-[10px] font-semibold uppercase tracking-wide"
+              style={{
+                color: task.completed
+                  ? "rgba(255,255,255,0.25)"
+                  : subjectColor,
+              }}
+            >
+              {subjectName}
+            </div>
+          )}
 
-            {subjectName && typeName && (
-              <span className="text-[9px] text-white/15">
-                •
-              </span>
-            )}
+          {/* ========================================================
+              TASK TYPE
 
-            {typeName && (
-              <span className="text-[9px] font-medium uppercase tracking-wide text-white/30">
-                {typeName}
-              </span>
-            )}
-          </div>
+              Intentionally on its own line.
+              No separator dot.
+              ======================================================== */}
+          {typeName && (
+            <div className="mt-0.5 text-[9px] font-medium uppercase tracking-wide text-white/30">
+              {typeName}
+            </div>
+          )}
 
           {/* Task name */}
           <div
@@ -257,7 +320,9 @@ export function DashboardTaskCard({
             {task.name}
           </div>
 
-          {/* MCQ progress */}
+          {/* ========================================================
+              MCQ PROGRESS
+              ======================================================== */}
           {mcq && (
             <div className="mt-3">
               <div className="flex items-center justify-between gap-3">
@@ -275,6 +340,7 @@ export function DashboardTaskCard({
                 </span>
               </div>
 
+              {/* Progress bar */}
               <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/[0.07]">
                 <div
                   className="h-full rounded-full transition-all"
@@ -285,6 +351,7 @@ export function DashboardTaskCard({
                 />
               </div>
 
+              {/* Footer */}
               <div className="mt-1.5 flex items-center justify-between gap-3">
                 <span className="text-[9px] text-white/20">
                   Required:{" "}
