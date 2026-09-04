@@ -21,13 +21,11 @@ export default function OnboardingShell({
 
   /*
    * ================================================================
-   * ONBOARDING CONFIGURATION
+   * CURRENT SECTION
    * ================================================================
    */
 
-  const sections = onboardingSections;
-
-  const currentSection = sections[currentIndex];
+  const currentSection = onboardingSections[currentIndex];
   const CurrentSection = currentSection.component;
 
   /*
@@ -38,7 +36,10 @@ export default function OnboardingShell({
 
   function goNext() {
     setCurrentIndex((current) =>
-      Math.min(current + 1, sections.length - 1)
+      Math.min(
+        current + 1,
+        onboardingSections.length - 1
+      )
     );
   }
 
@@ -47,6 +48,12 @@ export default function OnboardingShell({
       Math.max(current - 1, 0)
     );
   }
+
+  /*
+   * ================================================================
+   * FINISH
+   * ================================================================
+   */
 
   async function handleFinish() {
     if (finishing) return;
@@ -80,7 +87,10 @@ export default function OnboardingShell({
     window.addEventListener("keydown", handleKeyDown);
 
     return () => {
-      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener(
+        "keydown",
+        handleKeyDown
+      );
     };
   }, []);
 
@@ -103,13 +113,19 @@ export default function OnboardingShell({
       )}
 
       {/* ============================================================
-          BACKGROUND
+          GLOBAL BACKGROUND
           ============================================================ */}
 
       <div className="pointer-events-none absolute inset-0">
+        {/* Main atmosphere */}
+
         <div className="absolute left-1/2 top-[35%] h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#1f71a1]/[0.045] blur-[140px]" />
 
+        {/* Secondary atmosphere */}
+
         <div className="absolute bottom-[-200px] right-[-150px] h-[450px] w-[450px] rounded-full bg-[#46a65c]/[0.025] blur-[120px]" />
+
+        {/* Grid */}
 
         <div
           className="absolute inset-0 opacity-[0.02]"
@@ -125,11 +141,13 @@ export default function OnboardingShell({
           DESKTOP / TABLET
           ============================================================ */}
 
-      <div className="relative z-10 hidden min-h-screen w-full flex-col px-8 py-8 md:flex lg:px-12">
+      <div className="relative z-10 hidden h-screen min-h-0 w-full flex-col overflow-hidden px-8 py-8 md:flex lg:px-12">
         {/* Header */}
 
         <header className="mx-auto w-full max-w-6xl">
           <div className="flex items-center justify-between">
+            {/* Brand */}
+
             <div className="flex items-center gap-3">
               <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.08] bg-[#111419]">
                 <img
@@ -150,26 +168,32 @@ export default function OnboardingShell({
               </div>
             </div>
 
+            {/* Context */}
+
             <div className="text-[10px] text-white/20">
               Getting Started
             </div>
           </div>
 
+          {/* Progress */}
+
           <div className="mt-7">
             <OnboardingProgress
               currentIndex={currentIndex}
-              total={sections.length}
-              titles={sections.map(
+              total={onboardingSections.length}
+              titles={onboardingSections.map(
                 (section) => section.title
               )}
             />
           </div>
         </header>
 
-        {/* Main */}
+        {/* ==========================================================
+            MAIN
+            ========================================================== */}
 
         <div className="mx-auto flex min-h-0 w-full max-w-6xl flex-1 items-stretch py-8">
-          {/* Explanation sidebar */}
+          {/* Sidebar */}
 
           <OnboardingSidebar
             annotations={currentSection.annotations}
@@ -179,19 +203,23 @@ export default function OnboardingShell({
 
           <div className="flex min-h-0 min-w-0 flex-1 items-center">
             <div className="mx-auto flex h-full w-full max-w-3xl items-center">
-              <CurrentSection key={currentSection.id} />
+              <CurrentSection
+                key={currentSection.id}
+              />
             </div>
           </div>
         </div>
 
-        {/* Navigation */}
+        {/* ==========================================================
+            NAVIGATION
+            ========================================================== */}
 
         <footer className="mx-auto w-full max-w-6xl">
           <div className="ml-[300px] flex max-w-3xl justify-end">
             <div className="w-full max-w-md">
               <OnboardingNavigation
                 currentIndex={currentIndex}
-                total={sections.length}
+                total={onboardingSections.length}
                 onBack={goBack}
                 onNext={goNext}
                 onFinish={handleFinish}
@@ -209,13 +237,20 @@ export default function OnboardingShell({
       <div
         className="relative z-10 flex min-h-screen w-full flex-col md:hidden"
         onClick={(event) => {
-          const target = event.target as HTMLElement;
+          const target =
+            event.target as HTMLElement;
+
+          /*
+           * Don't trigger swipe/tap navigation when
+           * interacting with an actual button.
+           */
 
           if (target.closest("button")) {
             return;
           }
 
-          const midpoint = window.innerWidth / 2;
+          const midpoint =
+            window.innerWidth / 2;
 
           if (event.clientX < midpoint) {
             goBack();
@@ -229,8 +264,8 @@ export default function OnboardingShell({
         <div className="px-4 pt-5">
           <OnboardingProgress
             currentIndex={currentIndex}
-            total={sections.length}
-            titles={sections.map(
+            total={onboardingSections.length}
+            titles={onboardingSections.map(
               (section) => section.title
             )}
           />
@@ -239,6 +274,8 @@ export default function OnboardingShell({
         {/* Header */}
 
         <div className="flex items-center justify-between px-5 pt-5">
+          {/* Brand */}
+
           <div className="flex items-center gap-2.5">
             <div className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/[0.08] bg-[#111419]">
               <img
@@ -253,16 +290,23 @@ export default function OnboardingShell({
             </span>
           </div>
 
+          {/* Counter */}
+
           <span className="text-[10px] text-white/20">
-            {currentIndex + 1} / {sections.length}
+            {currentIndex + 1} /{" "}
+            {onboardingSections.length}
           </span>
         </div>
 
-        {/* Section */}
+        {/* ==========================================================
+            SECTION
+            ========================================================== */}
 
-        <div className="flex flex-1 items-center px-5">
-          <div className="w-full">
-            <CurrentSection key={currentSection.id} />
+        <div className="flex min-h-0 flex-1 items-center px-5">
+          <div className="flex h-full min-h-0 w-full items-center">
+            <CurrentSection
+              key={currentSection.id}
+            />
           </div>
         </div>
 
@@ -277,7 +321,7 @@ export default function OnboardingShell({
         <div className="px-5 pb-6">
           <OnboardingNavigation
             currentIndex={currentIndex}
-            total={sections.length}
+            total={onboardingSections.length}
             onBack={goBack}
             onNext={goNext}
             onFinish={handleFinish}
