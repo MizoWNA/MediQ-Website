@@ -92,29 +92,26 @@ export default function MentorSection(
          * ------------------------------------------------------------
          */
 
-        const { data, error: profileError } =
-          await supabase
-            .from("profiles")
-            .select(
-              `
-                mentor:profiles!profiles_mentor_id_fkey (
-                  id,
-                  username,
-                  display_name,
-                  year,
-                  phone_number,
-                  role
-                )
-              `
-            )
-            .eq("id", user.id)
-            .single();
+        const { data, error: profileError } = await supabase
+  .from("profiles")
+  .select(`
+    mentor_id,
+    mentor:profiles!profiles_mentor_id_fkey (
+      id,
+      username,
+      display_name,
+      year,
+      phone_number,
+      role
+    )
+  `)
+  .eq("id", user.id)
+  .single();
 
-        if (profileError) {
-          throw profileError;
-        }
-
-        if (cancelled) return;
+console.log("ONBOARDING MENTOR QUERY:", {
+  data,
+  error: profileError,
+});
 
         /*
          * ------------------------------------------------------------
