@@ -14,21 +14,6 @@ import {
  * ================================================================
  * PLAN SECTION — ANIMATION TIMELINE
  * ================================================================
- *
- * All values are milliseconds.
- *
- * enter = scene entrance duration
- * hold  = time the scene remains readable
- * exit  = scene exit duration
- *
- * Total scene duration:
- *
- *   enter + hold + exit
- *
- * These values are intentionally kept in one place so they can
- * later be synchronized with the voice-over.
- *
- * ================================================================
  */
 
 export const PLAN_ANIMATION_TIMINGS = {
@@ -186,7 +171,7 @@ function ModuleScene() {
     <SceneCard className="mx-auto w-full max-w-md p-5 sm:p-6 md:max-w-lg">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-[9px] font-medium uppercase tracking-[0.22em] text-[#5aa9d8]/65">
+          <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-[#5aa9d8]/65">
             Module 101
           </p>
 
@@ -194,7 +179,7 @@ function ModuleScene() {
             Cardiopulmonary
           </h2>
 
-          <p className="mt-1 text-[10px] text-white/25">
+          <p className="mt-1 text-xs text-white/25">
             The bigger picture.
           </p>
         </div>
@@ -216,7 +201,7 @@ function ModuleScene() {
               {stat.value}
             </p>
 
-            <p className="mt-1 text-[7px] uppercase tracking-[0.12em] text-white/20 sm:text-[8px]">
+            <p className="mt-1 text-[9px] uppercase tracking-[0.12em] text-white/20 sm:text-[10px]">
               {stat.label}
             </p>
           </div>
@@ -234,7 +219,7 @@ function BreakdownScene() {
   return (
     <div className="mx-auto w-full max-w-xl">
       <div className="mb-4 text-center sm:mb-5">
-        <p className="text-[9px] font-medium uppercase tracking-[0.22em] text-[#5aa9d8]/60">
+        <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-[#5aa9d8]/60">
           Module 101
         </p>
 
@@ -276,17 +261,17 @@ function BreakdownCard({
   subtitle: string;
 }) {
   return (
-    <div className="flex items-center gap-4 rounded-2xl border border-white/[0.07] bg-[#111419]/95 p-4 text-left shadow-[0_20px_60px_rgba(0,0,0,0.2)] md:block md:p-5 md:text-center">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/[0.07] bg-white/[0.025] text-[#5aa9d8]/65">
+    <div className="flex items-center gap-4 rounded-2xl border border-white/[0.07] bg-[#111419]/95 p-4 shadow-[0_20px_60px_rgba(0,0,0,0.2)] md:flex-col md:justify-center md:gap-0 md:p-6 md:text-center">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/[0.07] bg-white/[0.025] text-[#5aa9d8]/65 md:h-11 md:w-11">
         {icon}
       </div>
 
-      <div className="min-w-0">
-        <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-white/55">
+      <div className="min-w-0 md:mt-3">
+        <p className="text-xs font-medium uppercase tracking-[0.14em] text-white/55 sm:text-sm">
           {title}
         </p>
 
-        <p className="mt-1 text-[8px] text-white/20">
+        <p className="mt-1 text-[10px] text-white/20 sm:text-xs">
           {subtitle}
         </p>
       </div>
@@ -300,43 +285,37 @@ function BreakdownCard({
 
 function TasksScene() {
   return (
-    <div className="mx-auto w-full max-w-md md:max-w-lg">
+    <div className="mx-auto w-full max-w-3xl">
       <div className="mb-4 text-center">
-        <p className="text-[9px] font-medium uppercase tracking-[0.22em] text-[#5aa9d8]/60">
+        <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-[#5aa9d8]/60 sm:text-xs">
           Manageable tasks
-        </p>
-
-        <p className="mt-2 text-sm text-white/35 sm:text-base">
-          Big work becomes something you can actually do.
         </p>
       </div>
 
-      <div className="space-y-2.5">
+      <div className="grid grid-cols-1 gap-2.5 md:grid-cols-3 md:gap-4">
         {TASKS.map((task) => {
           const Icon = task.icon;
 
           return (
             <div
               key={task.title}
-              className="flex items-center gap-3 rounded-2xl border border-white/[0.07] bg-[#111419]/95 px-4 py-3.5 shadow-[0_15px_50px_rgba(0,0,0,0.18)] sm:px-5 sm:py-4"
+              className="flex min-h-[150px] flex-col items-center justify-center rounded-3xl border border-white/[0.07] bg-[#111419]/95 px-5 py-6 text-center shadow-[0_20px_60px_rgba(0,0,0,0.2)] md:min-h-[190px] md:px-6 md:py-8"
             >
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/[0.06] bg-white/[0.025]">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/[0.06] bg-white/[0.025]">
                 <Icon className="h-4 w-4 text-[#5aa9d8]/65" />
               </div>
 
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-[10px] font-medium text-white/65 sm:text-[11px]">
-                  {task.title}
-                </p>
+              <p className="mt-4 text-xs font-medium leading-5 text-white/65 sm:text-sm">
+                {task.title}
+              </p>
 
-                <p className="mt-1 text-[7px] uppercase tracking-[0.13em] text-white/20 sm:text-[8px]">
-                  {task.type}
-                </p>
-              </div>
+              <p className="mt-1.5 text-[10px] uppercase tracking-[0.14em] text-white/20 sm:text-xs">
+                {task.type}
+              </p>
 
-              <span className="shrink-0 text-[8px] text-white/20 sm:text-[9px]">
+              <p className="mt-2 text-[10px] text-white/25 sm:text-xs">
                 {task.meta}
-              </span>
+              </p>
             </div>
           );
         })}
@@ -352,36 +331,35 @@ function TasksScene() {
 function WeekScene() {
   return (
     <div className="mx-auto w-full max-w-3xl">
-      <div className="mb-3 flex items-end justify-between px-1 sm:mb-4">
+      <div className="mb-4 flex items-end justify-between px-1 sm:mb-5">
         <div>
-          <p className="text-[9px] font-medium uppercase tracking-[0.22em] text-[#5aa9d8]/60">
+          <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-[#5aa9d8]/60 sm:text-xs">
             Your week
           </p>
 
-          <p className="mt-1.5 text-[11px] text-white/40 sm:text-sm">
+          <p className="mt-1.5 text-xs text-white/40 sm:text-sm">
             A little progress, consistently.
           </p>
         </div>
 
-        <ListChecks className="mb-1 h-4 w-4 text-white/15" />
+        <ListChecks className="mb-1 h-5 w-5 text-white/15" />
       </div>
 
-      {/* Mobile: vertical timeline */}
-      <div className="space-y-2.5 md:hidden">
+      <div className="space-y-2.5 sm:space-y-3">
         {WEEK_TASKS.map((task, index) => (
           <div
             key={task.day}
             className={[
-              "flex items-center gap-3 rounded-2xl border px-4 py-3.5",
+              "flex items-center gap-3 rounded-2xl border px-3.5 py-3.5 sm:gap-4 sm:px-5 sm:py-4 md:px-6 md:py-4",
               index === 1
                 ? "border-[#5aa9d8]/20 bg-[#5aa9d8]/[0.045]"
                 : "border-white/[0.07] bg-[#111419]/95",
             ].join(" ")}
           >
-            <div className="flex w-10 shrink-0 flex-col items-center">
+            <div className="flex w-10 shrink-0 flex-col items-center sm:w-12">
               <p
                 className={[
-                  "text-[8px] font-medium tracking-[0.14em]",
+                  "text-[9px] font-medium tracking-[0.14em] sm:text-[10px]",
                   index === 1
                     ? "text-[#5aa9d8]/65"
                     : "text-white/25",
@@ -390,11 +368,7 @@ function WeekScene() {
                 {task.day}
               </p>
 
-              <div
-                className={[
-                  "mt-2 h-1 w-full overflow-hidden rounded-full bg-white/[0.05]",
-                ].join(" ")}
-              >
+              <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-white/[0.05]">
                 <div
                   className={[
                     "h-full rounded-full",
@@ -409,61 +383,14 @@ function WeekScene() {
             </div>
 
             <div className="min-w-0 flex-1">
-              <p className="text-[10px] font-medium text-white/55 sm:text-[11px]">
+              <p className="text-xs font-medium leading-5 text-white/55 sm:text-sm">
                 {task.title}
               </p>
 
-              <p className="mt-1 text-[8px] text-white/20">
+              <p className="mt-1 text-[9px] text-white/20 sm:text-[10px]">
                 {task.meta}
               </p>
             </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Desktop: horizontal week */}
-      <div className="hidden md:grid md:grid-cols-5 md:gap-2">
-        {WEEK_TASKS.map((task, index) => (
-          <div
-            key={task.day}
-            className={[
-              "min-w-0 rounded-2xl border p-3",
-              index === 1
-                ? "border-[#5aa9d8]/20 bg-[#5aa9d8]/[0.045]"
-                : "border-white/[0.07] bg-[#111419]/95",
-            ].join(" ")}
-          >
-            <p
-              className={[
-                "text-[8px] font-medium tracking-[0.14em]",
-                index === 1
-                  ? "text-[#5aa9d8]/65"
-                  : "text-white/20",
-              ].join(" ")}
-            >
-              {task.day}
-            </p>
-
-            <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-white/[0.05]">
-              <div
-                className={[
-                  "h-full rounded-full",
-                  index === 1
-                    ? "w-[72%] bg-[#5aa9d8]/45"
-                    : index === 3
-                      ? "w-[52%] bg-white/15"
-                      : "w-[38%] bg-white/10",
-                ].join(" ")}
-              />
-            </div>
-
-            <p className="mt-3 min-h-[28px] text-[9px] font-medium leading-4 text-white/50">
-              {task.title}
-            </p>
-
-            <p className="mt-1 text-[7px] leading-3 text-white/20">
-              {task.meta}
-            </p>
           </div>
         ))}
       </div>
@@ -477,15 +404,15 @@ function WeekScene() {
 
 function TodayScene() {
   return (
-    <div className="mx-auto w-full max-w-md md:max-w-lg">
-      <div className="rounded-3xl border border-[#5aa9d8]/15 bg-[#111419]/95 p-4 shadow-[0_25px_80px_rgba(0,0,0,0.25)] sm:p-5">
+    <div className="mx-auto w-full max-w-2xl">
+      <div className="rounded-3xl border border-[#5aa9d8]/15 bg-[#111419]/95 p-4 shadow-[0_25px_80px_rgba(0,0,0,0.25)] sm:p-5 md:p-6">
         <div className="mb-4 flex items-start justify-between sm:mb-5">
           <div>
-            <p className="text-[9px] font-medium uppercase tracking-[0.22em] text-[#5aa9d8]/65">
+            <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-[#5aa9d8]/65 sm:text-xs">
               Today
             </p>
 
-            <h3 className="mt-2 text-base font-semibold tracking-[-0.025em] text-white/80 sm:text-lg">
+            <h3 className="mt-2 text-lg font-semibold tracking-[-0.025em] text-white/80 sm:text-xl md:text-2xl">
               Just focus on what's next.
             </h3>
           </div>
@@ -495,7 +422,7 @@ function TodayScene() {
           </div>
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-2.5 sm:space-y-3">
           <TodayTask
             title="Review Respiratory Mechanics"
             meta="Anatomy · 25 min"
@@ -524,15 +451,15 @@ function TodayTask({
   meta: string;
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-2xl border border-white/[0.06] bg-white/[0.018] px-3.5 py-3 sm:px-4 sm:py-3.5">
+    <div className="flex items-center gap-3 rounded-2xl border border-white/[0.06] bg-white/[0.018] px-3.5 py-3.5 sm:px-4 sm:py-4">
       <div className="h-4 w-4 shrink-0 rounded-full border border-white/15" />
 
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[9px] font-medium text-white/60 sm:text-[10px]">
+        <p className="truncate text-[11px] font-medium leading-5 text-white/60 sm:text-xs md:text-sm">
           {title}
         </p>
 
-        <p className="mt-1 text-[7px] text-white/20 sm:text-[8px]">
+        <p className="mt-1 text-[9px] text-white/20 sm:text-[10px]">
           {meta}
         </p>
       </div>
@@ -548,7 +475,7 @@ function OverviewScene() {
   return (
     <div className="mx-auto w-full max-w-3xl">
       <div className="mb-5 text-center sm:mb-6">
-        <p className="text-[9px] font-medium uppercase tracking-[0.22em] text-[#5aa9d8]/60">
+        <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-[#5aa9d8]/60 sm:text-xs">
           The bigger picture
         </p>
 
@@ -556,7 +483,7 @@ function OverviewScene() {
           One step at a time.
         </h2>
 
-        <p className="mx-auto mt-2 max-w-md text-[9px] leading-4 text-white/30 sm:mt-3 sm:text-[11px] sm:leading-5">
+        <p className="mx-auto mt-2 max-w-md text-[10px] leading-5 text-white/30 sm:mt-3 sm:text-xs">
           You focus on what comes next.
           <br />
           MediQ keeps the bigger picture in view.
@@ -564,13 +491,10 @@ function OverviewScene() {
       </div>
 
       <div className="relative mx-auto max-w-2xl">
-        {/* Mobile vertical connector */}
         <div className="absolute bottom-5 left-6 top-5 w-px bg-white/[0.06] md:hidden" />
 
-        {/* Desktop horizontal connector */}
         <div className="absolute left-1/2 top-14 hidden h-px w-[72%] -translate-x-1/2 bg-white/[0.06] md:block" />
 
-        {/* Mobile: vertical */}
         <div className="space-y-2.5 md:hidden">
           <OverviewNode
             label="Module"
@@ -604,37 +528,36 @@ function OverviewScene() {
           />
         </div>
 
-        {/* Desktop: horizontal */}
         <div className="hidden md:grid md:grid-cols-5 md:gap-2">
           <OverviewNode
             label="Module"
             value="101"
-            icon={<BookOpen className="h-3.5 w-3.5" />}
+            icon={<BookOpen className="h-4 w-4" />}
           />
 
           <OverviewNode
             label="Learn"
             value="Lectures"
-            icon={<BookOpen className="h-3.5 w-3.5" />}
+            icon={<BookOpen className="h-4 w-4" />}
           />
 
           <OverviewNode
             label="Practice"
             value="MCQs"
-            icon={<FileQuestion className="h-3.5 w-3.5" />}
+            icon={<FileQuestion className="h-4 w-4" />}
             active
           />
 
           <OverviewNode
             label="Reinforce"
             value="Review"
-            icon={<RotateCcw className="h-3.5 w-3.5" />}
+            icon={<RotateCcw className="h-4 w-4" />}
           />
 
           <OverviewNode
             label="Today"
             value="3 tasks"
-            icon={<Check className="h-3.5 w-3.5" />}
+            icon={<Check className="h-4 w-4" />}
           />
         </div>
       </div>
@@ -667,11 +590,11 @@ function OverviewNode({
       </div>
 
       <div className="min-w-0">
-        <p className="text-[7px] uppercase tracking-[0.14em] text-white/20 md:mt-2 md:text-[7px]">
+        <p className="text-[8px] uppercase tracking-[0.14em] text-white/20 md:mt-2 md:text-[9px]">
           {label}
         </p>
 
-        <p className="mt-0.5 truncate text-[10px] font-medium text-white/50 md:text-[9px]">
+        <p className="mt-0.5 truncate text-[11px] font-medium text-white/50 md:text-[10px]">
           {value}
         </p>
       </div>
@@ -798,4 +721,3 @@ export default function PlanSection() {
     </section>
   );
 }
-
