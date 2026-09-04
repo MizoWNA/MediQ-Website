@@ -68,10 +68,10 @@ export default function MentorSection(
 
       try {
         /*
-         * ------------------------------------------------------------
-         * Get the currently authenticated student
-         * ------------------------------------------------------------
-         */
+        * ------------------------------------------------------------
+        * Get the currently authenticated student
+        * ------------------------------------------------------------
+        */
 
         const {
           data: { user },
@@ -87,55 +87,69 @@ export default function MentorSection(
         }
 
         /*
-         * ------------------------------------------------------------
-         * Fetch the student's mentor through the self-reference
-         * ------------------------------------------------------------
-         */
+        * ------------------------------------------------------------
+        * Get the student's mentor_id
+        * ------------------------------------------------------------
+        */
 
-        const { data, error: profileError } = await supabase
-  .from("profiles")
-  .select(`
-    mentor_id,
-    mentor:profiles!profiles_mentor_id_fkey (
-      id,
-      username,
-      display_name,
-      year,
-      phone_number,
-      role
-    )
-  `)
-  .eq("id", user.id)
-  .single();
+        const { data: studentProfile, error: studentError } =
+          await supabase
+            .from("profiles")
+            .select("mentor_id")
+            .eq("id", user.id)
+            .single();
 
-console.log("ONBOARDING MENTOR QUERY:", {
-  data,
-  error: profileError,
-});
+        if (studentError) {
+          throw studentError;
+        }
 
-        /*
-         * ------------------------------------------------------------
-         * No mentor assigned
-         * ------------------------------------------------------------
-         */
+        if (!studentProfile?.mentor_id) {
+          if (!cancelled) {
+            setMentor(null);
+            setLoading(false);
+          }
 
-        if (!data?.mentor) {
-          setMentor(null);
-          setLoading(false);
           return;
         }
 
         /*
-         * ------------------------------------------------------------
-         * Normalize mentor data
-         * ------------------------------------------------------------
-         */
+        * ------------------------------------------------------------
+        * Fetch the mentor directly
+        * ------------------------------------------------------------
+        */
+
+        const { data: mentorProfile, error: mentorError } =
+          await supabase
+            .from("profiles")
+            .select(`
+              id,
+              username,
+              display_name,
+              year,
+              phone_number,
+              role
+            `)
+            .eq("id", studentProfile.mentor_id)
+            .eq("role", "mentor")
+            .single();
+
+        if (mentorError) {
+          throw mentorError;
+        }
+
+        if (cancelled) return;
+
+        /*
+        * ------------------------------------------------------------
+        * Store normalized mentor data
+        * ------------------------------------------------------------
+        */
 
         setMentor({
-          username: data.mentor.username,
-          name: data.mentor.display_name,
-          year: data.mentor.year,
-          phone: data.mentor.phone_number,
+          username: mentorProfile.username,
+          name: mentorProfile.display_name,
+          year: mentorProfile.year,
+          phone: mentorProfile.phone_number,
         });
 
         setAvatarError(false);
