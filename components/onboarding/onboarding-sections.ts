@@ -11,52 +11,50 @@ export interface OnboardingAnnotation {
 export interface OnboardingSection {
   id: string;
   title: string;
-  component: ComponentType;
   annotations: OnboardingAnnotation[];
-  voiceover?: string;
+  component: ComponentType;
 }
 
 export const onboardingSections: OnboardingSection[] = [
   {
     id: "welcome",
     title: "Welcome",
-    component: WelcomeSection,
-
     annotations: [
       {
-        label: "Workspace",
-        text: "Your central hub for everything MediQ.",
+        label: "Your Home",
+        text: "MediQ brings your academic work, plans, and progress together in one place.",
       },
       {
-        label: "Mentorship",
-        text: "Your mentor, resources, and guidance in one place.",
+        label: "Your Plan",
+        text: "Your mentorship journey is built around what you need to work on next.",
       },
       {
-        label: "Progress",
-        text: "See what you've done and what's coming next.",
+        label: "Your Progress",
+        text: "As you move through the program, MediQ keeps your progress visible.",
       },
     ],
-
-    // Add when the recording is ready:
-    // voiceover: "/audio/onboarding/welcome.mp3",
+    component: WelcomeSection,
   },
+
   {
     id: "mentor",
     title: "Your Mentor",
-    component: MentorSection,
     annotations: [
       {
-        label: "YOUR MENTOR",
-        text: "Someone assigned specifically to support your journey through MediQ.",
+        label: "Someone in your corner",
+        text: "Your mentor is here to help you navigate the program and make better decisions about your studies.",
       },
       {
-        label: "GUIDANCE",
-        text: "Get another perspective when you're unsure what to do next.",
+        label: "Guidance",
+        text: "Reach out when you're unsure what to prioritize, how to approach something, or what comes next.",
       },
       {
-        label: "ACCOUNTABILITY",
-        text: "Turn your plans into goals you can actually follow through on.",
+        label: "Accountability",
+        text: "Your mentor can help turn plans into goals and keep you moving forward.",
       },
     ],
+    component: MentorSection,
   },
+
+  // Future sections go here.
 ];
