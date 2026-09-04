@@ -3,6 +3,8 @@ import type { ComponentType } from "react";
 import WelcomeSection from "./sections/WelcomeSection";
 import MentorSection from "./sections/MentorSection";
 import PlanSection from "./sections/PlanSection";
+import DashboardSection from './sections/DashboardSection';
+import TaskSection from "./sections/TaskSection";
 
 export interface OnboardingAnnotation {
 label: string;
@@ -75,5 +77,45 @@ text: "Instead of wondering what to do next, you can focus on the next step and 
 },
 ],
 component: PlanSection,
+},
+
+{
+id: "dashboard",
+title: "Your Dashboard",
+annotations: [
+{
+label: "The bigger picture",
+text: "Medical school is a lot to take on at once. MediQ helps break the workload into something more manageable.",
+},
+{
+label: "One step at a time",
+text: "Lectures, questions, and review become clear tasks you can work through without losing sight of the bigger goal.",
+},
+{
+label: "Daily progress",
+text: "Instead of wondering what to do next, you can focus on the next step and keep moving forward.",
+},
+],
+component: DashboardSection,
+},
+
+{
+id: "dashboard",
+title: "Your Dashboard",
+annotations: [
+{
+label: "The bigger picture",
+text: "Medical school is a lot to take on at once. MediQ helps break the workload into something more manageable.",
+},
+{
+label: "One step at a time",
+text: "Lectures, questions, and review become clear tasks you can work through without losing sight of the bigger goal.",
+},
+{
+label: "Daily progress",
+text: "Instead of wondering what to do next, you can focus on the next step and keep moving forward.",
+},
+],
+component: TaskSection,
 },
 ];
