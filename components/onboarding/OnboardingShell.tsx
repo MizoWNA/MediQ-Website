@@ -141,7 +141,7 @@ export default function OnboardingShell({
           DESKTOP / TABLET
           ============================================================ */}
 
-      <div className="relative z-10 hidden min-h-screen w-full flex-col px-8 py-8 md:flex lg:px-12">
+      <div className="relative z-10 hidden h-screen min-h-0 w-full flex-col overflow-hidden px-8 py-8 md:flex lg:px-12">
         {/* Header */}
 
         <header className="mx-auto w-full max-w-6xl">
@@ -302,8 +302,8 @@ export default function OnboardingShell({
             SECTION
             ========================================================== */}
 
-        <div className="flex flex-1 items-center px-5">
-          <div className="w-full">
+        <div className="flex min-h-0 flex-1 items-center px-5">
+          <div className="flex h-full min-h-0 w-full items-center">
             <CurrentSection
               key={currentSection.id}
             />
