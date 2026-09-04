@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import {
-  Check,
   ClipboardList,
   Crosshair,
   GraduationCap,
@@ -14,131 +13,77 @@ import {
  * READY SECTION
  * ================================================================
  *
- * Final onboarding moment.
+ * The final onboarding moment.
  *
- * The four things the student has just been introduced to:
+ * Instead of introducing another feature, this section brings
+ * everything together around MediQ.
  *
- *   Mentor
- *   Plan
- *   Tasks
- *   Progress
+ * Animation:
  *
- * gradually come together around MediQ before the final message
- * appears.
+ *   1. MediQ logo appears
+ *   2. Four subtle connection lines draw outward
+ *   3. Mentor / Plan / Tasks / Progress appear
+ *   4. The system gently settles
+ *   5. Final message fades in
  *
- * This is intentionally self-contained.
- * No Supabase.
  * No external data.
+ * No Supabase.
+ * Fully self-contained.
  * ================================================================
  */
-
-const TIMINGS = {
-  start: 500,
-  itemStep: 750,
-  settle: 1100,
-  message: 900,
-};
-
-/* ================================================================
- * TYPES
- * ================================================================ */
-
-type Phase =
-  | "intro"
-  | "items"
-  | "settle"
-  | "message";
-
-/* ================================================================
- * DATA
- * ================================================================ */
 
 const ITEMS = [
   {
     label: "Mentor",
     icon: GraduationCap,
-    position:
-      "left-[8%] top-[18%] sm:left-[14%] sm:top-[20%]",
-    delay: 0,
+    side: "left",
+    position: "top-[18%]",
   },
   {
     label: "Plan",
     icon: ClipboardList,
-    position:
-      "right-[8%] top-[18%] sm:right-[14%] sm:top-[20%]",
-    delay: 1,
+    side: "right",
+    position: "top-[18%]",
   },
   {
     label: "Tasks",
     icon: Crosshair,
-    position:
-      "left-[8%] bottom-[18%] sm:left-[14%] sm:bottom-[20%]",
-    delay: 2,
+    side: "left",
+    position: "bottom-[18%]",
   },
   {
     label: "Progress",
     icon: TrendingUp,
-    position:
-      "right-[8%] bottom-[18%] sm:right-[14%] sm:bottom-[20%]",
-    delay: 3,
+    side: "right",
+    position: "bottom-[18%]",
   },
 ];
 
-/* ================================================================
- * MAIN COMPONENT
- * ================================================================ */
-
 export default function ReadySection() {
-  const [phase, setPhase] =
-    useState<Phase>("intro");
-
-  const [visibleItems, setVisibleItems] =
-    useState(0);
+  const [started, setStarted] = useState(false);
+  const [connected, setConnected] = useState(false);
+  const [showMessage, setShowMessage] =
+    useState(false);
 
   useEffect(() => {
-    let timer: number | undefined;
+    const startTimer = window.setTimeout(() => {
+      setStarted(true);
+    }, 350);
 
-    if (phase === "intro") {
-      timer = window.setTimeout(() => {
-        setPhase("items");
-      }, TIMINGS.start);
-    }
+    const connectionTimer = window.setTimeout(() => {
+      setConnected(true);
+    }, 1250);
 
-    if (phase === "items") {
-      if (visibleItems < ITEMS.length) {
-        timer = window.setTimeout(() => {
-          setVisibleItems((current) =>
-            Math.min(current + 1, ITEMS.length)
-          );
-        }, TIMINGS.itemStep);
-      } else {
-        timer = window.setTimeout(() => {
-          setPhase("settle");
-        }, TIMINGS.settle);
-      }
-    }
-
-    if (phase === "settle") {
-      timer = window.setTimeout(() => {
-        setPhase("message");
-      }, TIMINGS.message);
-    }
+    const messageTimer = window.setTimeout(() => {
+      setShowMessage(true);
+    }, 2700);
 
     return () => {
-      if (timer !== undefined) {
-        window.clearTimeout(timer);
-      }
+      window.clearTimeout(startTimer);
+      window.clearTimeout(connectionTimer);
+      window.clearTimeout(messageTimer);
     };
-  }, [phase, visibleItems]);
-
-  const showItems =
-    phase === "items" ||
-    phase === "settle" ||
-    phase === "message";
-
-  const settled =
-    phase === "settle" ||
-    phase === "message";
+  }, []);
 
   return (
     <section className="relative flex h-full min-h-0 w-full items-center justify-center overflow-hidden px-5 py-6 text-white sm:px-8">
@@ -146,140 +91,145 @@ export default function ReadySection() {
        * AMBIENT LIGHT
        * ========================================================= */}
 
-      <div className="pointer-events-none absolute left-1/2 top-1/2 h-[460px] w-[460px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#1f71a1]/[0.045] blur-[140px]" />
-
       <div
         className={[
-          "pointer-events-none absolute left-1/2 top-1/2 h-[260px] w-[260px]",
-          "-translate-x-1/2 -translate-y-1/2 rounded-full",
-          "bg-[#46a65c]/[0.025] blur-[100px]",
-          "transition-all duration-[1800ms]",
-          settled
-            ? "scale-125 opacity-100"
+          "pointer-events-none absolute left-1/2 top-[39%]",
+          "h-[460px] w-[460px]",
+          "-translate-x-1/2 -translate-y-1/2",
+          "rounded-full bg-[#1f71a1]/[0.035] blur-[140px]",
+          "transition-all duration-[2200ms]",
+          started
+            ? "scale-100 opacity-100"
             : "scale-75 opacity-0",
         ].join(" ")}
       />
 
+      <div
+        className={[
+          "pointer-events-none absolute left-1/2 top-[39%]",
+          "h-[220px] w-[220px]",
+          "-translate-x-1/2 -translate-y-1/2",
+          "rounded-full bg-[#46a65c]/[0.025] blur-[90px]",
+          "transition-all duration-[2000ms]",
+          connected
+            ? "scale-100 opacity-100"
+            : "scale-50 opacity-0",
+        ].join(" ")}
+      />
+
       {/* =========================================================
-       * MAIN CONTENT
+       * CONTENT
        * ========================================================= */}
 
       <div className="relative z-10 flex h-full w-full max-w-3xl flex-col items-center justify-center">
         {/* =======================================================
-         * VISUAL
+         * SYSTEM VISUAL
          * ======================================================= */}
 
-        <div
-          className="relative h-[300px] w-full sm:h-[330px]"
-          aria-hidden="true"
-        >
+        <div className="relative h-[300px] w-full sm:h-[330px]">
           {/* -----------------------------------------------------
-           * CONNECTING LINES
+           * CONNECTION LINES
+           * ----------------------------------------------------- */}
+
+          {/* Top left */}
+          <div
+            className={[
+              "absolute left-[20%] top-[28%]",
+              "h-px origin-left",
+              "bg-gradient-to-r from-[#5aa9d8]/30 to-white/[0.04]",
+              "transition-all duration-[1000ms]",
+              connected
+                ? "w-[23%] opacity-100"
+                : "w-0 opacity-0",
+            ].join(" ")}
+          />
+
+          {/* Top right */}
+          <div
+            className={[
+              "absolute right-[20%] top-[28%]",
+              "h-px origin-right",
+              "bg-gradient-to-l from-[#5aa9d8]/30 to-white/[0.04]",
+              "transition-all duration-[1000ms]",
+              connected
+                ? "w-[23%] opacity-100"
+                : "w-0 opacity-0",
+            ].join(" ")}
+          />
+
+          {/* Bottom left */}
+          <div
+            className={[
+              "absolute bottom-[28%] left-[20%]",
+              "h-px origin-left",
+              "bg-gradient-to-r from-[#5aa9d8]/20 to-white/[0.03]",
+              "transition-all duration-[1000ms]",
+              connected
+                ? "w-[23%] opacity-100"
+                : "w-0 opacity-0",
+            ].join(" ")}
+          />
+
+          {/* Bottom right */}
+          <div
+            className={[
+              "absolute bottom-[28%] right-[20%]",
+              "h-px origin-right",
+              "bg-gradient-to-l from-[#5aa9d8]/20 to-white/[0.03]",
+              "transition-all duration-[1000ms]",
+              connected
+                ? "w-[23%] opacity-100"
+                : "w-0 opacity-0",
+            ].join(" ")}
+          />
+
+          {/* -----------------------------------------------------
+           * SMALL CONNECTION NODES
            * ----------------------------------------------------- */}
 
           <div
             className={[
-              "pointer-events-none absolute left-1/2 top-1/2",
-              "h-[1px] w-[58%] -translate-x-1/2",
-              "bg-gradient-to-r from-transparent via-white/[0.08] to-transparent",
-              "transition-opacity duration-[1400ms]",
-              settled ? "opacity-100" : "opacity-0",
-            ].join(" ")}
-          />
-
-          <div
-            className={[
-              "pointer-events-none absolute left-1/2 top-1/2",
-              "h-[58%] w-[1px] -translate-x-1/2 -translate-y-1/2",
-              "bg-gradient-to-b from-transparent via-white/[0.08] to-transparent",
-              "transition-opacity duration-[1400ms]",
-              settled ? "opacity-100" : "opacity-0",
-            ].join(" ")}
-          />
-
-          {/* -----------------------------------------------------
-           * OUTER RING
-           * ----------------------------------------------------- */}
-
-          <div
-            className={[
-              "absolute left-1/2 top-1/2",
-              "h-[150px] w-[150px]",
-              "-translate-x-1/2 -translate-y-1/2",
-              "rounded-full border border-white/[0.055]",
-              "transition-all duration-[1400ms]",
-              settled
-                ? "scale-110 opacity-100"
-                : "scale-75 opacity-40",
-            ].join(" ")}
-          />
-
-          <div
-            className={[
-              "absolute left-1/2 top-1/2",
-              "h-[116px] w-[116px]",
-              "-translate-x-1/2 -translate-y-1/2",
-              "rounded-full border border-[#5aa9d8]/[0.12]",
-              "transition-all duration-[1400ms]",
-              settled
-                ? "scale-110 opacity-100"
-                : "scale-90 opacity-60",
-            ].join(" ")}
-          />
-
-          {/* -----------------------------------------------------
-           * CENTRAL MEDIQ LOGO
-           * ----------------------------------------------------- */}
-
-          <div
-            className={[
-              "absolute left-1/2 top-1/2",
-              "flex h-[78px] w-[78px]",
-              "-translate-x-1/2 -translate-y-1/2",
-              "items-center justify-center",
-              "rounded-[24px]",
-              "border border-white/[0.09]",
-              "bg-[#111419]",
-              "transition-all duration-[1200ms]",
-              "z-20",
-              settled
-                ? "scale-100 opacity-100"
-                : "scale-90 opacity-100",
-            ].join(" ")}
-            style={{
-              boxShadow:
-                settled
-                  ? "0 0 0 1px rgba(31,113,161,0.14), 0 0 50px rgba(31,113,161,0.08)"
-                  : "0 0 0 1px rgba(31,113,161,0.08)",
-            }}
-          >
-            <img
-              src="/mediq.svg"
-              alt=""
-              className="h-11 w-11 object-contain"
-            />
-          </div>
-
-          {/* -----------------------------------------------------
-           * CENTRAL CHECK
-           * ----------------------------------------------------- */}
-
-          <div
-            className={[
-              "absolute left-1/2 top-1/2 z-30",
-              "flex h-6 w-6",
-              "-translate-y-1/2 translate-x-[28px]",
-              "items-center justify-center",
-              "rounded-full border border-[#46a65c]/20",
-              "bg-[#101713]",
+              "absolute left-[19%] top-[calc(28%-2px)]",
+              "h-1 w-1 rounded-full bg-[#5aa9d8]/40",
               "transition-all duration-700",
-              settled
+              connected
                 ? "scale-100 opacity-100"
-                : "scale-50 opacity-0",
+                : "scale-0 opacity-0",
             ].join(" ")}
-          >
-            <Check className="h-3 w-3 text-emerald-400/80" />
-          </div>
+          />
+
+          <div
+            className={[
+              "absolute right-[19%] top-[calc(28%-2px)]",
+              "h-1 w-1 rounded-full bg-[#5aa9d8]/40",
+              "transition-all duration-700",
+              connected
+                ? "scale-100 opacity-100"
+                : "scale-0 opacity-0",
+            ].join(" ")}
+          />
+
+          <div
+            className={[
+              "absolute bottom-[calc(28%-2px)] left-[19%]",
+              "h-1 w-1 rounded-full bg-[#5aa9d8]/30",
+              "transition-all duration-700",
+              connected
+                ? "scale-100 opacity-100"
+                : "scale-0 opacity-0",
+            ].join(" ")}
+          />
+
+          <div
+            className={[
+              "absolute bottom-[calc(28%-2px)] right-[19%]",
+              "h-1 w-1 rounded-full bg-[#5aa9d8]/30",
+              "transition-all duration-700",
+              connected
+                ? "scale-100 opacity-100"
+                : "scale-0 opacity-0",
+            ].join(" ")}
+          />
 
           {/* -----------------------------------------------------
            * FOUR CONCEPTS
@@ -288,47 +238,146 @@ export default function ReadySection() {
           {ITEMS.map((item, index) => {
             const Icon = item.icon;
 
-            const visible =
-              showItems &&
-              visibleItems > index;
+            const isLeft = item.side === "left";
 
             return (
               <div
                 key={item.label}
                 className={[
-                  "absolute flex items-center gap-2",
+                  "absolute",
                   item.position,
-                  "transition-all duration-[1100ms]",
-                  visible
-                    ? "translate-x-0 translate-y-0 scale-100 opacity-100"
-                    : "scale-90 opacity-0",
-                  settled
-                    ? "left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 scale-[0.72] opacity-0"
-                    : "",
+                  isLeft
+                    ? "left-[6%] sm:left-[11%]"
+                    : "right-[6%] sm:right-[11%]",
+                  "transition-all duration-[1000ms]",
+                  connected
+                    ? "translate-y-0 scale-100 opacity-100"
+                    : isLeft
+                      ? "-translate-x-5 scale-95 opacity-0"
+                      : "translate-x-5 scale-95 opacity-0",
                 ].join(" ")}
                 style={{
-                  transitionDelay: settled
-                    ? `${item.delay * 70}ms`
-                    : "0ms",
+                  transitionDelay: `${index * 120}ms`,
                 }}
               >
                 <div
                   className={[
-                    "flex h-9 w-9 shrink-0 items-center justify-center",
-                    "rounded-xl border border-white/[0.07]",
-                    "bg-[#111419]/95",
-                    "shadow-[0_8px_30px_rgba(0,0,0,0.18)]",
+                    "flex items-center gap-2.5",
+                    isLeft
+                      ? "flex-row"
+                      : "flex-row-reverse",
                   ].join(" ")}
                 >
-                  <Icon className="h-4 w-4 text-white/35" />
-                </div>
+                  <div
+                    className={[
+                      "flex h-9 w-9 shrink-0 items-center justify-center",
+                      "rounded-xl border",
+                      "bg-[#111419]/90",
+                      "backdrop-blur-sm",
+                      "transition-all duration-1000",
+                      connected
+                        ? "border-white/[0.08]"
+                        : "border-transparent",
+                    ].join(" ")}
+                  >
+                    <Icon className="h-4 w-4 text-white/35" />
+                  </div>
 
-                <span className="whitespace-nowrap text-[10px] font-medium uppercase tracking-[0.16em] text-white/25">
-                  {item.label}
-                </span>
+                  <span
+                    className={[
+                      "text-[10px] font-medium uppercase",
+                      "tracking-[0.16em] text-white/25",
+                    ].join(" ")}
+                  >
+                    {item.label}
+                  </span>
+                </div>
               </div>
             );
           })}
+
+          {/* -----------------------------------------------------
+           * CENTRAL RINGS
+           * ----------------------------------------------------- */}
+
+          <div
+            className={[
+              "absolute left-1/2 top-1/2",
+              "h-[150px] w-[150px]",
+              "-translate-x-1/2 -translate-y-1/2",
+              "rounded-full border border-white/[0.045]",
+              "transition-all duration-[1600ms]",
+              started
+                ? "scale-100 opacity-100"
+                : "scale-75 opacity-0",
+            ].join(" ")}
+          />
+
+          <div
+            className={[
+              "absolute left-1/2 top-1/2",
+              "h-[112px] w-[112px]",
+              "-translate-x-1/2 -translate-y-1/2",
+              "rounded-full border border-[#5aa9d8]/[0.10]",
+              "transition-all duration-[1600ms]",
+              connected
+                ? "scale-100 opacity-100"
+                : "scale-75 opacity-0",
+            ].join(" ")}
+          />
+
+          {/* -----------------------------------------------------
+           * MEDIQ LOGO
+           * ----------------------------------------------------- */}
+
+          <div
+            className={[
+              "absolute left-1/2 top-1/2 z-20",
+              "flex h-[78px] w-[78px]",
+              "-translate-x-1/2 -translate-y-1/2",
+              "items-center justify-center",
+              "rounded-[24px]",
+              "border border-white/[0.09]",
+              "bg-[#111419]",
+              "transition-all duration-[1200ms]",
+              started
+                ? "scale-100 opacity-100"
+                : "scale-75 opacity-0",
+            ].join(" ")}
+            style={{
+              boxShadow:
+                connected
+                  ? "0 0 0 1px rgba(31,113,161,0.14), 0 0 55px rgba(31,113,161,0.07)"
+                  : "0 0 0 1px rgba(31,113,161,0.08)",
+            }}
+          >
+            <img
+              src="/mediq.svg"
+              alt="MediQ"
+              className="relative z-10 h-11 w-11 object-contain"
+            />
+          </div>
+
+          {/* -----------------------------------------------------
+           * CENTER PULSE
+           * ----------------------------------------------------- */}
+
+          <div
+            className={[
+              "absolute left-1/2 top-1/2 z-30",
+              "h-1.5 w-1.5",
+              "-translate-x-1/2 -translate-y-1/2",
+              "rounded-full bg-[#5aa9d8]/60",
+              "transition-all duration-700",
+              connected
+                ? "scale-100 opacity-100"
+                : "scale-0 opacity-0",
+            ].join(" ")}
+            style={{
+              boxShadow:
+                "0 0 14px rgba(90,169,216,0.4)",
+            }}
+          />
         </div>
 
         {/* =======================================================
@@ -337,18 +386,14 @@ export default function ReadySection() {
 
         <div
           className={[
-            "relative -mt-2 text-center",
-            "transition-all duration-[1000ms]",
-            phase === "message"
+            "-mt-1 text-center",
+            "transition-all duration-[1200ms]",
+            showMessage
               ? "translate-y-0 opacity-100"
               : "translate-y-4 opacity-0",
           ].join(" ")}
         >
-          <div className="text-[10px] font-medium uppercase tracking-[0.24em] text-white/25">
-            MediQ Mentorship
-          </div>
-
-          <h2 className="mt-3 text-3xl font-semibold tracking-[-0.035em] text-white sm:text-4xl">
+          <h2 className="text-3xl font-semibold tracking-[-0.035em] text-white sm:text-4xl">
             You're ready.
           </h2>
 
@@ -360,12 +405,12 @@ export default function ReadySection() {
 
           <p
             className={[
-              "mt-7 text-[10px] uppercase tracking-[0.18em]",
-              "text-white/20",
-              "transition-all duration-1000 delay-300",
-              phase === "message"
-                ? "translate-y-0 opacity-100"
-                : "translate-y-2 opacity-0",
+              "mt-7 text-[10px] font-medium uppercase",
+              "tracking-[0.18em] text-white/20",
+              "transition-opacity duration-1000 delay-300",
+              showMessage
+                ? "opacity-100"
+                : "opacity-0",
             ].join(" ")}
           >
             Take it one step at a time.
@@ -374,14 +419,14 @@ export default function ReadySection() {
       </div>
 
       {/* =========================================================
-       * MOTION
+       * REDUCED MOTION
        * ========================================================= */}
 
       <style jsx>{`
         @media (prefers-reduced-motion: reduce) {
-          * {
-            animation-duration: 1ms !important;
-            animation-delay: 0ms !important;
+          *,
+          *::before,
+          *::after {
             transition-duration: 1ms !important;
             transition-delay: 0ms !important;
           }
