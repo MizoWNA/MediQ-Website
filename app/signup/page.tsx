@@ -523,11 +523,18 @@ return ( <main className="relative min-h-screen overflow-hidden bg-[#0b0d10] px-
             </p>
 
             <p className="mt-2 text-sm leading-6 text-white/40">
-              Screenshot this card and
-              send it to our registration
-              number to complete your
-              purchase.
-            </p>
+            Screenshot this card and send it to {" "}
+            <span className="font-semibold text-white"> 010 3366 3583</span> on whatsapp to pay.
+            <a
+              href="https://wa.me/201033663583"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 flex w-fit items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-400 hover:bg-emerald-500/20 hover:border-emerald-500/50 transition-all"
+            >
+              <span>💬 Chat on WhatsApp</span>
+              <span aria-hidden="true">&rarr;</span>
+            </a>
+          </p>
           </div>
         </div>
       </div>
