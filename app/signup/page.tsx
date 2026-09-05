@@ -523,10 +523,7 @@ return ( <main className="relative min-h-screen overflow-hidden bg-[#0b0d10] px-
             </p>
 
             <p className="mt-2 text-sm leading-6 text-white/40">
-              Screenshot this card and
-              send it to our registration
-              number to complete your
-              purchase.
+              Screenshot this card and send it to <strong className="text-white font-semibold underline decoration-sky-500 decoration-2 underline-offset-2">010 3366 3583</strong> to complete your purchase.
             </p>
           </div>
         </div>
