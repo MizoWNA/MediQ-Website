@@ -33,7 +33,7 @@ export function formatDate(value: string | null) {
 }
 
 export function formatPrice(value: number) {
-  return `₱${Number(value || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}`;
+  return `EGP ${Number(value || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}`;
 }
 
 export function statusLabel(status: RegistrationStatus) {
