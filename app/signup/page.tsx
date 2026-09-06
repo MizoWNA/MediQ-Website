@@ -317,11 +317,10 @@ try {
     data as RegistrationResult;
 
   router.push(
-    `/signup/questionnaire?registration_id=${encodeURIComponent(
+    `/registration/questionnaire?registration_id=${encodeURIComponent(
       registration.registration_id
     )}`
   );
-
 } catch (err) {
   console.error(
     "Registration failed:",
