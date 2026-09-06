@@ -94,7 +94,7 @@ export default function QuestionnairePage() {
 
       try {
         const response = await fetch(
-          "/api/registration/questionnaire",
+          "/api/registrations/questionnaire",
           {
             method: "GET",
             headers: {
@@ -267,7 +267,7 @@ export default function QuestionnairePage() {
         }));
 
       const response = await fetch(
-        "/api/registration/questionnaire",
+        "/api/registrations/questionnaire",
         {
           method: "POST",
           headers: {
