@@ -81,7 +81,7 @@ export default function RegistrationDetailPage() {
         throw new Error(data?.error || "Failed to load registration.");
       }
 
-      // Clear any stale error once registration loads successfully.
+      // Clear any stale error once registration loads successfully now.
       setError(null);
 
       setRegistration(data.registration);
