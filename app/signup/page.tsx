@@ -18,19 +18,20 @@ type RegistrationPlan,
 } from "@/lib/registration-plans";
 
 interface RegistrationResult {
-registration_code: string;
-full_name: string;
-university: string;
-academic_year: number;
-phone_number: string;
-email: string | null;
-plan: string;
-base_price: number;
-affiliate_code: string | null;
-discount_percent: number;
-discount_amount: number;
-final_price: number;
-status: string;
+  registration_id: string;
+  registration_code: string;
+  full_name: string;
+  university: string;
+  academic_year: number;
+  phone_number: string;
+  email: string | null;
+  plan: string;
+  base_price: number;
+  affiliate_code: string | null;
+  discount_percent: number;
+  discount_amount: number;
+  final_price: number;
+  status: string;
 }
 
 interface AffiliatePreview {
