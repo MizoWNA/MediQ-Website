@@ -16,21 +16,24 @@ import {
 REGISTRATION_PLANS,
 type RegistrationPlan,
 } from "@/lib/registration-plans";
+import { useRouter } from "next/navigation";
+
 
 interface RegistrationResult {
-registration_code: string;
-full_name: string;
-university: string;
-academic_year: number;
-phone_number: string;
-email: string | null;
-plan: string;
-base_price: number;
-affiliate_code: string | null;
-discount_percent: number;
-discount_amount: number;
-final_price: number;
-status: string;
+  registration_id: string;
+  registration_code: string;
+  full_name: string;
+  university: string;
+  academic_year: number;
+  phone_number: string;
+  email: string | null;
+  plan: string;
+  base_price: number;
+  affiliate_code: string | null;
+  discount_percent: number;
+  discount_amount: number;
+  final_price: number;
+  status: string;
 }
 
 interface AffiliatePreview {
@@ -52,6 +55,7 @@ const [university, setUniversity] = useState("");
 const [academicYear, setAcademicYear] = useState<number | "">("");
 const [phoneNumber, setPhoneNumber] = useState("");
 const [email, setEmail] = useState("");
+const router = useRouter();
 
 const [selectedPlan, setSelectedPlan] =
 useState<RegistrationPlan | null>(null);
@@ -309,8 +313,13 @@ try {
     );
   }
 
-  setResult(
-    data as RegistrationResult
+  const registration =
+    data as RegistrationResult;
+
+  router.push(
+    `/registration/questionnaire?registration_id=${encodeURIComponent(
+      registration.registration_id
+    )}`
   );
 } catch (err) {
   console.error(
