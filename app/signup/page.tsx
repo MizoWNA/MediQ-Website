@@ -150,7 +150,7 @@ const timer = window.setTimeout(
        * preview lookup failure.
        *
        * The actual registration RPC will still
-       * validate the code when submitted.
+       * validate the code when submitted.  .
        */
 
       setAffiliatePreview(null);
