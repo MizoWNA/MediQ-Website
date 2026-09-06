@@ -62,6 +62,33 @@ async function authenticateAdmin(request: NextRequest) {
   };
 }
 
+export async function GET(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { error } = await authenticateAdmin(request);
+    if (error) return error;
+    const { id } = await context.params;
+    if (!id) return NextResponse.json({ error: "Registration ID is required." }, { status: 400 });
+    const { data: registration, error: registrationError } = await supabaseAdmin
+      .from("registrations")
+      .select(`id, registration_code, full_name, university, academic_year, phone_number, email, plan, base_price, affiliate_code, discount_percent, discount_amount, final_price, status, created_at, paid_at, paid_by, profile_id`)
+      .eq("id", id)
+      .maybeSingle();
+    if (registrationError) {
+      console.error("Failed to load registration detail:", registrationError.message);
+      return NextResponse.json({ error: "Failed to load registration." }, { status: 500 });
+    }
+    if (!registration) return NextResponse.json({ error: "Registration not found." }, { status: 404 });
+    const { data: mentors } = await supabaseAdmin.from("profiles").select("id, username, display_name").eq("role", "mentor").order("display_name", { ascending: true });
+    return NextResponse.json({ registration, mentors: mentors ?? [] });
+  } catch (error) {
+    console.error("Admin registration detail failed:", error);
+    return NextResponse.json({ error: "Unexpected server error." }, { status: 500 });
+  }
+}
+
 export async function PATCH(
   request: NextRequest,
   context: {
