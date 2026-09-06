@@ -16,6 +16,8 @@ import {
 REGISTRATION_PLANS,
 type RegistrationPlan,
 } from "@/lib/registration-plans";
+import { useRouter } from "next/navigation";
+
 
 interface RegistrationResult {
   registration_id: string;
@@ -53,6 +55,7 @@ const [university, setUniversity] = useState("");
 const [academicYear, setAcademicYear] = useState<number | "">("");
 const [phoneNumber, setPhoneNumber] = useState("");
 const [email, setEmail] = useState("");
+const router = useRouter();
 
 const [selectedPlan, setSelectedPlan] =
 useState<RegistrationPlan | null>(null);
@@ -310,9 +313,15 @@ try {
     );
   }
 
-  setResult(
-    data as RegistrationResult
+  const registration =
+    data as RegistrationResult;
+
+  router.push(
+    `/registration/questionnaire?registration_id=${encodeURIComponent(
+      registration.registration_id
+    )}`
   );
+  
 } catch (err) {
   console.error(
     "Registration failed:",
