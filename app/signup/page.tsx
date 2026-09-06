@@ -317,7 +317,7 @@ try {
     data as RegistrationResult;
 
   router.push(
-    `/registration/questionnaire?registration_id=${encodeURIComponent(
+    `/signup/questionnaire?registration_id=${encodeURIComponent(
       registration.registration_id
     )}`
   );
