@@ -12,6 +12,7 @@ import {
   useSearchParams,
 } from "next/navigation";
 import {
+  Suspense,
   useCallback,
   useEffect,
   useMemo,
@@ -54,7 +55,7 @@ const ANSWER_OPTIONS = [
   },
 ];
 
-export default function QuestionnairePage() {
+function QuestionnaireContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -708,6 +709,14 @@ export default function QuestionnairePage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function QuestionnairePage() {
+  return (
+    <Suspense fallback={null}>
+      <QuestionnaireContent />
+    </Suspense>
   );
 }
 
