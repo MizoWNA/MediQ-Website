@@ -48,14 +48,27 @@ export function getYearLabel(year: number) {
   return year === 1 ? "1st Year" : year === 2 ? "2nd Year" : year === 3 ? "3rd Year" : `${year}th Year`;
 }
 
-export function RegistrationQuestionnaire() {
-  return (
-    <section className="rounded-2xl border border-white/[0.07] bg-white/[0.025] p-5">
-      <h2 className="text-sm font-semibold text-white">Mentor assessment</h2>
-      <p className="mt-2 text-sm leading-6 text-white/35">The questionnaire will be added here in a future update.</p>
-    </section>
-  );
-}
+export type RegistrationQuestionAnswer = {
+  question_id: string;
+  category: string;
+  question: string;
+  translation: string | null;
+  sort_order: number;
+  answer: number | null;
+};
+
+export type QuestionnaireResponse = {
+  registration_id: string;
+  answers: RegistrationQuestionAnswer[];
+};
+
+export type CategoryScore = {
+  category: string;
+  score: number | null;
+  answered: number;
+  total: number;
+};
+
 
 export function InfoItem({ label, value }: { label: string; value: string }) {
   return <div><div className="text-[10px] uppercase tracking-[0.14em] text-white/30">{label}</div><div className="mt-1 text-sm text-white/80">{value || "—"}</div></div>;
